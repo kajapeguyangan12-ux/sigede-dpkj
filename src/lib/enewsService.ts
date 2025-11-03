@@ -76,10 +76,10 @@ export const deleteENewsItem = async (id: string, jenis: 'berita' | 'pengumuman'
 // Helper function to normalize data from different field names
 const normalizeENewsItem = (data: any, id: string, jenis: 'berita' | 'pengumuman'): ENewsItem => {
   // Handle different field name variations
-  const judul = data.judul || data.title || '';
+  const judul = data.title || data.judul || '';
   
   // Handle date/tanggal - multiple possible formats
-  let tanggal: any = data.tanggal || data.date || data.createdAt;
+  let tanggal: any = data.createdAt || data.tanggal || data.date;
   
   // Convert Firestore Timestamp to ISO string
   if (tanggal && typeof tanggal === 'object' && tanggal.toDate) {
@@ -87,13 +87,17 @@ const normalizeENewsItem = (data: any, id: string, jenis: 'berita' | 'pengumuman
   } else if (tanggal && typeof tanggal === 'object' && tanggal.seconds) {
     // Handle raw Firestore timestamp object
     tanggal = new Date(tanggal.seconds * 1000).toISOString();
-  } else if (!tanggal || typeof tanggal === 'object') {
+  } else if (typeof tanggal === 'string') {
+    // If it's already a string (ISO date), keep it
+    tanggal = tanggal;
+  } else {
+    // Fallback to current date
     tanggal = new Date().toISOString();
   }
   
-  const deskripsi = data.deskripsi || data.description || '';
+  const deskripsi = data.description || data.deskripsi || '';
   const lokasi = data.lokasi || data.location;
-  let gambar = data.gambar || data.imageUrl || data.image;
+  let gambar = data.imageUrl || data.gambar || data.image;
   
   // If gambar is empty string, use fallback
   if (!gambar || gambar.trim() === '') {

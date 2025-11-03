@@ -2,41 +2,53 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
+import { handleAdminLogout } from '../../../lib/logoutHelper';
 import UserLoginHelp from '../../../components/UserLoginHelp';
 import { FirestoreUser } from '../../../lib/userManagementService';
 
 export default function AdminLogin() {
   const router = useRouter();
-  const { login, loading, isAuthenticated, isAdmin, user } = useAuth();
-  
-  // Clear redirect flag when reaching login page
-  React.useEffect(() => {
-    sessionStorage.removeItem('auth_redirecting');
-  }, []);
+  const { login, loading, user, isAdmin } = useAuth();
   
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Simple redirect check
-  useEffect(() => {
-    // Check if user is already authenticated with stored data
+  // Check existing session once on mount
+  React.useEffect(() => {
+    console.log('🔍 Admin Login: Component mounted, checking session');
+    
+    // Clear any logout/redirect flags
+    sessionStorage.removeItem('auth_redirecting');
+    sessionStorage.removeItem('admin_logout_in_progress');
+    
+    // Check if user is already authenticated
     const storedUser = localStorage.getItem('sigede_auth_user');
-    if (storedUser && !loading) {
+    if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
         const validAdminRoles = ['administrator', 'admin_desa', 'kepala_desa'];
         
         if (userData && userData.role && validAdminRoles.includes(userData.role)) {
-          console.log('🔄 LOGIN PAGE: Found admin user in storage, redirecting');
-          router.push('/admin/home');
+          console.log('🔄 Already authenticated as admin, redirecting');
+          window.location.href = '/admin/home';
+          return;
+        } else {
+          console.log('🗑️ Invalid admin session, clearing');
+          localStorage.removeItem('sigede_auth_user');
+          localStorage.removeItem('userId');
         }
       } catch (e) {
+        console.log('🗑️ Corrupted session data, clearing');
         localStorage.removeItem('sigede_auth_user');
+        localStorage.removeItem('userId');
       }
     }
-  }, [router, loading]);
+    
+    // Clear any submission state on mount
+    setIsSubmitting(false);
+  }, []); // Run once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

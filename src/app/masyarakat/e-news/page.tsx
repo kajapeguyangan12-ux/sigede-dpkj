@@ -108,21 +108,25 @@ export default function ENewsPage() {
               >
                 <div className="group rounded-2xl bg-white overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 mx-0">
                   {/* Image Container */}
-                  <div className="relative h-40 sm:h-48 bg-gray-100 overflow-hidden">
+                  <div className="relative h-40 sm:h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                     {item.gambar && item.gambar !== '/logo/default.png' ? (
-                      item.gambar.startsWith('http') ? (
-                        <img
-                          src={item.gambar}
-                          alt={item.judul}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <img
-                          src={item.gambar}
-                          alt={item.judul}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      )
+                      <img
+                        src={item.gambar}
+                        alt={item.judul}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          // Fallback if image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.parentElement!.innerHTML = `
+                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-50">
+                              <div class="text-4xl sm:text-5xl">
+                                ${item.jenis === 'berita' ? '📰' : '📢'}
+                              </div>
+                            </div>
+                          `;
+                        }}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-50">
                         <div className="text-4xl sm:text-5xl">
@@ -133,9 +137,9 @@ export default function ENewsPage() {
                     {/* Badge */}
                     <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-white rounded-full px-2 sm:px-3 py-1 shadow-md">
                       <span className={`text-[10px] sm:text-xs font-semibold ${
-                        item.jenis === 'berita' ? 'text-blue-600' : 'text-amber-600'
+                        item.jenis === 'berita' ? 'text-red-600' : 'text-purple-600'
                       }`}>
-                        {item.jenis === 'berita' ? 'Berita' : 'Pengumuman'}
+                        {item.jenis === 'berita' ? '📰 Berita' : '📢 Pengumuman'}
                       </span>
                     </div>
                   </div>
@@ -143,7 +147,9 @@ export default function ENewsPage() {
                   {/* Content Container */}
                   <div className="p-3 sm:p-4">
                     {/* Title */}
-                    <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                    <h3 className={`text-sm sm:text-base font-bold text-gray-900 mb-2 line-clamp-2 transition-colors ${
+                      item.jenis === 'berita' ? 'group-hover:text-red-600' : 'group-hover:text-purple-600'
+                    }`}>
                       {item.judul}
                     </h3>
 
@@ -182,8 +188,17 @@ export default function ENewsPage() {
 
                     {/* CTA Button */}
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] sm:text-xs font-semibold text-blue-600">Lihat Selengkapnya</span>
-                      <ChevronRight size={16} className="text-blue-600 group-hover:translate-x-1 transition-transform sm:w-4 sm:h-4" />
+                      <span className={`text-[10px] sm:text-xs font-semibold ${
+                        item.jenis === 'berita' ? 'text-red-600' : 'text-purple-600'
+                      }`}>
+                        Lihat Selengkapnya
+                      </span>
+                      <ChevronRight 
+                        size={16} 
+                        className={`group-hover:translate-x-1 transition-transform sm:w-4 sm:h-4 ${
+                          item.jenis === 'berita' ? 'text-red-600' : 'text-purple-600'
+                        }`} 
+                      />
                     </div>
                   </div>
                 </div>

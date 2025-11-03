@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from '../../../contexts/AuthContext';
+import { handleAdminLogout } from '../../../lib/logoutHelper';
 import AdminLayout from "../components/AdminLayout";
 import AdminHeaderCard, {
   AdminHeaderSearchBar,
@@ -194,11 +195,7 @@ export default function RegulasiDesaPage() {
   }
 
   const handleLogout = async () => {
-    try {
-      await logout('admin');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await handleAdminLogout(() => logout('admin'));
   };
 
   return (

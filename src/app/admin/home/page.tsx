@@ -7,6 +7,7 @@ import AdminHeaderCard, { AdminHeaderSearchBar, AdminHeaderAccount } from "../..
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db as firestore } from '../../../lib/firebase';
 import { FIREBASE_COLLECTIONS } from '../../../lib/rolePermissions';
+import { handleAdminLogout } from '../../../lib/logoutHelper';
 
 function RenderIcon({ name, className = '' }: { name: string; className?: string }) {
   const baseProps = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, className } as const;
@@ -153,11 +154,7 @@ export default function AdminHomePage() {
   }, []);
 
   const handleLogout = async () => {
-    try {
-      await logout('admin');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await handleAdminLogout(() => logout('admin'));
   };
 
   return (

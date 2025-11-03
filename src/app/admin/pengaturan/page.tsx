@@ -10,6 +10,7 @@ import AdminLayout from "../components/AdminLayout";
 interface PengaturanHome {
   judulSelamatDatang: string;
   ucapanSelamatDatang: string;
+  fotoUcapanSelamatDatang: string; // New field
   fotoKepalaDesa: string;
   namaKepalaDesa: string;
   fotoSlideshow: string[];
@@ -28,6 +29,7 @@ export default function PengaturanPage() {
   const [pengaturan, setPengaturan] = useState<PengaturanHome>({
     judulSelamatDatang: "Ucapan Selamat Datang",
     ucapanSelamatDatang: "",
+    fotoUcapanSelamatDatang: "",
     fotoKepalaDesa: "",
     namaKepalaDesa: "",
     fotoSlideshow: [],
@@ -43,8 +45,10 @@ export default function PengaturanPage() {
   const [slideshowFiles, setSlideshowFiles] = useState<File[]>([]);
   
   const [previewKepalaDesa, setPreviewKepalaDesa] = useState<string>("");
+  const [previewUcapan, setPreviewUcapan] = useState<string>(""); // New preview state
   const [previewPopup, setPreviewPopup] = useState<string>("");
   const fileKepalaDesa = useRef<HTMLInputElement>(null);
+  const fileUcapan = useRef<HTMLInputElement>(null); // New ref
   const filePopup = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -68,6 +72,7 @@ export default function PengaturanPage() {
     const defaultPengaturan = {
       judulSelamatDatang: "Ucapan Selamat Datang",
       ucapanSelamatDatang: "",
+      fotoUcapanSelamatDatang: "",
       fotoKepalaDesa: "",
       namaKepalaDesa: "",
       fotoSlideshow: [],
@@ -102,6 +107,7 @@ export default function PengaturanPage() {
         setPengaturan({
           judulSelamatDatang: data.judulSelamatDatang || "Ucapan Selamat Datang",
           ucapanSelamatDatang: data.ucapanSelamatDatang || "",
+          fotoUcapanSelamatDatang: data.fotoUcapanSelamatDatang || "",
           fotoKepalaDesa: data.fotoKepalaDesa || "",
           namaKepalaDesa: data.namaKepalaDesa || "",
           fotoSlideshow: data.fotoSlideshow || [],
@@ -114,6 +120,7 @@ export default function PengaturanPage() {
           popupYoutubeStartTime: data.popupYoutubeStartTime || 0,
         });
         setPreviewKepalaDesa(data.fotoKepalaDesa || "");
+        setPreviewUcapan(data.fotoUcapanSelamatDatang || "");
         setPreviewPopup(data.popupFoto || "");
         setSlideshowPreviews(data.fotoSlideshow || []);
       } else {
@@ -151,6 +158,17 @@ export default function PengaturanPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewKepalaDesa(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFileUcapan = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUcapan(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -215,6 +233,7 @@ export default function PengaturanPage() {
       setSaving(true);
       
       let fotoKepalaDesaUrl = pengaturan.fotoKepalaDesa;
+      let fotoUcapanUrl = pengaturan.fotoUcapanSelamatDatang;
       let popupFotoUrl = pengaturan.popupFoto;
       let slideshowUrls = [...pengaturan.fotoSlideshow];
 
@@ -223,6 +242,14 @@ export default function PengaturanPage() {
         fotoKepalaDesaUrl = await uploadImage(
           fileKepalaDesa.current.files[0],
           "kepala-desa.jpg"
+        );
+      }
+
+      // Upload foto ucapan selamat datang jika ada file baru
+      if (fileUcapan.current?.files?.[0]) {
+        fotoUcapanUrl = await uploadImage(
+          fileUcapan.current.files[0],
+          "ucapan-selamat-datang.jpg"
         );
       }
 
@@ -249,6 +276,7 @@ export default function PengaturanPage() {
       await setDoc(docRef, {
         judulSelamatDatang: pengaturan.judulSelamatDatang,
         ucapanSelamatDatang: pengaturan.ucapanSelamatDatang,
+        fotoUcapanSelamatDatang: fotoUcapanUrl,
         fotoKepalaDesa: fotoKepalaDesaUrl,
         namaKepalaDesa: pengaturan.namaKepalaDesa,
         fotoSlideshow: slideshowUrls,
@@ -258,6 +286,7 @@ export default function PengaturanPage() {
         popupIsi: pengaturan.popupIsi,
         popupFoto: popupFotoUrl,
         popupYoutubeUrl: pengaturan.popupYoutubeUrl,
+        popupYoutubeStartTime: pengaturan.popupYoutubeStartTime,
         updatedAt: new Date().toISOString(),
       });
 
@@ -321,6 +350,57 @@ export default function PengaturanPage() {
               placeholder="Contoh: Ucapan Selamat Datang"
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
             />
+          </div>
+
+          {/* Foto Ucapan Selamat Datang */}
+          <div className="bg-white rounded-2xl shadow-xl p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Gambar Ucapan Selamat Datang
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload gambar yang akan ditampilkan di header halaman masyarakat (menggantikan teks ucapan)
+            </p>
+            
+            {previewUcapan && (
+              <div className="mb-4">
+                <img
+                  src={previewUcapan}
+                  alt="Preview Ucapan Selamat Datang"
+                  className="w-full max-w-2xl h-64 object-cover rounded-xl shadow-lg mx-auto"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewUcapan("");
+                    setPengaturan({ ...pengaturan, fotoUcapanSelamatDatang: "" });
+                    if (fileUcapan.current) {
+                      fileUcapan.current.value = "";
+                    }
+                  }}
+                  className="mt-2 w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all"
+                >
+                  Hapus Gambar
+                </button>
+              </div>
+            )}
+            
+            <input
+              ref={fileUcapan}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUcapan}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileUcapan.current?.click()}
+              className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl transition-all"
+            >
+              {previewUcapan ? "Ganti Gambar Ucapan" : "Pilih Gambar Ucapan"}
+            </button>
           </div>
 
           {/* Foto Kepala Desa & Nama */}

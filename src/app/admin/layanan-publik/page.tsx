@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from "../components/AdminLayout";
 import AdminHeaderCard, { AdminHeaderSearchBar, AdminHeaderAccount } from "../../components/AdminHeaderCard";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../../contexts/AuthContext";
+import { handleAdminLogout } from "../../../lib/logoutHelper";
 import { 
   getAllLayananPublik, 
   getLayananByJenis, 
@@ -24,6 +26,7 @@ const jenisLayananList = [
 
 export default function LayananPublikAdminPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [layananData, setLayananData] = useState<LayananPublik[]>([]);
   const [filteredData, setFilteredData] = useState<LayananPublik[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,9 +78,8 @@ export default function LayananPublikAdminPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminAuth");
-    router.push("/admin/login");
+  const handleLogout = async () => {
+    await handleAdminLogout(() => logout('admin'));
   };
 
   // Filter data berdasarkan search, jenis, dan status

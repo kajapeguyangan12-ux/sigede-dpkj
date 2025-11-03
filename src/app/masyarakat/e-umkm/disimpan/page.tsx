@@ -1,21 +1,30 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import BottomNavigation from '../../../components/BottomNavigation';
+import { ArrowLeft, Bookmark, Search, Trash2, MessageCircle } from 'lucide-react';
 
 interface SavedProduct {
-  id: number;
+  id: string;
   name: string;
   price: string;
   store: string;
   rating: number;
   description: string;
   image: string;
+  phone?: string; // Phone number for WhatsApp
+  kategori?: string; // Category for filtering
 }
 
-const categories = ['all', 'makanan', 'minuman'];
+const categories = [
+  { id: 'all', label: 'All' },
+  { id: 'makanan', label: 'Makanan' },
+  { id: 'minuman', label: 'Minuman' }
+];
 
 export default function DisimpanPage() {
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [savedProducts, setSavedProducts] = useState<SavedProduct[]>([]);
@@ -28,138 +37,232 @@ export default function DisimpanPage() {
   }, []);
 
   const filteredProducts = savedProducts.filter((product) => {
-    const matchesCategory = selectedCategory === 'all' || product.name.toLowerCase().includes(selectedCategory);
+    const matchesCategory = selectedCategory === 'all' || 
+                           product.kategori?.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+                           product.name.toLowerCase().includes(selectedCategory);
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           product.store.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           product.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  const removeProduct = (id: number) => {
+  const removeProduct = (id: string) => {
     const updated = savedProducts.filter(p => p.id !== id);
     setSavedProducts(updated);
     localStorage.setItem('savedProducts', JSON.stringify(updated));
+    
+    // Show toast notification
+    showToast('Produk dihapus dari daftar tersimpan', 'success');
+  };
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl transition-all duration-300 ${
+      type === 'success' 
+        ? 'bg-green-600 text-white' 
+        : 'bg-red-600 text-white'
+    }`;
+    toast.textContent = message;
+    toast.style.animation = 'slideDown 0.3s ease-out';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.animation = 'slideUp 0.3s ease-in';
+      setTimeout(() => document.body.removeChild(toast), 300);
+    }, 2000);
+  };
+
+  const contactSeller = (product: SavedProduct) => {
+    if (!product.phone) {
+      showToast('Nomor telepon tidak tersedia', 'error');
+      return;
+    }
+    
+    // Format phone number for WhatsApp
+    let phoneNumber = product.phone.replace(/\D/g, ''); // Remove non-numeric characters
+    
+    // Add country code if not present
+    if (!phoneNumber.startsWith('62')) {
+      if (phoneNumber.startsWith('0')) {
+        phoneNumber = '62' + phoneNumber.substring(1);
+      } else {
+        phoneNumber = '62' + phoneNumber;
+      }
+    }
+    
+    const message = encodeURIComponent(
+      `Halo, saya tertarik dengan produk *${product.name}* dari toko *${product.store}*. Bisa info lebih lanjut?`
+    );
+    
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   return (
-    <main className="min-h-[100svh] bg-red-50 text-gray-800">
-      <div className="mx-auto w-full max-w-md px-4 pb-20 pt-4">
-        {/* Header Card */}
-        <div className="mb-4 rounded-2xl border border-black/10 bg-white/70 shadow-lg ring-1 ring-black/5 backdrop-blur">
-          <div className="relative overflow-hidden rounded-2xl">
-            <div className="absolute inset-0 -z-10 opacity-50 [background:radial-gradient(120%_100%_at_0%_0%,#ef4444,transparent_60%)]" />
-            <div className="flex items-center justify-between px-4 py-2">
-              <a href="/masyarakat/e-umkm" className="text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              </a>
-              <div className="text-base font-bold text-gray-900">Disimpan</div>
-              <div className="text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
+    <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-white to-red-50">
+      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+        {/* Header Card - Modern Design */}
+        <div className="mb-6 rounded-3xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 shadow-2xl overflow-hidden">
+          <div className="relative px-6 py-4">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_50%)]"></div>
+            
+            <div className="relative flex items-center justify-between">
+              <button 
+                onClick={() => router.back()}
+                className="p-2 hover:bg-white/20 rounded-full transition-all duration-300 active:scale-95"
+              >
+                <ArrowLeft className="w-6 h-6 text-white" />
+              </button>
+              <div className="flex items-center space-x-2">
+                <Bookmark className="w-5 h-5 text-white fill-white" />
+                <h1 className="text-xl font-bold text-white">Disimpan</h1>
               </div>
+              <div className="w-10"></div> {/* Spacer for alignment */}
             </div>
           </div>
         </div>
 
-        {/* Search Bar */}
-        <section className="mb-6">
-          <div className="rounded-3xl bg-white/90 p-4 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 bg-white/50"
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
+        {/* Search Bar - Modern Glass Effect */}
+        <section className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+            <input
+              type="text"
+              placeholder="Cari produk, toko, atau deskripsi..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white shadow-md transition-all duration-300 hover:shadow-lg placeholder:text-gray-400"
+            />
           </div>
         </section>
 
-        {/* Categories */}
+        {/* Categories - Modern Pills */}
         <section className="mb-6">
-          <div className="rounded-3xl bg-white/90 p-4 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
-            <div className="flex space-x-2 justify-center">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition-colors ${
-                    selectedCategory === category
-                      ? 'bg-red-100 text-red-600 border border-red-200'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+          <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`px-6 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                  selectedCategory === category.id
+                    ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/50'
+                    : 'bg-white text-gray-600 shadow-md hover:shadow-lg border-2 border-gray-200'
+                }`}
+              >
+                {category.label}
+              </button>
+            ))}
           </div>
         </section>
 
-        {/* Products Grid */}
-        <section className="mb-6">
-          <div className="rounded-3xl bg-white/90 p-6 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
-            {filteredProducts.length === 0 ? (
-              <div className="text-center py-8">
-                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
-                <p className="text-gray-500">Belum ada produk yang disimpan</p>
+        {/* Products List - Modern Cards */}
+        <section className="space-y-4">
+          {filteredProducts.length === 0 ? (
+            <div className="bg-white rounded-3xl shadow-xl p-12 text-center">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                <Bookmark className="w-12 h-12 text-gray-400" />
               </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Belum Ada Produk Tersimpan</h3>
+              <p className="text-gray-500 mb-6">Mulai simpan produk favorit Anda untuk akses cepat</p>
+              <button
+                onClick={() => router.push('/masyarakat/e-umkm')}
+                className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95"
+              >
+                Jelajahi UMKM
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Results Count */}
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-600">
+                  {filteredProducts.length} Produk Tersimpan
+                </p>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-sm text-red-600 hover:text-red-700 font-medium"
+                  >
+                    Reset Pencarian
+                  </button>
+                )}
+              </div>
+
+              {/* Product Cards */}
+              <div className="space-y-4">
                 {filteredProducts.map((product) => (
-                  <div key={product.id} className="bg-white rounded-2xl shadow-lg p-4 ring-1 ring-red-100">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
-                        <span className="text-red-600 text-xs font-medium">Foto Produk</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-800 mb-1">{product.name}</h3>
-                            <p className="text-gray-600 text-sm mb-1">{product.description}</p>
-                            <p className="text-red-600 font-bold mb-1">{product.price}</p>
-                            <p className="text-gray-500 text-sm mb-2">{product.store}</p>
-                            <div className="flex items-center">
-                              <span className="text-yellow-400 text-sm">★</span>
-                              <span className="text-gray-600 text-sm ml-1">Rating</span>
+                  <div 
+                    key={product.id} 
+                    className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-gray-100 hover:border-red-200 group"
+                  >
+                    <div className="p-4">
+                      <div className="flex space-x-4">
+                        {/* Product Image */}
+                        <div className="relative w-24 h-24 bg-gradient-to-br from-red-100 via-red-200 to-red-300 rounded-xl flex-shrink-0 shadow-md overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                          {product.image ? (
+                            <img 
+                              src={product.image} 
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-red-600 text-xs font-bold text-center px-2">Foto Produk</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-900 mb-1 text-base line-clamp-1 group-hover:text-red-600 transition-colors">
+                            {product.name}
+                          </h3>
+                          <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                            {product.description}
+                          </p>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <p className="text-red-600 font-bold text-lg">
+                              {product.price}
+                            </p>
+                            <div className="flex items-center space-x-1 bg-yellow-50 px-2 py-1 rounded-full">
+                              <span className="text-yellow-500 text-sm">★</span>
+                              <span className="text-gray-700 text-xs font-semibold">{product.rating}</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex space-x-2 mt-3">
-                          <button
-                            onClick={() => removeProduct(product.id)}
-                            className="flex items-center space-x-1 px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm hover:bg-red-200 transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          <p className="text-gray-500 text-sm flex items-center">
+                            <svg className="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM9 5a1 1 0 112 0v3.586l1.707 1.707a1 1 0 01-1.414 1.414l-2-2A1 1 0 019 9V5z" clipRule="evenodd" />
                             </svg>
-                            <span>Hapus</span>
-                          </button>
-                          <button className="flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-600 rounded-full text-sm hover:bg-green-200 transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            <span>Hubungi Penjual</span>
-                          </button>
+                            {product.store}
+                          </p>
                         </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
+                        <button
+                          onClick={() => removeProduct(product.id)}
+                          className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl font-semibold hover:bg-red-100 transition-all duration-300 transform hover:scale-105 active:scale-95 border-2 border-red-200"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span className="text-sm">Hapus</span>
+                        </button>
+                        <button 
+                          onClick={() => contactSeller(product)}
+                          className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span className="text-sm">Hubungi</span>
+                        </button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </section>
       </div>
 

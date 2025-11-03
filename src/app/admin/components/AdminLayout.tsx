@@ -37,6 +37,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Simple auth check - redirect if not authenticated
   React.useEffect(() => {
+    // Check if we're in the middle of logout process
+    const isLoggingOut = sessionStorage.getItem('admin_logout_in_progress');
+    if (isLoggingOut) {
+      console.log('⏳ AdminLayout: Logout in progress, skipping auth check');
+      return;
+    }
+
     const storedUser = localStorage.getItem('sigede_auth_user');
     if (!storedUser) {
       console.log('❌ AdminLayout: No stored user found, redirecting to login');
@@ -67,6 +74,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     try {
       console.log('🚪 Admin Layout: Logout initiated');
       
+      // Set flag FIRST to prevent auth check from running
+      sessionStorage.setItem('admin_logout_in_progress', 'true');
+      
       // Show loading state to prevent interaction during logout
       const logoutButton = document.querySelector('[data-logout-btn]');
       if (logoutButton) {
@@ -78,13 +88,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       console.log('🚪 Admin Layout: Starting manual logout process');
       
       // Clear all auth data immediately
-      localStorage.removeItem('sigede_auth_user');
-      localStorage.removeItem('firebase:authUser');
-      localStorage.removeItem('firebase:host');
-      sessionStorage.clear();
-      
-      // Set redirect flag
-      sessionStorage.setItem('auth_redirecting', 'true');
+      localStorage.clear(); // Clear everything
+      sessionStorage.setItem('admin_logout_in_progress', 'true'); // Keep this flag
       
       try {
         await logout('admin');
@@ -92,21 +97,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         console.error('Context logout failed, but continuing with manual logout');
       }
       
+      // Clean up and redirect
+      sessionStorage.removeItem('admin_logout_in_progress');
+      
       // Force immediate redirect
       console.log('✅ Admin Layout: Forcing redirect to login');
-      window.location.href = '/admin/login';
+      window.location.replace('/admin/login'); // Use replace instead of href
     } catch (error) {
       console.error('Admin Layout: Logout error:', error);
-      // Clear user data immediately on error
-      localStorage.removeItem('sigede_auth_user');
-      localStorage.removeItem('firebase:authUser');
-      localStorage.removeItem('firebase:host');
+      // Clear everything on error
+      localStorage.clear();
       sessionStorage.clear();
       
-      // Force redirect even on error to prevent HMR issues
-      setTimeout(() => {
-        window.location.href = '/admin/login';
-      }, 50);
+      // Force redirect even on error
+      window.location.replace('/admin/login');
     }
   };
 

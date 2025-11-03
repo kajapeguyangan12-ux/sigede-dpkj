@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { auth } from "../../../lib/firebase";
+import { useAuth } from '../../../contexts/AuthContext';
+import { handleAdminLogout } from '../../../lib/logoutHelper';
 import { addDetailedAPB, subscribeToDetailedAPB, deleteDetailedAPB, DetailedAPBData } from "../../../lib/keuanganService";
 import AdminLayout from "../components/AdminLayout";
 import AdminHeaderCard, {
@@ -21,6 +21,7 @@ interface FinancialItem {
 
 export default function KeuanganPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
   const [formData, setFormData] = useState({ 
@@ -171,12 +172,7 @@ export default function KeuanganPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push("/admin/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await handleAdminLogout(() => logout('admin'));
   };
 
   const handleAddData = (e: React.FormEvent) => {

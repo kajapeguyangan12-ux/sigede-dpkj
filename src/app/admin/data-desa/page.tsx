@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from '../../../contexts/AuthContext';
+import { handleAdminLogout } from '../../../lib/logoutHelper';
 import AdminLayout from "../components/AdminLayout";
 import AdminHeaderCard, {
   AdminHeaderSearchBar,

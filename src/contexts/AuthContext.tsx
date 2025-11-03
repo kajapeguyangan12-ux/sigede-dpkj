@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import authService, { AuthUser, LoginCredentials } from '../lib/authenticationService';
 import { clearAllAuthData } from '../lib/developmentUtils';
+import { setupSessionCheck, validateSession } from '../lib/sessionService';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -22,16 +23,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [sessionCheckInterval, setSessionCheckInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Check for existing session in localStorage
-    const checkExistingSession = () => {
+    const checkExistingSession = async () => {
       try {
         const savedUser = localStorage.getItem('sigede_auth_user');
         if (savedUser) {
           const userData = JSON.parse(savedUser);
           console.log('🔍 AUTH CONTEXT: Found existing session:', userData);
-          setUser(userData);
+          
+          // Validate session
+          const isValid = await validateSession(userData.uid);
+          if (isValid) {
+            setUser(userData);
+            
+            // Setup session check interval
+            const interval = setupSessionCheck(userData.uid, handleSessionInvalidated);
+            setSessionCheckInterval(interval);
+          } else {
+            console.log('⚠️ AUTH CONTEXT: Session invalid, clearing data');
+            clearAllAuthData();
+          }
         }
       } catch (error) {
         console.error('Error loading saved session:', error);
@@ -42,9 +56,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     checkExistingSession();
+    
+    // Cleanup interval on unmount
+    return () => {
+      if (sessionCheckInterval) {
+        clearInterval(sessionCheckInterval);
+      }
+    };
   }, []);
 
+  // Handle session invalidation (user logged in from another device)
+  const handleSessionInvalidated = () => {
+    console.log('❌ AUTH CONTEXT: Session invalidated by another login');
+    setUser(null);
+    clearAllAuthData();
+    
+    // Clear interval
+    if (sessionCheckInterval) {
+      clearInterval(sessionCheckInterval);
+      setSessionCheckInterval(null);
+    }
+    
+    // Redirect to login
+    const userType = user?.role && authService.isAdmin(user.role) ? 'admin' : 'masyarakat';
+    const redirectPath = userType === 'admin' ? '/admin/login' : '/masyarakat/login';
+    
+    alert('Anda telah login dari perangkat lain. Sesi ini akan diakhiri.');
+    window.location.replace(redirectPath);
+  };
+
   const login = async (credentials: LoginCredentials) => {
+    // Create a promise that times out after 20 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Login timeout. Silakan coba lagi.')), 20000);
+    });
+
     try {
       console.log('🔐 AUTH CONTEXT: Login attempt');
       setLoading(true);
@@ -53,7 +99,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearAllAuthData();
       setUser(null);
       
-      const authUser = await authService.login(credentials);
+      // Race between login and timeout
+      const authUser = await Promise.race([
+        authService.login(credentials),
+        timeoutPromise
+      ]) as AuthUser;
       
       // Save to state and localStorage
       setUser(authUser);
@@ -61,6 +111,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Also save userId for backward compatibility
       localStorage.setItem('userId', authUser.uid);
+      
+      // Setup session check interval
+      const interval = setupSessionCheck(authUser.uid, handleSessionInvalidated);
+      setSessionCheckInterval(interval);
       
       console.log('✅ AUTH CONTEXT: Login successful, userId:', authUser.uid);
     } catch (error) {
@@ -85,7 +139,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('🚪 AUTH CONTEXT: Logout attempt for userType:', userType);
       setIsLoggingOut(true);
       
-      // Clear auth service first
+      // Clear session check interval
+      if (sessionCheckInterval) {
+        clearInterval(sessionCheckInterval);
+        setSessionCheckInterval(null);
+      }
+      
+      // Clear auth service first (includes session termination)
       await authService.logout();
       
       // Clear state
@@ -94,22 +154,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Use utility to clear all auth data thoroughly
       clearAllAuthData();
       
-      console.log('✅ AUTH CONTEXT: Logout successful, redirecting to login');
+      console.log('✅ AUTH CONTEXT: Logout successful');
       
-      // Determine redirect path based on user type
-      const redirectPath = userType === 'admin' ? '/admin/login' : '/masyarakat/login';
-      
-      // Force reload to completely reset state
-      window.location.href = redirectPath;
+      // DON'T redirect here - let the calling component handle it
+      // This prevents double redirect issues
       
     } catch (error) {
       console.error('❌ AUTH CONTEXT: Logout failed:', error);
-      // Even if logout fails, clear local state and redirect
+      // Even if logout fails, clear local state
       setUser(null);
       clearAllAuthData();
       
-      const redirectPath = userType === 'admin' ? '/admin/login' : '/masyarakat/login';
-      window.location.href = redirectPath;
+      // Clear interval on error
+      if (sessionCheckInterval) {
+        clearInterval(sessionCheckInterval);
+        setSessionCheckInterval(null);
+      }
     } finally {
       setIsLoggingOut(false);
       setLoading(false);

@@ -1,5 +1,6 @@
 import { 
   signInWithEmailAndPassword,
+  signInAnonymously,
   signOut as firebaseSignOut,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -16,6 +17,7 @@ import { auth, db as firestore } from './firebase';
 import { FIREBASE_COLLECTIONS, UserStatus } from './rolePermissions';
 import { UserRole } from '../app/masyarakat/lib/useCurrentUser';
 import { FirestoreUser } from './userManagementService';
+import { createUserSession, terminateSession } from './sessionService';
 
 export interface LoginCredentials {
   email?: string;
@@ -86,10 +88,29 @@ class AuthenticationService {
       // 3. Untuk sementara, skip Firebase Auth validation (karena user dibuat tanpa Firebase Auth)
       // TODO: Implement proper password validation when Firebase Auth integration is complete
       
-      // 4. Update last login
-      await this.updateLastLogin(userDoc.uid);
+      // 4. Sign in to Firebase Auth anonymously untuk Firebase Storage access
+      try {
+        console.log('🔐 AUTH: Signing in to Firebase Auth for Storage access...');
+        await signInAnonymously(auth);
+        console.log('✅ AUTH: Firebase Auth signed in successfully');
+      } catch (authError) {
+        console.warn('⚠️ AUTH: Firebase Auth sign-in failed (non-critical):', authError);
+        // Continue anyway, storage might still work
+      }
+      
+      // 5. Create session (terminates other sessions for this user)
+      const userType = this.isAdmin(userDoc.role) ? 'admin' : 'masyarakat';
+      try {
+        await createUserSession(userDoc.uid, userType);
+        console.log('✅ AUTH: Session created successfully');
+      } catch (sessionError) {
+        console.warn('⚠️ AUTH: Session creation failed (non-critical):', sessionError);
+      }
+      
+      // 6. Update last login (non-blocking, runs in background)
+      this.updateLastLogin(userDoc.uid);
 
-      // 5. Return AuthUser object
+      // 7. Return AuthUser object immediately
       const authUser: AuthUser = {
         uid: userDoc.uid,
         email: userDoc.email,
@@ -142,64 +163,68 @@ class AuthenticationService {
     }
   }
 
-  // Cari user berdasarkan berbagai field (ID, email, username)
+  // Cari user berdasarkan berbagai field (ID, email, username) - OPTIMIZED
   private async findUserByAnyField(identifier: string): Promise<FirestoreUser | null> {
     try {
-      // Try by UID first
-      let q = query(this.usersCollection, where('uid', '==', identifier));
-      let snapshot = await getDocs(q);
+      console.log('🔍 AUTH: Searching for user:', identifier);
       
-      if (!snapshot.empty) {
-        return snapshot.docs[0].data() as FirestoreUser;
+      // Run all queries in parallel for better performance
+      const [uidSnapshot, emailSnapshot, usernameSnapshot, idNumberSnapshot] = await Promise.all([
+        getDocs(query(this.usersCollection, where('uid', '==', identifier))),
+        getDocs(query(this.usersCollection, where('email', '==', identifier))),
+        getDocs(query(this.usersCollection, where('userName', '==', identifier))),
+        getDocs(query(this.usersCollection, where('idNumber', '==', identifier)))
+      ]);
+      
+      // Check results in priority order
+      if (!uidSnapshot.empty) {
+        console.log('✅ AUTH: User found by UID');
+        return uidSnapshot.docs[0].data() as FirestoreUser;
+      }
+      
+      if (!emailSnapshot.empty) {
+        console.log('✅ AUTH: User found by email');
+        return emailSnapshot.docs[0].data() as FirestoreUser;
+      }
+      
+      if (!usernameSnapshot.empty) {
+        console.log('✅ AUTH: User found by username');
+        return usernameSnapshot.docs[0].data() as FirestoreUser;
+      }
+      
+      if (!idNumberSnapshot.empty) {
+        console.log('✅ AUTH: User found by idNumber');
+        return idNumberSnapshot.docs[0].data() as FirestoreUser;
       }
 
-      // Try by email
-      q = query(this.usersCollection, where('email', '==', identifier));
-      snapshot = await getDocs(q);
-      
-      if (!snapshot.empty) {
-        return snapshot.docs[0].data() as FirestoreUser;
-      }
-
-      // Try by username
-      q = query(this.usersCollection, where('userName', '==', identifier));
-      snapshot = await getDocs(q);
-      
-      if (!snapshot.empty) {
-        return snapshot.docs[0].data() as FirestoreUser;
-      }
-
-      // Try by idNumber
-      q = query(this.usersCollection, where('idNumber', '==', identifier));
-      snapshot = await getDocs(q);
-      
-      if (!snapshot.empty) {
-        return snapshot.docs[0].data() as FirestoreUser;
-      }
-
+      console.log('❌ AUTH: User not found');
       return null;
     } catch (error) {
-      console.error('Error finding user by any field:', error);
+      console.error('❌ AUTH: Error finding user by any field:', error);
       return null;
     }
   }
 
-  // Update last login timestamp
-  private async updateLastLogin(uid: string): Promise<void> {
-    try {
-      const q = query(this.usersCollection, where('uid', '==', uid));
-      const snapshot = await getDocs(q);
-      
-      if (!snapshot.empty) {
-        const docRef = snapshot.docs[0].ref;
-        await updateDoc(docRef, {
-          lastLoginAt: serverTimestamp()
-        });
+  // Update last login timestamp - NON-BLOCKING
+  private updateLastLogin(uid: string): void {
+    // Run in background, don't await
+    (async () => {
+      try {
+        const q = query(this.usersCollection, where('uid', '==', uid));
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const docRef = snapshot.docs[0].ref;
+          await updateDoc(docRef, {
+            lastLoginAt: serverTimestamp()
+          });
+          console.log('✅ AUTH: Last login updated for uid:', uid);
+        }
+      } catch (error) {
+        console.error('⚠️ AUTH: Error updating last login (non-critical):', error);
+        // Don't throw error for this non-critical operation
       }
-    } catch (error) {
-      console.error('Error updating last login:', error);
-      // Don't throw error for this non-critical operation
-    }
+    })();
   }
 
   // Logout
@@ -207,7 +232,15 @@ class AuthenticationService {
     try {
       console.log('🚪 AUTH SERVICE: Starting logout');
       
-      // Clear all auth data first
+      // 1. Terminate session first
+      try {
+        await terminateSession();
+        console.log('✅ AUTH SERVICE: Session terminated');
+      } catch (sessionError) {
+        console.warn('⚠️ AUTH SERVICE: Session termination failed:', sessionError);
+      }
+      
+      // 2. Clear all auth data
       if (typeof window !== 'undefined') {
         // Clear all possible auth-related items
         const keysToRemove = [
@@ -233,7 +266,7 @@ class AuthenticationService {
         console.log('🧹 AUTH SERVICE: Cleared all auth storage');
       }
       
-      // Sign out from Firebase Auth
+      // 3. Sign out from Firebase Auth
       if (auth.currentUser) {
         await firebaseSignOut(auth);
         console.log('✅ AUTH SERVICE: Firebase signOut successful');

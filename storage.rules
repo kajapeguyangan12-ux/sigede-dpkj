@@ -1,0 +1,96 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // E-News folder - allow authenticated users to write
+    match /e-news/{filename} {
+      allow read: if true; // Public read
+      allow write, delete: if request.auth != null; // Any authenticated user
+    }
+    
+    // Pengumuman folder - allow authenticated users to write
+    match /pengumuman/{filename} {
+      allow read: if true; // Public read
+      allow write, delete: if request.auth != null; // Any authenticated user
+    }
+    
+    // Ucapan Selamat Datang
+    match /ucapan-selamat-datang.jpg {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Foto Kepala Desa
+    match /kepala-desa.jpg {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Slideshow images
+    match /slideshow/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Popup images
+    match /popup/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Profil Desa images
+    match /profil-desa/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Wisata Budaya images
+    match /wisata-budaya/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // E-UMKM images
+    match /e-umkm/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Layanan Publik images
+    match /layanan-publik/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Data Desa KK Excel files
+    match /data-desa-kk/{filename} {
+      allow read: if request.auth != null;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Regulasi documents
+    match /regulasi/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // Keuangan documents
+    match /keuangan/{filename} {
+      allow read: if request.auth != null;
+      allow write, delete: if request.auth != null;
+    }
+    
+    // User profile pictures
+    match /users/{userId}/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Default rule - deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

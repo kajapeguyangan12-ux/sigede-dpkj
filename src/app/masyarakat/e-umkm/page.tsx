@@ -84,22 +84,59 @@ export default function EUMKMPage() {
   };
 
   const toggleSaveProduct = (product: Product) => {
-    let updatedSaved;
-    if (savedProducts.includes(product.id)) {
-      updatedSaved = savedProducts.filter(id => id !== product.id);
-    } else {
-      updatedSaved = [...savedProducts, product.id];
-    }
-    setSavedProducts(updatedSaved);
-
     const existingSaved = JSON.parse(localStorage.getItem('savedProducts') || '[]');
+    
+    // Check if product already saved
+    const isSaved = existingSaved.some((p: any) => p.id === product.id);
+    
     let updatedProducts;
-    if (updatedSaved.includes(product.id)) {
-      updatedProducts = [...existingSaved, product];
-    } else {
+    if (isSaved) {
+      // Remove from saved
       updatedProducts = existingSaved.filter((p: any) => p.id !== product.id);
+      setSavedProducts(savedProducts.filter(id => id !== product.id));
+    } else {
+      // Add to saved - transform to match SavedProduct interface
+      const savedProduct = {
+        id: product.id,
+        name: product.namaUsaha,
+        price: product.hargaRataRata || 'Hubungi penjual',
+        store: product.namaPemilik,
+        rating: product.rating || 0,
+        description: product.deskripsi || '',
+        image: product.fotoUsaha?.[0] || '',
+        phone: product.noTelepon || '',
+        kategori: product.kategori || ''
+      };
+      updatedProducts = [...existingSaved, savedProduct];
+      setSavedProducts([...savedProducts, product.id]);
     }
+    
     localStorage.setItem('savedProducts', JSON.stringify(updatedProducts));
+    
+    // Show toast notification
+    if (isSaved) {
+      showToast('Dihapus dari produk tersimpan', 'error');
+    } else {
+      showToast('Berhasil disimpan!', 'success');
+    }
+  };
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    // Simple toast implementation
+    const toast = document.createElement('div');
+    toast.className = `fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl transition-all duration-300 ${
+      type === 'success' 
+        ? 'bg-green-600 text-white' 
+        : 'bg-red-600 text-white'
+    }`;
+    toast.textContent = message;
+    toast.style.animation = 'slideDown 0.3s ease-out';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.animation = 'slideUp 0.3s ease-in';
+      setTimeout(() => document.body.removeChild(toast), 300);
+    }, 2000);
   };
 
   const filteredProducts = products.filter((product) => {
@@ -308,22 +345,31 @@ export default function EUMKMPage() {
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 {filteredProducts.map((product) => (
-                  <div key={product.id} className="bg-white rounded-2xl shadow-lg p-4 ring-1 ring-red-100 relative">
+                  <div key={product.id} className="bg-white rounded-2xl shadow-lg p-4 ring-1 ring-red-100 relative group hover:shadow-2xl hover:ring-2 hover:ring-red-300 transition-all duration-300">
+                    {/* Bookmark Button with Animation */}
                     <button
                       onClick={() => toggleSaveProduct(product)}
-                      className={`absolute top-2 right-2 p-1 rounded-full ${
+                      className={`absolute top-3 right-3 p-2 rounded-full z-10 transition-all duration-300 transform hover:scale-110 active:scale-95 ${
                         savedProducts.includes(product.id)
-                          ? 'bg-red-100 text-red-600'
-                          : 'bg-gray-100 text-gray-600'
+                          ? 'bg-red-100 text-red-600 shadow-lg shadow-red-200'
+                          : 'bg-white/80 text-gray-400 hover:bg-gray-100 shadow-md'
                       }`}
+                      title={savedProducts.includes(product.id) ? 'Hapus dari tersimpan' : 'Simpan produk'}
                     >
-                      <svg className="w-5 h-5" fill={savedProducts.includes(product.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                      <svg 
+                        className={`w-5 h-5 transition-all duration-300 ${
+                          savedProducts.includes(product.id) ? 'scale-110' : ''
+                        }`} 
+                        fill={savedProducts.includes(product.id) ? 'currentColor' : 'none'} 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                       </svg>
                     </button>
                     
                     {/* Image */}
-                    <div className="w-full h-32 bg-gradient-to-br from-red-100 to-red-200 rounded-xl mb-3 flex items-center justify-center shadow-inner overflow-hidden">
+                    <div className="w-full h-32 bg-gradient-to-br from-red-100 to-red-200 rounded-xl mb-3 flex items-center justify-center shadow-inner overflow-hidden group-hover:scale-105 transition-transform duration-300">
                       {product.fotoUsaha && product.fotoUsaha[0] ? (
                         <img 
                           src={product.fotoUsaha[0]} 
@@ -335,7 +381,7 @@ export default function EUMKMPage() {
                       )}
                     </div>
                     
-                    <h3 className="font-semibold text-gray-800 mb-1 line-clamp-1">{product.namaUsaha}</h3>
+                    <h3 className="font-semibold text-gray-800 mb-1 line-clamp-1 group-hover:text-red-600 transition-colors">{product.namaUsaha}</h3>
                     <p className="text-red-600 font-bold mb-1">{product.hargaRataRata || 'Hubungi penjual'}</p>
                     <p className="text-gray-500 text-sm mb-1 line-clamp-1">{product.namaPemilik}</p>
                     <div className="flex items-center">

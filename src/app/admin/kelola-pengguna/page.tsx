@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from 'react';
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { auth } from "../../../lib/firebase";
+import { useAuth } from '../../../contexts/AuthContext';
+import { handleAdminLogout } from '../../../lib/logoutHelper';
 import { RoleCardType } from './components/RoleCard';
 import UserListNew from './components/UserListNew';
 import AdminLayout from '../components/AdminLayout';
@@ -51,15 +51,11 @@ const roleCards: RoleCardType[] = [
 
 export default function KelolaPenggunaPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [listRole, setListRole] = useState<RoleCardType | null>(null);
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/admin/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await handleAdminLogout(() => logout('admin'));
   };
 
   return (

@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { auth } from "../../../../lib/firebase";
+import { useAuth } from '../../../contexts/AuthContext';
+import { handleAdminLogout } from '../../../lib/logoutHelper';
 import AdminLayout from "../../components/AdminLayout";
 import AdminHeaderCard from "../../../components/AdminHeaderCard";
 import {
@@ -16,6 +16,7 @@ import {
 
 export default function StrukturSimplifiedAdminPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [selectedType, setSelectedType] = useState<'desa' | 'bpd'>('desa');
   const [strukturData, setStrukturData] = useState<StrukturPemerintahanSimplified | null>(null);
   const [loading, setLoading] = useState(true);
@@ -169,12 +170,7 @@ export default function StrukturSimplifiedAdminPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push("/admin/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await handleAdminLogout(() => logout('admin'));
   };
 
   const officers = strukturData?.officers || [];

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from '../../../contexts/AuthContext';
+import { handleMasyarakatLogout } from '../../../lib/masyarakatLogoutHelper';
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from '../../components/BottomNavigation';
 const SiGedeLogo = "/logo/LOGO_DPKJ.png";
@@ -19,11 +20,7 @@ export default function ProfilMasyarakatPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      await logout('masyarakat');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await handleMasyarakatLogout(() => logout('masyarakat'));
   };
 
   return (

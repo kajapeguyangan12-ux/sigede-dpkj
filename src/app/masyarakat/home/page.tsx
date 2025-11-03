@@ -53,6 +53,7 @@ interface UMKM {
 interface PengaturanHome {
   judulSelamatDatang: string;
   ucapanSelamatDatang: string;
+  fotoUcapanSelamatDatang: string; // New field for welcome image
   fotoKepalaDesa: string;
   namaKepalaDesa: string;
   fotoSlideshow: string[];
@@ -198,16 +199,38 @@ export default function HomeMasyarakatMobile() {
   const [currentSlideshowIndex, setCurrentSlideshowIndex] = useState(0);
 
   useEffect(() => {
+    console.log('🏠 Home Masyarakat: Component mounted');
+    console.log('📋 Session Storage Check:', {
+      popupShown: sessionStorage.getItem('popupShown'),
+      authRedirecting: sessionStorage.getItem('auth_redirecting')
+    });
     fetchData();
     fetchPengaturan();
   }, []);
 
   useEffect(() => {
     // Show popup only once per session if active
-    const popupShown = sessionStorage.getItem('popupShown');
-    if (pengaturan?.popupAktif && !popupShown) {
-      setShowPopup(true);
-      sessionStorage.setItem('popupShown', 'true');
+    // Check both sessionStorage and pengaturan
+    if (pengaturan?.popupAktif) {
+      const popupShown = sessionStorage.getItem('popupShown');
+      console.log('🔔 Checking popup status:', { 
+        popupAktif: pengaturan.popupAktif, 
+        popupShown, 
+        popupTipe: pengaturan.popupTipe 
+      });
+      
+      if (!popupShown) {
+        console.log('✅ Showing popup');
+        // Add small delay to ensure DOM is ready
+        setTimeout(() => {
+          setShowPopup(true);
+          sessionStorage.setItem('popupShown', 'true');
+        }, 500); // 500ms delay to ensure component is fully mounted
+      } else {
+        console.log('ℹ️ Popup already shown in this session');
+      }
+    } else {
+      console.log('ℹ️ Popup tidak aktif atau pengaturan belum dimuat');
     }
   }, [pengaturan]);
 
@@ -260,19 +283,43 @@ export default function HomeMasyarakatMobile() {
       console.log('Berita terbaru:', berita);
 
       // Fetch 3 UMKM dengan rating tertinggi (hanya yang aktif)
-      const umkmQuery = query(
-        collection(db, "e-umkm"),
-        where("status", "==", "aktif"),
-        orderBy("rating", "desc"),
-        limit(3)
-      );
-      const umkmSnapshot = await getDocs(umkmQuery);
-      const umkm: UMKM[] = [];
-      umkmSnapshot.forEach((doc) => {
-        umkm.push({ id: doc.id, ...doc.data() } as UMKM);
-      });
-      setUmkmList(umkm);
-      console.log('UMKM rating tertinggi:', umkm);
+      // Try with composite index first, fallback to client-side filtering if index not available
+      try {
+        const umkmQuery = query(
+          collection(db, "e-umkm"),
+          where("status", "==", "aktif"),
+          orderBy("rating", "desc"),
+          limit(3)
+        );
+        const umkmSnapshot = await getDocs(umkmQuery);
+        const umkm: UMKM[] = [];
+        umkmSnapshot.forEach((doc) => {
+          umkm.push({ id: doc.id, ...doc.data() } as UMKM);
+        });
+        setUmkmList(umkm);
+        console.log('UMKM rating tertinggi:', umkm);
+      } catch (indexError: any) {
+        console.warn('⚠️ Composite index not available, using fallback query:', indexError.message);
+        
+        // Fallback: Fetch all active UMKM and sort client-side
+        const umkmFallbackQuery = query(
+          collection(db, "e-umkm"),
+          where("status", "==", "aktif")
+        );
+        const umkmSnapshot = await getDocs(umkmFallbackQuery);
+        const umkm: UMKM[] = [];
+        umkmSnapshot.forEach((doc) => {
+          umkm.push({ id: doc.id, ...doc.data() } as UMKM);
+        });
+        
+        // Sort by rating client-side and take top 3
+        const sortedUmkm = umkm
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+          .slice(0, 3);
+        
+        setUmkmList(sortedUmkm);
+        console.log('UMKM rating tertinggi (fallback):', sortedUmkm);
+      }
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -283,14 +330,23 @@ export default function HomeMasyarakatMobile() {
 
   const fetchPengaturan = async () => {
     try {
+      console.log('📥 Fetching pengaturan home...');
       const docRef = doc(db, "pengaturan", "home");
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        setPengaturan(docSnap.data() as PengaturanHome);
+        const data = docSnap.data() as PengaturanHome;
+        console.log('✅ Pengaturan loaded:', {
+          popupAktif: data.popupAktif,
+          popupTipe: data.popupTipe,
+          popupJudul: data.popupJudul
+        });
+        setPengaturan(data);
+      } else {
+        console.log('⚠️ Pengaturan document tidak ditemukan');
       }
     } catch (error) {
-      console.error('Error fetching pengaturan:', error);
+      console.error('❌ Error fetching pengaturan:', error);
     }
   };
 
@@ -527,23 +583,15 @@ export default function HomeMasyarakatMobile() {
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4">
-                        <p className="text-gray-700 text-sm sm:text-base leading-relaxed italic text-center">
-                          "{pengaturan?.ucapanSelamatDatang || "Selamat datang di Sistem Informasi Desa Dauh Puri Kaja."}"
-                        </p>
-                        <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-center gap-2">
-                          <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">
-                              {pengaturan?.namaKepalaDesa?.charAt(0) || 'K'}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-800">
-                              {pengaturan?.namaKepalaDesa || 'Kepala Desa'}
-                            </p>
-                            <p className="text-xs text-gray-500">Dauh Puri Kaja</p>
-                          </div>
-                        </div>
+                      <div className="relative w-full h-full">
+                        {/* Welcome Image - Full Container */}
+                        {pengaturan?.fotoUcapanSelamatDatang && (
+                          <img 
+                            src={pengaturan.fotoUcapanSelamatDatang}
+                            alt="Ucapan Selamat Datang"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
                       </div>
                     )}
                   </div>

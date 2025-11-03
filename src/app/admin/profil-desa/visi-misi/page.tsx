@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { auth } from "../../../../lib/firebase";
+import { useAuth } from "../../../../contexts/AuthContext";
+import { handleAdminLogout } from "../../../../lib/logoutHelper";
 import AdminLayout from "../../components/AdminLayout";
 import AdminHeaderCard, { AdminHeaderSearchBar, AdminHeaderAccount } from "../../../components/AdminHeaderCard";
 import {
@@ -16,6 +16,7 @@ import {
 
 export default function VisiMisiDesaAdminPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [visiMisiData, setVisiMisiData] = useState<VisiMisiContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -194,12 +195,7 @@ export default function VisiMisiDesaAdminPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push("/admin/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await handleAdminLogout(() => logout('admin'));
   };
 
   return (

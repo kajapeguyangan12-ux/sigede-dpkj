@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../contexts/AuthContext";
+import { handleAdminLogout } from '../../../lib/logoutHelper';
 import AdminLayout from "../components/AdminLayout";
 import AdminHeaderCard, { AdminHeaderAccount } from "../../components/AdminHeaderCard";
 
@@ -33,11 +34,7 @@ export default function ProfilAdminPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      await logout('admin');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await handleAdminLogout(() => logout('admin'));
   };
 
   if (!user) {

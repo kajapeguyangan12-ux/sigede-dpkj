@@ -47,6 +47,48 @@ export default function LoginMasyarakatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Check existing session and clear any stale data on mount
+  useEffect(() => {
+    console.log('🔍 Masyarakat Login: Component mounted, checking session');
+    
+    // Clear any redirecting flags and popup flags for fresh login
+    sessionStorage.removeItem('auth_redirecting');
+    sessionStorage.removeItem('popupShown'); // Clear popup flag so it shows on next login
+    
+    // Check if user is already authenticated
+    const storedUser = localStorage.getItem('sigede_auth_user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        const adminRoles = ['administrator', 'admin_desa', 'kepala_desa'];
+        
+        // If valid masyarakat user (non-admin), redirect to home
+        if (userData && userData.role && !adminRoles.includes(userData.role)) {
+          console.log('🔄 Already authenticated as masyarakat, redirecting');
+          window.location.href = '/masyarakat/home';
+          return;
+        } else if (userData && userData.role && adminRoles.includes(userData.role)) {
+          // Admin trying to access masyarakat login
+          console.log('🗑️ Admin session found on masyarakat login, clearing');
+          localStorage.removeItem('sigede_auth_user');
+          localStorage.removeItem('userId');
+        } else {
+          // Invalid session
+          console.log('🗑️ Invalid session, clearing');
+          localStorage.removeItem('sigede_auth_user');
+          localStorage.removeItem('userId');
+        }
+      } catch (e) {
+        console.log('🗑️ Corrupted session data, clearing');
+        localStorage.removeItem('sigede_auth_user');
+        localStorage.removeItem('userId');
+      }
+    }
+    
+    // Clear any submission state on mount
+    setIsLoading(false);
+  }, []); // Run once on mount
+
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
