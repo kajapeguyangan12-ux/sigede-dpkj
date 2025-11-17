@@ -1,0 +1,695 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import AdminLayout from "../components/AdminLayout";
+import AdminHeaderCard, { AdminHeaderSearchBar, AdminHeaderAccount } from "../../components/AdminHeaderCard";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../../contexts/AuthContext";
+import { handleAdminLogout } from "../../../lib/logoutHelper";
+import { 
+  getAllLayananPublik, 
+  getLayananByJenis, 
+  updateStatusLayanan, 
+  LayananPublik,
+  getLayananStats,
+  approveByAdmin,
+  approveByKadus,
+  approveByKades,
+  markAsCompleted
+} from "../../../lib/layananPublikService";
+
+const jenisLayananList = [
+  "Surat Kelakuan Baik",
+  "Surat Keterangan Belum Nikah/Kawin", 
+  "Surat Keterangan Belum Bekerja",
+  "Surat Keterangan Kawin/Menikah",
+  "Surat Keterangan Kematian",
+  "Surat Keterangan Perjalanan",
+  "Pelayanan Taring Dukcapil"
+];
+
+export default function LayananPublikAdminPage() {
+  const router = useRouter();
+  const { logout, user } = useAuth();
+  const [layananData, setLayananData] = useState<LayananPublik[]>([]);
+  const [filteredData, setFilteredData] = useState<LayananPublik[]>([]);
+  const [loading, setLoading] = useState(false); // Only for data operations
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedJenis, setSelectedJenis] = useState("semua");
+  const [selectedStatus, setSelectedStatus] = useState("semua");
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedLayanan, setSelectedLayanan] = useState<LayananPublik | null>(null);
+  const [processingAction, setProcessingAction] = useState(false);
+  const [stats, setStats] = useState<any>(null);
+  const [actionModal, setActionModal] = useState<{
+    show: boolean;
+    type: 'approve' | 'tolak' | 'selesai' | null;
+    layanan: LayananPublik | null;
+  }>({
+    show: false,
+    type: null,
+    layanan: null
+  });
+  const [actionForm, setActionForm] = useState({
+    catatan: "",
+    alasanTolak: ""
+  });
+
+  useEffect(() => {
+    fetchData();
+    fetchStats();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllLayananPublik();
+      setLayananData(data);
+      setFilteredData(data);
+    } catch (error) {
+      console.error("Error fetching layanan:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const statsData = await getLayananStats();
+      setStats(statsData);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    await handleAdminLogout(() => logout('admin'));
+  };
+
+  // Filter data berdasarkan search, jenis, dan status
+  useEffect(() => {
+    let filtered = layananData;
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.namaLengkap.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.jenisLayanan.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.nik.includes(searchTerm)
+      );
+    }
+
+    // Filter by jenis layanan
+    if (selectedJenis !== "semua") {
+      filtered = filtered.filter(item => item.jenisLayanan === selectedJenis);
+    }
+
+    // Filter by status
+    if (selectedStatus !== "semua") {
+      filtered = filtered.filter(item => item.status === selectedStatus);
+    }
+
+    // Role-based filtering
+    if (user?.role) {
+      filtered = filtered.filter(item => {
+        switch (user.role) {
+          case 'admin_desa':
+            // Admin desa bisa lihat: pending_admin, approved_admin, dan yang sudah diproses lebih lanjut
+            return ['pending_admin', 'approved_admin', 'approved_kadus', 'approved_kades', 'completed', 'ditolak', 'auto_approved'].includes(item.status);
+          
+          case 'kepala_dusun':
+            // Kepala dusun bisa lihat: approved_admin (untuk approval), approved_kadus, dan yang sudah diproses lebih lanjut
+            return ['approved_admin', 'approved_kadus', 'approved_kades', 'completed', 'ditolak', 'auto_approved'].includes(item.status);
+          
+          case 'kepala_desa':
+            // Kepala desa bisa lihat: approved_kadus (untuk approval), approved_kades, dan yang sudah diproses lebih lanjut  
+            return ['approved_kadus', 'approved_kades', 'completed', 'ditolak', 'auto_approved'].includes(item.status);
+          
+          default:
+            // Super admin atau role lain bisa lihat semua
+            return true;
+        }
+      });
+    }
+
+    setFilteredData(filtered);
+  }, [searchTerm, selectedJenis, selectedStatus, layananData, user]);
+
+  const handleDetailClick = (layanan: LayananPublik) => {
+    setSelectedLayanan(layanan);
+    setShowDetailModal(true);
+  };
+
+  const handleActionClick = (type: 'approve' | 'tolak' | 'selesai', layanan: LayananPublik) => {
+    setActionModal({
+      show: true,
+      type,
+      layanan
+    });
+    setActionForm({ catatan: "", alasanTolak: "" });
+  };
+
+  const processAction = async () => {
+    if (!actionModal.layanan || !actionModal.type || !user) return;
+    
+    try {
+      setProcessingAction(true);
+      
+      if (actionModal.type === 'approve') {
+        // Workflow approval berdasarkan role dan status current
+        const currentStatus = actionModal.layanan.status;
+        
+        if (user.role === 'admin_desa' && currentStatus === 'pending_admin') {
+          await approveByAdmin(actionModal.layanan.id!, {
+            catatanAdmin: actionForm.catatan
+          });
+        } else if (user.role === 'kepala_dusun' && currentStatus === 'approved_admin') {
+          await approveByKadus(actionModal.layanan.id!, {
+            catatanKadus: actionForm.catatan
+          });
+        } else if (user.role === 'kepala_desa' && currentStatus === 'approved_kadus') {
+          await approveByKades(actionModal.layanan.id!, {
+            catatanKades: actionForm.catatan
+          });
+        } else {
+          alert('Tidak ada aksi approval yang dapat dilakukan untuk status ini!');
+          return;
+        }
+      } else if (actionModal.type === 'tolak') {
+        await updateStatusLayanan(
+          actionModal.layanan.id!,
+          'ditolak',
+          {
+            processedBy: user.displayName || "Admin",
+            alasanTolak: actionForm.alasanTolak
+          }
+        );
+      } else if (actionModal.type === 'selesai') {
+        await markAsCompleted(actionModal.layanan.id!);
+      }
+
+      await fetchData();
+      await fetchStats();
+      setActionModal({ show: false, type: null, layanan: null });
+      alert(`Layanan berhasil ${actionModal.type === 'approve' ? 'disetujui' : actionModal.type === 'tolak' ? 'ditolak' : 'diselesaikan'}!`);
+    } catch (error) {
+      console.error("Error processing action:", error);
+      alert("Terjadi kesalahan saat memproses layanan!");
+    } finally {
+      setProcessingAction(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'diproses': return 'bg-blue-100 text-blue-800';
+      case 'diterima': return 'bg-green-100 text-green-800';
+      case 'ditolak': return 'bg-red-100 text-red-800';
+      case 'selesai': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Menunggu';
+      case 'diproses': return 'Diproses';
+      case 'diterima': return 'Diterima';
+      case 'ditolak': return 'Ditolak';
+      case 'selesai': return 'Selesai';
+      default: return status;
+    }
+  };
+
+  return (
+    <AdminLayout>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        {/* Enhanced Header */}
+        <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 relative z-40 overflow-hidden max-w-7xl mx-auto mt-6">
+          {/* Floating Background Elements */}
+          <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-pink-400/10 to-rose-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-rose-400/5 to-purple-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
+
+          {/* Enhanced AdminHeaderCard with better styling */}
+          <div className="w-full bg-gradient-to-r from-white via-purple-50/30 to-pink-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
+            {/* Enhanced Title Section */}
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-xl shadow-purple-500/25 transform hover:scale-105 transition-all duration-300">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd"/>
+                  <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-purple-800 to-pink-800 bg-clip-text text-transparent mb-2">
+                  Layanan Publik
+                </h1>
+                <p className="text-slate-600 font-medium text-lg">
+                  Kelola permohonan layanan publik dari masyarakat
+                </p>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2 text-sm text-purple-600 font-semibold">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                    Permohonan Aktif
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-pink-600 font-semibold">
+                    <div className="w-2 h-2 bg-pink-500 rounded-full animate-pulse"></div>
+                    Sistem Online
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Enhanced Controls Section */}
+            <div className="flex items-center gap-6 relative z-10">
+              {/* Enhanced Search Bar */}
+              <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-purple-400 hover:shadow-lg transition-all duration-300 group">
+                <input
+                  type="text"
+                  placeholder="Cari permohonan layanan..."
+                  className="flex-1 bg-transparent text-gray-700 text-base font-medium focus:outline-none placeholder-gray-500"
+                />
+                <svg
+                  className="ml-3 text-gray-400 group-hover:text-purple-500 transition-colors duration-300"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              
+              {/* Enhanced Account Section */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-purple-50 hover:to-purple-100 transition-all duration-300 cursor-pointer shadow-md">
+                  <svg
+                    width="24"
+                    height="24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    className="text-gray-600"
+                  >
+                    <path d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 01-7.5-7.5h2A5.5 5.5 0 0110 10z"/>
+                  </svg>
+                </div>
+                
+                <button
+                  onClick={handleLogout}
+                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    className="text-red-600 group-hover:text-red-700"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Manajemen Layanan Publik
+            </h1>
+            <p className="text-gray-700 font-medium">
+              Kelola permohonan layanan publik dari masyarakat
+            </p>
+          </div>
+
+          {/* Statistics Cards */}
+          {stats && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
+                  <p className="text-sm text-gray-700 font-medium">Total</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                  <p className="text-sm text-gray-700 font-medium">Menunggu</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{stats.diproses}</p>
+                  <p className="text-sm text-gray-700 font-medium">Diproses</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">{stats.diterima}</p>
+                  <p className="text-sm text-gray-700 font-medium">Diterima</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-600">{stats.ditolak}</p>
+                  <p className="text-sm text-gray-700 font-medium">Ditolak</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">{stats.selesai}</p>
+                  <p className="text-sm text-gray-700 font-medium">Selesai</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Filters */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 shadow-sm">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative">
+                <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Cari berdasarkan nama, NIK, atau jenis layanan..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <select
+                value={selectedJenis}
+                onChange={(e) => setSelectedJenis(e.target.value)}
+                className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+              >
+                <option value="semua">Semua Jenis Layanan</option>
+                {jenisLayananList.map(jenis => (
+                  <option key={jenis} value={jenis}>{jenis}</option>
+                ))}
+              </select>
+
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
+              >
+                <option value="semua">Semua Status</option>
+                <option value="pending">Menunggu</option>
+                <option value="diproses">Diproses</option>
+                <option value="diterima">Diterima</option>
+                <option value="ditolak">Ditolak</option>
+                <option value="selesai">Selesai</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Layanan Cards */}
+          <div className="space-y-4">
+            {filteredData.length === 0 && !loading ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                <div className="text-6xl mb-4">📄</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Tidak ada layanan</h3>
+                <p className="text-gray-700 font-medium">Belum ada permohonan layanan yang masuk</p>
+              </div>
+            ) : (
+              filteredData.map((layanan) => (
+                <div key={layanan.id} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{layanan.jenisLayanan}</h3>
+                          <p className="text-sm text-gray-600">{layanan.namaLengkap}</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(layanan.status)}`}>
+                          {getStatusText(layanan.status)}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-700 font-medium">NIK:</span>
+                          <span className="ml-2 font-semibold text-gray-900">{layanan.nik}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-700 font-medium">Tanggal Upload:</span>
+                          <span className="ml-2 font-semibold text-gray-900">
+                            {layanan.createdAt ? new Date(layanan.createdAt.seconds * 1000).toLocaleDateString('id-ID') : '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-700 font-medium">Keperluan:</span>
+                          <span className="ml-2 font-semibold text-gray-900">{layanan.keperluan || '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="ml-6 flex flex-col gap-2">
+                      <button
+                        onClick={() => handleDetailClick(layanan)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                      >
+                        Detail
+                      </button>
+                      
+                      {/* Role-based approval buttons */}
+                      {user?.role === 'admin_desa' && layanan.status === 'pending_admin' && (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => handleActionClick('approve', layanan)}
+                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                          >
+                            Approve Admin
+                          </button>
+                          <button
+                            onClick={() => handleActionClick('tolak', layanan)}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                          >
+                            Tolak
+                          </button>
+                        </div>
+                      )}
+                      
+                      {user?.role === 'kepala_dusun' && layanan.status === 'approved_admin' && (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => handleActionClick('approve', layanan)}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                          >
+                            Approve Kadus
+                          </button>
+                          <button
+                            onClick={() => handleActionClick('tolak', layanan)}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                          >
+                            Tolak
+                          </button>
+                        </div>
+                      )}
+                      
+                      {user?.role === 'kepala_desa' && layanan.status === 'approved_kadus' && (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => handleActionClick('approve', layanan)}
+                            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
+                          >
+                            Approve Kades
+                          </button>
+                          <button
+                            onClick={() => handleActionClick('tolak', layanan)}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                          >
+                            Tolak
+                          </button>
+                        </div>
+                      )}
+                      
+                      {layanan.status === 'approved_kades' && (
+                        <button
+                          onClick={() => handleActionClick('selesai', layanan)}
+                          className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm font-medium"
+                        >
+                          Mark Completed
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Detail Modal */}
+        {showDetailModal && selectedLayanan && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-900">Detail Permohonan</h3>
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Informasi Pemohon</h4>
+                    <div className="space-y-2 text-sm text-gray-800">
+                      <div className="text-gray-900"><strong className="text-gray-900">Nama Lengkap:</strong> {selectedLayanan.namaLengkap}</div>
+                      <div className="text-gray-900"><strong className="text-gray-900">NIK:</strong> {selectedLayanan.nik}</div>
+                      <div className="text-gray-900"><strong className="text-gray-900">No. KK:</strong> {selectedLayanan.noKK}</div>
+                      <div className="text-gray-900"><strong className="text-gray-900">Alamat:</strong> {selectedLayanan.alamat}</div>
+                      {selectedLayanan.noTelepon && <div className="text-gray-900"><strong className="text-gray-900">No. Telepon:</strong> {selectedLayanan.noTelepon}</div>}
+                      {selectedLayanan.email && <div className="text-gray-900"><strong className="text-gray-900">Email:</strong> {selectedLayanan.email}</div>}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Detail Layanan</h4>
+                    <div className="space-y-2 text-sm text-gray-800">
+                      <div className="text-gray-900"><strong className="text-gray-900">Jenis Layanan:</strong> {selectedLayanan.jenisLayanan}</div>
+                      <div className="text-gray-900"><strong className="text-gray-900">Status:</strong> 
+                        <span className={`ml-2 px-2 py-1 rounded text-xs ${getStatusColor(selectedLayanan.status)}`}>
+                          {getStatusText(selectedLayanan.status)}
+                        </span>
+                      </div>
+                      <div className="text-gray-900"><strong className="text-gray-900">Tanggal Permohonan:</strong> 
+                        {selectedLayanan.createdAt ? new Date(selectedLayanan.createdAt.seconds * 1000).toLocaleDateString('id-ID') : '-'}
+                      </div>
+                      {selectedLayanan.keperluan && <div className="text-gray-900"><strong className="text-gray-900">Keperluan:</strong> {selectedLayanan.keperluan}</div>}
+                      {selectedLayanan.tujuan && <div className="text-gray-900"><strong className="text-gray-900">Tujuan:</strong> {selectedLayanan.tujuan}</div>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Information based on jenis layanan */}
+                {(selectedLayanan.tempatLahir || selectedLayanan.tanggalLahir || selectedLayanan.jenisKelamin) && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Data Pribadi</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-800">
+                      {selectedLayanan.tempatLahir && <div className="text-gray-900"><strong className="text-gray-900">Tempat Lahir:</strong> {selectedLayanan.tempatLahir}</div>}
+                      {selectedLayanan.tanggalLahir && <div className="text-gray-900"><strong className="text-gray-900">Tanggal Lahir:</strong> {selectedLayanan.tanggalLahir}</div>}
+                      {selectedLayanan.jenisKelamin && <div className="text-gray-900"><strong className="text-gray-900">Jenis Kelamin:</strong> {selectedLayanan.jenisKelamin}</div>}
+                      {selectedLayanan.agama && <div className="text-gray-900"><strong className="text-gray-900">Agama:</strong> {selectedLayanan.agama}</div>}
+                      {selectedLayanan.pekerjaan && <div className="text-gray-900"><strong className="text-gray-900">Pekerjaan:</strong> {selectedLayanan.pekerjaan}</div>}
+                      {selectedLayanan.statusPerkawinan && <div className="text-gray-900"><strong className="text-gray-900">Status Perkawinan:</strong> {selectedLayanan.statusPerkawinan}</div>}
+                    </div>
+                  </div>
+                )}
+
+                {selectedLayanan.catatanTambahan && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Catatan Tambahan</h4>
+                    <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedLayanan.catatanTambahan}</p>
+                  </div>
+                )}
+
+                {selectedLayanan.catatanAdmin && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Catatan Admin</h4>
+                    <p className="text-sm text-gray-900 bg-blue-50 p-3 rounded-lg">{selectedLayanan.catatanAdmin}</p>
+                  </div>
+                )}
+
+                {selectedLayanan.alasanTolak && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Alasan Penolakan</h4>
+                    <p className="text-sm text-red-900 bg-red-50 p-3 rounded-lg">{selectedLayanan.alasanTolak}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Modal */}
+        {actionModal.show && actionModal.layanan && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900">
+                  {actionModal.type === 'approve' ? 'Approve Permohonan' : 
+                   actionModal.type === 'tolak' ? 'Tolak Permohonan' : 'Selesaikan Layanan'}
+                </h3>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {actionModal.type === 'tolak' ? 'Alasan Penolakan *' : 'Catatan'}
+                  </label>
+                  <textarea
+                    value={actionModal.type === 'tolak' ? actionForm.alasanTolak : actionForm.catatan}
+                    onChange={(e) => setActionForm(prev => ({
+                      ...prev,
+                      [actionModal.type === 'tolak' ? 'alasanTolak' : 'catatan']: e.target.value
+                    }))}
+                    placeholder={
+                      actionModal.type === 'tolak' 
+                        ? 'Berikan alasan mengapa permohonan ditolak...' 
+                        : 'Tambahkan catatan atau instruksi...'
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={4}
+                    required={actionModal.type === 'tolak'}
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setActionModal({ show: false, type: null, layanan: null })}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    disabled={processingAction}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={processAction}
+                    disabled={processingAction || (actionModal.type === 'tolak' && !actionForm.alasanTolak.trim())}
+                    className={`px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 ${
+                      actionModal.type === 'approve' ? 'bg-green-500 hover:bg-green-600' :
+                      actionModal.type === 'tolak' ? 'bg-red-500 hover:bg-red-600' :
+                      'bg-purple-500 hover:bg-purple-600'
+                    }`}
+                  >
+                    {processingAction ? 'Memproses...' : 
+                     actionModal.type === 'approve' ? 'Approve' :
+                     actionModal.type === 'tolak' ? 'Tolak' : 'Selesai'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </AdminLayout>
+  );
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from '../../components/BottomNavigation';
 import { getRegulasiDesa, type RegulasiDesa } from '../../../lib/regulasiService';
@@ -13,22 +13,22 @@ export default function RegulasiPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchRegulasiData = async () => {
-      try {
-        const data = await getRegulasiDesa();
-        // Filter hanya regulasi yang aktif
-        const activeRegulasi = data.filter(item => item.status === 'aktif');
-        setRegulasiData(activeRegulasi);
-      } catch (error) {
-        console.error('Error fetching regulasi data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRegulasiData();
+  const fetchRegulasiData = useMemo(() => async () => {
+    try {
+      const data = await getRegulasiDesa();
+      // Filter hanya regulasi yang aktif
+      const activeRegulasi = data.filter(item => item.status === 'aktif');
+      setRegulasiData(activeRegulasi);
+    } catch (error) {
+      console.error('Error fetching regulasi data:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchRegulasiData();
+  }, [fetchRegulasiData]);
 
   const openDetailModal = (regulasi: RegulasiDesa) => {
     setSelectedRegulasi(regulasi);

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import AuthGuard from '@/app/components/AuthGuard';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -44,15 +43,17 @@ export default function CreateUMKMPage() {
   const [jamBuka, setJamBuka] = useState('08:00');
   const [jamTutup, setJamTutup] = useState('20:00');
 
-  // Load user data
+  // Load user data and check access
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userId = localStorage.getItem('userId');
-      if (userId) {
-        // You can fetch user data here if needed
+    if (user) {
+      // Block access for external users
+      if (user.role === 'warga_luar_dpkj') {
+        alert('Akses ditolak. Fitur ini hanya tersedia untuk warga lokal DPKJ.');
+        router.push('/masyarakat/e-umkm');
+        return;
       }
     }
-  }, []);
+  }, [user, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -214,18 +215,8 @@ export default function CreateUMKMPage() {
       const imageUrls = photos.length > 0 ? await uploadImages() : [];
 
       // Get user data
-      const userId = localStorage.getItem('userId');
-      const userName = localStorage.getItem('sigede_auth_user');
-      let namaPemilik = 'User';
-      
-      if (userName) {
-        try {
-          const userData = JSON.parse(userName);
-          namaPemilik = userData.nama || userData.email || 'User';
-        } catch (e) {
-          console.error('Error parsing user data:', e);
-        }
-      }
+      const userId = user?.uid;
+      const namaPemilik = user?.displayName || user?.email || 'User';
 
       // Save to Firestore
       await addDoc(collection(db, 'e-umkm'), {
@@ -237,6 +228,7 @@ export default function CreateUMKMPage() {
         tanggalDaftar: serverTimestamp(),
         rating: 0,
         jumlahProduk: 0,
+        totalKunjungan: 0, // Initialize visit count
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -252,8 +244,7 @@ export default function CreateUMKMPage() {
   };
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-24">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-pink-600 px-3 sm:px-4 py-4 sm:py-6">
           <div className="max-w-4xl mx-auto">
@@ -718,7 +709,6 @@ export default function CreateUMKMPage() {
           </div>
         )}
       </div>
-    </AuthGuard>
   );
 }
 

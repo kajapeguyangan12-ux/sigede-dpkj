@@ -33,7 +33,7 @@ export default function RegulasiDesaPage() {
     berlaku: 0,
     tidakBerlaku: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Only for data operations
   const [showModal, setShowModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -201,12 +201,148 @@ export default function RegulasiDesaPage() {
   return (
     <AdminLayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-        <AdminHeaderCard title="Kelola Regulasi Desa">
-          <AdminHeaderSearchBar />
-          <AdminHeaderAccount onLogout={handleLogout} />
-        </AdminHeaderCard>
+        {/* Enhanced AdminHeaderCard with better styling */}
+        <div className="w-full bg-gradient-to-r from-white via-blue-50/30 to-indigo-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-8 -mt-10 md:-mt-14 lg:-mt-16 z-50 relative backdrop-blur-sm overflow-hidden">
+          {/* Floating Background Elements */}
+          <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-blue-400/5 to-cyan-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
+          {/* Enhanced Title Section */}
+          {/* Enhanced Controls Section */}
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/25 transform hover:scale-105 transition-all duration-300">
+              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 bg-clip-text text-transparent mb-2">
+                Kelola Regulasi Desa
+              </h1>
+              <p className="text-slate-600 font-medium text-lg">
+                Manajemen peraturan desa dan kelurahan
+              </p>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-2 text-sm text-blue-600 font-semibold">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  {regulasiData.length} Total Regulasi
+                </div>
+                <div className="flex items-center gap-2 text-sm text-green-600 font-semibold">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  {stats.berlaku} Aktif
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Enhanced Title Section */}
+          <div className="flex items-center gap-6 relative z-10">
+            {/* Enhanced Search Bar */}
+            <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-blue-400 hover:shadow-lg transition-all duration-300 group">
+              <input
+                type="text"
+                placeholder="Cari regulasi, nomor, atau jenis..."
+                className="flex-1 bg-transparent text-gray-700 text-base font-medium focus:outline-none placeholder-gray-500"
+              />
+              <svg
+                className="ml-3 text-gray-400 group-hover:text-blue-500 transition-colors duration-300"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </div>
+            
+            {/* Enhanced Account Section */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-blue-50 hover:to-blue-100 transition-all duration-300 cursor-pointer shadow-md">
+                <svg
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  className="text-gray-600"
+                >
+                  <path d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 01-7.5-7.5h2A5.5 5.5 0 0110 10z"/>
+                </svg>
+              </div>
+              
+              <button
+                onClick={handleLogout}
+                className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  className="text-red-600 group-hover:text-red-700"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Search and Filter Section */}
+          <div className="mb-8 bg-white rounded-2xl shadow-md p-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Cari regulasi..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  className="px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors font-medium"
+                >
+                  <option value="semua">Semua Status</option>
+                  <option value="aktif">Aktif</option>
+                  <option value="tidak_aktif">Tidak Aktif</option>
+                </select>
+
+                <button
+                  onClick={() => {
+                    setEditingId(null);
+                    setSelectedPdfFile(null);
+                    setSelectedDiagramFile(null);
+                    setShowModal(true);
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 font-semibold"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Tambah Regulasi
+                </button>
+              </div>
+            </div>
+          </div>
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform duration-300">

@@ -102,7 +102,7 @@ export default function KeuanganMasyarakatPage() {
     if (yearOptions.length > 0 && !yearOptions.includes(selectedYear)) {
       setSelectedYear(yearOptions[0]);
     }
-  }, [yearOptions, selectedYear]);
+  }, [yearOptions]);
 
   const financeData = useMemo(() => processAPBData(apbData), [apbData]);
   

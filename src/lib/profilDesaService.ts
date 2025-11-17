@@ -299,16 +299,59 @@ const convertToWebP = (file: File): Promise<Blob> => {
 
       canvas.toBlob((blob) => {
         if (blob) {
+          console.log('✅ WebP conversion successful', {
+            originalSize: file.size,
+            webpSize: blob.size,
+            compression: ((1 - blob.size / file.size) * 100).toFixed(2) + '%'
+          });
           resolve(blob);
         } else {
           reject(new Error('Failed to convert image to WebP'));
         }
-      }, 'image/webp', 0.8);
+      }, 'image/webp', 0.85); // Quality 85%
     };
 
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = URL.createObjectURL(file);
   });
+};
+
+// Upload image to struktur-pemerintahan folder
+export const uploadStrukturImage = async (file: File, fileName: string): Promise<string> => {
+  try {
+    const storage = getStorage();
+    const storageRef = ref(storage, `struktur-pemerintahan/${fileName}`);
+
+    // Convert to WebP first
+    const webpBlob = await convertToWebP(file);
+    const webpFile = new File([webpBlob], fileName.replace(/\.[^/.]+$/, '.webp'), { type: 'image/webp' });
+
+    const snapshot = await uploadBytes(storageRef, webpFile);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading struktur image:', error);
+    throw error;
+  }
+};
+
+// Upload image to lembaga-kemasyarakatan folder
+export const uploadLembagaImage = async (file: File, fileName: string): Promise<string> => {
+  try {
+    const storage = getStorage();
+    const storageRef = ref(storage, `lembaga-kemasyarakatan/${fileName}`);
+
+    // Convert to WebP first
+    const webpBlob = await convertToWebP(file);
+    const webpFile = new File([webpBlob], fileName.replace(/\.[^/.]+$/, '.webp'), { type: 'image/webp' });
+
+    const snapshot = await uploadBytes(storageRef, webpFile);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading lembaga image:', error);
+    throw error;
+  }
 };
 
 const normaliseDusunData = (value: unknown): WilayahDusunEntry[] => {

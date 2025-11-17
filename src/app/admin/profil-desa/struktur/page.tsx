@@ -12,7 +12,7 @@ import {
   deleteStrukturPemerintahan,
   getStrukturCoverImage,
   saveStrukturCoverImage,
-  uploadImageToStorage 
+  uploadStrukturImage 
 } from "../../../../lib/profilDesaService";
 
 interface AnggotaStruktur {
@@ -38,7 +38,7 @@ export default function StrukturPage() {
   const [tipeStruktur, setTipeStruktur] = useState<TipeStruktur>('pemerintahan-desa');
   const [anggotaList, setAnggotaList] = useState<AnggotaStruktur[]>([]);
   const [coverImage, setCoverImage] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Only for data operations
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAnggota, setEditingAnggota] = useState<AnggotaStruktur | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -144,7 +144,13 @@ export default function StrukturPage() {
 
     try {
       setUploadingCover(true);
-      const imageUrl = await uploadImageToStorage(file, `cover-struktur-${tipeStruktur}`);
+      // Generate filename dengan format WebP
+      const timestamp = Date.now();
+      const tipeNama = tipeStruktur === 'pemerintahan-desa' ? 'pemerintahan' : 'bpd';
+      const fileName = `${timestamp}_${tipeNama}.webp`;
+      
+      // Upload akan otomatis dikonversi ke WebP oleh uploadStrukturImage
+      const imageUrl = await uploadStrukturImage(file, fileName);
       await saveStrukturCoverImage(tipeStruktur, imageUrl);
       setCoverImage(imageUrl);
       alert('Cover image berhasil diupdate');
@@ -484,7 +490,13 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
 
     try {
       setUploading(true);
-      const imageUrl = await uploadImageToStorage(file, `struktur-${tipeStruktur}`);
+      // Generate filename dengan format WebP
+      const timestamp = Date.now();
+      const tipeNama = tipeStruktur === 'pemerintahan-desa' ? 'pemerintahan' : 'bpd';
+      const fileName = `${timestamp}_${tipeNama}_anggota.webp`;
+      
+      // Upload akan otomatis dikonversi ke WebP oleh uploadStrukturImage
+      const imageUrl = await uploadStrukturImage(file, fileName);
       setFormData({ ...formData, foto: imageUrl });
     } catch (error) {
       console.error('Error uploading image:', error);

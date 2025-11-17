@@ -1,388 +1,189 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import Image from "next/image";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import HeaderCard from "../../components/HeaderCard";
-import { userManagementService } from "../../../lib/userManagementService";
 
-// Custom SVG icons as components
+// Custom SVG icons
+const UserGroupIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+  </svg>
+);
+
 const UserIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
   </svg>
 );
 
-const IdentificationIcon = ({ className }: { className?: string }) => (
+const HomeIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
   </svg>
 );
 
-const MailIcon = ({ className }: { className?: string }) => (
+const GlobeIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-  </svg>
-);
-
-const PhoneIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-  </svg>
-);
-
-const LockClosedIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
   </svg>
 );
 
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
   </svg>
 );
 
-const CheckIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-  </svg>
-);
-
+// Logo paths
 const DesaLogo = "/logo/LOGO_DPKJ.png";
 
-export default function DaftarMasyarakatPage() {
+export default function RegisterSelectionPage() {
   const router = useRouter();
-  
-  const [form, setForm] = useState({
-    username: "",
-    name: "",
-    nik: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirm: "",
-    agree: false,
-  });
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
-  const canSubmit = useMemo(() => {
-    return (
-      form.username.trim() !== "" &&
-      form.name.trim() !== "" &&
-      form.nik.trim() !== "" &&
-      form.email.trim() !== "" &&
-      form.phone.trim() !== "" &&
-      form.password.length >= 6 &&
-      form.password === form.confirm &&
-      form.agree
-    );
-  }, [form]);
+  const handleWargaLokalClick = () => {
+    router.push('/masyarakat/daftar/warga-lokal');
+  };
 
-  const set = (k: keyof typeof form, v: string | boolean) =>
-    setForm((s) => ({ ...s, [k]: v }));
-
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!canSubmit) return;
-    
-    setIsLoading(true);
-    setError("");
-    setSuccessMessage("");
-    
-    try {
-      console.log('🚀 Submitting registration...');
-      
-      // Validasi NIK (harus 16 digit)
-      if (form.nik.length !== 16) {
-        setError('NIK harus 16 digit');
-        setIsLoading(false);
-        return;
-      }
-
-      // Validasi phone number
-      if (form.phone.length < 10) {
-        setError('Nomor telepon tidak valid');
-        setIsLoading(false);
-        return;
-      }
-
-      // Panggil service untuk registrasi
-      const result = await userManagementService.registerMasyarakat({
-        username: form.username.trim(),
-        displayName: form.name.trim(),
-        nik: form.nik,
-        email: form.email.trim(),
-        phoneNumber: form.phone,
-        password: form.password
-      });
-
-      if (result.success) {
-        console.log('✅ Registration successful!');
-        setSuccessMessage(result.message);
-        
-        // Reset form
-        setForm({
-          username: "",
-          name: "",
-          nik: "",
-          email: "",
-          phone: "",
-          password: "",
-          confirm: "",
-          agree: false,
-        });
-
-        // Redirect ke login setelah 2 detik
-        setTimeout(() => {
-          router.push('/masyarakat/login');
-        }, 2000);
-      } else {
-        console.log('❌ Registration failed:', result.message);
-        setError(result.message);
-      }
-    } catch (error: any) {
-      console.error('❌ Registration error:', error);
-      setError(error.message || 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleWargaLuarClick = () => {
+    router.push('/masyarakat/daftar/warga-luar');
   };
 
   return (
-    <main className="min-h-[100svh] bg-red-50 text-gray-800">
-      <div className="mx-auto w-full max-w-md px-4 pb-20 pt-4">
-        {/* Header Card */}
-        <HeaderCard 
-          title="Pendaftaran"
-          subtitle="Buat Akun Baru"
-          backUrl="/masyarakat/login"
-          showBackButton={false}
-        />
-
-        {/* Registration Form Card */}
-        <div className="rounded-3xl bg-white/95 shadow-xl ring-1 ring-gray-200 backdrop-blur-sm overflow-hidden">
-          {/* Welcome Section */}
-          <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
-            <div className="text-center">
-              <div className="mb-3">
-                <div className="mx-auto w-16 h-16 bg-white/20 rounded-2xl p-3 backdrop-blur-sm">
-                  <UserIcon className="w-full h-full text-white" />
-                </div>
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-6">
+            <div className="relative">
+              <Image
+                src={DesaLogo}
+                alt="Logo Desa"
+                width={80}
+                height={80}
+                className="rounded-2xl shadow-xl border-4 border-white"
+                priority
+              />
+              <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-white text-xs font-bold">📝</span>
               </div>
-              <h2 className="text-xl font-bold mb-2">Buat Akun Baru</h2>
-              <p className="text-white/90 text-sm">Lengkapi data diri untuk bergabung dengan SIGEDE</p>
             </div>
           </div>
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-600 via-red-700 to-red-800 bg-clip-text text-transparent mb-4">
+            Pilih Jenis Pendaftaran
+          </h1>
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
+            Silakan pilih jenis pendaftaran sesuai dengan status kependudukan Anda di Desa Dauh Puri Kaja
+          </p>
+        </div>
 
-          {/* Form content */}
-          <div className="p-6">
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Data Identitas</h3>
-              <p className="text-gray-600 text-sm">Pastikan data sesuai dengan identitas resmi</p>
-            </div>
-
-            {/* Success Message */}
-            {successMessage && (
-              <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4 text-green-700 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckIcon className="w-5 h-5 text-green-500" />
-                  <span>{successMessage}</span>
+        {/* Registration Options */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Warga Lokal DPKJ */}
+          <button
+            onClick={handleWargaLokalClick}
+            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-105 hover:-translate-y-2"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="relative z-10 text-center text-white">
+              <div className="mb-6">
+                <div className="w-20 h-20 mx-auto bg-white/20 rounded-3xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <HomeIcon className="w-10 h-10" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Warga Lokal DPKJ</h3>
+                <p className="text-blue-100 text-sm leading-relaxed">
+                  Untuk warga yang berdomisili di wilayah Desa Dauh Puri Kaja
+                </p>
+              </div>
+              
+              <div className="space-y-2 text-left">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-sm">Akses lengkap semua fitur</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-sm">Layanan publik & pengaduan</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-sm">Data desa & keuangan</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-sm">E-News, UMKM & Wisata Budaya</span>
                 </div>
               </div>
-            )}
 
-            {/* Error Message */}
-            {error && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  <span>{error}</span>
+              <div className="mt-6 flex items-center justify-center">
+                <span className="bg-white/20 px-4 py-2 rounded-full text-sm font-medium">
+                  Pilih Pendaftaran →
+                </span>
+              </div>
+            </div>
+          </button>
+
+          {/* Warga Luar DPKJ */}
+          <button
+            onClick={handleWargaLuarClick}
+            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-105 hover:-translate-y-2"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="relative z-10 text-center text-white">
+              <div className="mb-6">
+                <div className="w-20 h-20 mx-auto bg-white/20 rounded-3xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <GlobeIcon className="w-10 h-10" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Warga Luar DPKJ</h3>
+                <p className="text-emerald-100 text-sm leading-relaxed">
+                  Untuk warga luar yang ingin mengakses informasi desa
+                </p>
+              </div>
+              
+              <div className="space-y-2 text-left">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-sm">Akses E-News terbaru</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-sm">Informasi UMKM lokal</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-sm">Wisata & Budaya DPKJ</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span className="text-sm">Profil & informasi desa</span>
                 </div>
               </div>
-            )}
 
-              <form onSubmit={onSubmit} className="space-y-4">
-                {/* Username field */}
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">Username</label>
-                  <input
-                    type="text"
-                    placeholder="Masukkan username unik"
-                    value={form.username}
-                    onChange={(e) => set("username", e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 hover:border-gray-400"
-                    required
-                  />
-                </div>
-
-                {/* Full name field */}
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">Nama Lengkap</label>
-                  <input
-                    type="text"
-                    placeholder="Sesuai dengan KTP/Identitas resmi"
-                    value={form.name}
-                    onChange={(e) => set("name", e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 hover:border-gray-400"
-                    required
-                  />
-                </div>
-
-                {/* NIK field */}
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">NIK</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="16 digit NIK sesuai KTP"
-                    value={form.nik}
-                    onChange={(e) => set("nik", e.target.value.replace(/\D/g, '').substring(0, 16))}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 hover:border-gray-400"
-                    required
-                  />
-                </div>
-
-                {/* Email field */}
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">Email</label>
-                  <input
-                    type="email"
-                    placeholder="contoh@email.com"
-                    value={form.email}
-                    onChange={(e) => set("email", e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 hover:border-gray-400"
-                    required
-                  />
-                </div>
-
-                {/* Phone field */}
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">No. Telp</label>
-                  <input
-                    type="tel"
-                    placeholder="08xxxxxxxxxx"
-                    value={form.phone}
-                    onChange={(e) => set("phone", e.target.value.replace(/\D/g, '').substring(0, 13))}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 hover:border-gray-400"
-                    required
-                  />
-                </div>
-
-                {/* Password field */}
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">Kata Sandi</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Minimal 6 karakter"
-                      value={form.password}
-                      onChange={(e) => set("password", e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 pr-10 text-sm shadow-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 hover:border-gray-400"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      {showPassword ? "👁️‍🗨️" : "👁️"}
-                    </button>
-                  </div>
-                  {form.password && (
-                    <div className="mt-1 text-xs text-gray-500">
-                      Kekuatan: {form.password.length >= 8 ? '🟢 Kuat' : form.password.length >= 6 ? '🟡 Sedang' : '🔴 Lemah'}
-                    </div>
-                  )}
-                </div>
-
-                {/* Confirm password field */}
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">Konfirmasi Kata Sandi</label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Ulangi kata sandi"
-                      value={form.confirm}
-                      onChange={(e) => set("confirm", e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 pr-10 text-sm shadow-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 hover:border-gray-400"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      {showConfirmPassword ? "👁️‍🗨️" : "👁️"}
-                    </button>
-                  </div>
-                  {form.confirm && (
-                    <div className="mt-1 text-xs">
-                      {form.password === form.confirm ? (
-                        <span className="text-green-600">✓ Password cocok</span>
-                      ) : (
-                        <span className="text-red-500">✗ Password tidak cocok</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Terms and conditions */}
-                <div className="flex items-start gap-3 pt-2">
-                  <input
-                    id="agree"
-                    type="checkbox"
-                    checked={form.agree}
-                    onChange={(e) => set("agree", e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                  />
-                  <label htmlFor="agree" className="text-sm text-gray-700">
-                    Saya menyetujui{" "}
-                    <Link href="#" className="text-red-600 font-medium underline hover:text-red-700">
-                      Syarat & Ketentuan
-                    </Link>
-                    {" "}yang berlaku
-                  </label>
-                </div>
-
-                {/* Submit button */}
-                <button
-                  type="submit"
-                  disabled={!canSubmit || isLoading}
-                  className="w-full rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-                      <span>Mendaftar...</span>
-                    </div>
-                  ) : (
-                    "DAFTAR"
-                  )}
-                </button>
-
-                {/* Login link */}
-                <div className="pt-4 text-center text-sm">
-                  Sudah Punya Akun?{" "}
-                  <Link className="text-red-600 font-medium hover:text-red-700 hover:underline" href="/masyarakat/login">
-                    Login
-                  </Link>
-                </div>
-              </form>
+              <div className="mt-6 flex items-center justify-center">
+                <span className="bg-white/20 px-4 py-2 rounded-full text-sm font-medium">
+                  Pilih Pendaftaran →
+                </span>
+              </div>
             </div>
+          </button>
+        </div>
+
+        {/* Back to Login */}
+        <div className="text-center">
+          <Link 
+            href="/masyarakat/login" 
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-red-600 font-medium transition-all duration-300 group"
+          >
+            <ArrowLeftIcon className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            <span>Kembali ke Login</span>
+          </Link>
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-6 px-4">
-          <p className="text-gray-500 text-sm leading-relaxed">
-            ©CopyRight BaliGerbang Digital
+        <div className="text-center mt-8">
+          <p className="text-gray-500 text-sm">
+            ©Copyright BaliGerbangDigital 2024
           </p>
         </div>
       </div>

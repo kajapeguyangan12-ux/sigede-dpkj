@@ -2,17 +2,61 @@
 
 import BottomNavigation from '../../../../../components/BottomNavigation';
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import HeaderCard from "../../../../../components/HeaderCard";
+import { useAuth } from '../../../../../../contexts/AuthContext';
+import { getMasyarakatByEmail } from '../../../../../../lib/masyarakatService';
 
 export default function KontakPage() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    nomorTelepon: "Data Nomor Telepon",
+    nomorTelepon: "",
     nomorTeleponBaru: "",
     konfirmasiTelepon: "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Fetch user data from database
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.email) {
+        setDataLoading(false);
+        return;
+      }
+
+      console.log('🔍 EDIT KONTAK: Fetching data for:', user.email);
+
+      try {
+        const profileData = await getMasyarakatByEmail(user.email);
+        
+        if (profileData) {
+          console.log('✅ EDIT KONTAK: Profile data found:', profileData);
+          
+          setFormData(prev => ({
+            ...prev,
+            nomorTelepon: profileData.noTelepon || "-",
+          }));
+          
+          console.log('📋 EDIT KONTAK: Phone number set:', profileData.noTelepon);
+        } else {
+          console.log('❌ EDIT KONTAK: No profile data found');
+          // Fallback to AuthContext
+          setFormData(prev => ({
+            ...prev,
+            nomorTelepon: user.phoneNumber || "-",
+          }));
+        }
+      } catch (error) {
+        console.error('💥 EDIT KONTAK ERROR:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -45,7 +89,14 @@ export default function KontakPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Loading State */}
+        {dataLoading ? (
+          <div className="rounded-xl border border-gray-300 bg-white p-8 shadow-sm text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
+            <p className="text-sm text-gray-600">Memuat data...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nomor Telepon Section */}
           <div className="rounded-xl border border-gray-300 bg-white p-4 shadow-sm">
             <label className="block text-sm font-semibold text-gray-800 mb-2">
@@ -96,6 +147,7 @@ export default function KontakPage() {
             </button>
           </div>
         </form>
+        )}
       </div>
 
       <BottomNavigation />

@@ -17,7 +17,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SiGeDe",
   description: "Aplikasi SiGeDe",
-  viewport: "width=device-width, initial-scale=1",
   icons: {
     icon: [
       {
@@ -26,6 +25,11 @@ export const metadata: Metadata = {
       },
     ],
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

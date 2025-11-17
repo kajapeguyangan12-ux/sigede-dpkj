@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import AuthGuard from '@/app/components/AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -51,31 +51,39 @@ const STATUS_CONFIG = {
 
 export default function TokoSayaPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [umkmList, setUmkmList] = useState<UMKM[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUMKM, setSelectedUMKM] = useState<UMKM | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
-    fetchMyUMKM();
-  }, []);
+    if (user) {
+      // Block access for external users
+      if (user.role === 'warga_luar_dpkj') {
+        alert('Akses ditolak. Fitur ini hanya tersedia untuk warga lokal DPKJ.');
+        router.push('/masyarakat/e-umkm');
+        return;
+      }
+      fetchMyUMKM();
+    }
+  }, [user, router]);
 
   const fetchMyUMKM = async () => {
     try {
       setLoading(true);
-      const userId = localStorage.getItem('userId');
       
-      console.log('Fetching UMKM for userId:', userId); // Debug log
-      
-      if (!userId) {
-        console.log('No userId found, redirecting to login');
-        router.push('/masyarakat/login');
+      if (!user?.uid) {
+        console.log('No user found, layout will handle redirect');
+        setLoading(false);
         return;
       }
 
+      console.log('Fetching UMKM for userId:', user.uid);
+
       const q = query(
         collection(db, 'e-umkm'),
-        where('userId', '==', userId)
+        where('userId', '==', user.uid)
       );
       
       const querySnapshot = await getDocs(q);
@@ -106,7 +114,6 @@ export default function TokoSayaPage() {
   };
 
   return (
-    <AuthGuard>
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-24">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-3 sm:px-4 py-4 sm:py-6 shadow-xl">
@@ -388,7 +395,6 @@ export default function TokoSayaPage() {
           </div>
         )}
       </div>
-    </AuthGuard>
   );
 }
 

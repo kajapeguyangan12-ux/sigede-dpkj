@@ -15,7 +15,7 @@ import {
   deleteLembagaKemasyarakatan,
   getLembagaCoverImage,
   saveLembagaCoverImage,
-  uploadImageToStorage 
+  uploadLembagaImage 
 } from '../../../../lib/profilDesaService'
 
 interface AnggotaLembaga {
@@ -37,6 +37,7 @@ export default function AdminLembagaPage() {
   const [editingAnggota, setEditingAnggota] = useState<AnggotaLembaga | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [coverImage, setCoverImage] = useState<string>('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState<AnggotaLembaga>({
@@ -44,6 +45,7 @@ export default function AdminLembagaPage() {
     jabatan: '',
     email: '',
     noTelepon: '',
+    foto: '',
     urutanTampil: 1
   })
 
@@ -131,6 +133,7 @@ export default function AdminLembagaPage() {
       jabatan: '',
       email: '',
       noTelepon: '',
+      foto: '',
       urutanTampil: 1
     })
   }
@@ -141,7 +144,9 @@ export default function AdminLembagaPage() {
 
     try {
       setIsLoading(true)
-      const imageUrl = await uploadImageToStorage(file, `lembaga-covers/${tipeLembaga}`)
+      const timestamp = Date.now()
+      const fileName = `${timestamp}_cover.webp`
+      const imageUrl = await uploadLembagaImage(file, fileName)
       await saveLembagaCoverImage(tipeLembaga, imageUrl)
       
       setCoverImage(imageUrl)
@@ -149,6 +154,25 @@ export default function AdminLembagaPage() {
       console.error('Error uploading cover image:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setUploadingPhoto(true)
+      const timestamp = Date.now()
+      const fileName = `${timestamp}_anggota.webp`
+      const imageUrl = await uploadLembagaImage(file, fileName)
+      
+      setFormData(prev => ({ ...prev, foto: imageUrl }))
+    } catch (error) {
+      console.error('Error uploading foto anggota:', error)
+      alert('Gagal mengupload foto. Silakan coba lagi.')
+    } finally {
+      setUploadingPhoto(false)
     }
   }
 
@@ -232,8 +256,16 @@ export default function AdminLembagaPage() {
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
-                          {anggota.nama.charAt(0).toUpperCase()}
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold overflow-hidden">
+                          {anggota.foto ? (
+                            <img 
+                              src={anggota.foto} 
+                              alt={anggota.nama}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            anggota.nama.charAt(0).toUpperCase()
+                          )}
                         </div>
                         <div>
                           <h4 className="font-semibold text-gray-800">{anggota.nama}</h4>
@@ -337,6 +369,39 @@ export default function AdminLembagaPage() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Foto Anggota
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('anggotaFotoInput')?.click()}
+                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Camera className="h-5 w-5" />
+                    {formData.foto ? 'Ganti Foto' : 'Pilih Foto'}
+                  </button>
+                  <input
+                    id="anggotaFotoInput"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFotoChange}
+                    className="hidden"
+                  />
+                  {uploadingPhoto && (
+                    <p className="text-sm text-blue-600 mt-2">Mengupload foto...</p>
+                  )}
+                  {formData.foto && !uploadingPhoto && (
+                    <div className="mt-3 relative">
+                      <img
+                        src={formData.foto}
+                        alt="Preview"
+                        className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>

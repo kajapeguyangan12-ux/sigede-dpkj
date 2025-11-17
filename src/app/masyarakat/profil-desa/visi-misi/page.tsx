@@ -60,11 +60,8 @@ export default function VisiMisiDesaPage() {
                 </div>
 
                 <div className="rounded-2xl bg-gray-50 p-6 shadow-inner">
-                  <p className="text-base text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
-                    {visiMisiData.visi}
-                  </p>
                   {visiMisiData.visiImageUrl && (
-                    <div className="mt-6">
+                    <div className="mb-6">
                       <img
                         src={visiMisiData.visiImageUrl}
                         alt="Visi Desa"
@@ -72,6 +69,9 @@ export default function VisiMisiDesaPage() {
                       />
                     </div>
                   )}
+                  <p className="text-base text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
+                    {visiMisiData.visi}
+                  </p>
                 </div>
               </div>
             </section>
@@ -84,11 +84,8 @@ export default function VisiMisiDesaPage() {
                 </div>
 
                 <div className="rounded-2xl bg-gray-50 p-6 shadow-inner">
-                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {visiMisiData.misi}
-                  </p>
                   {visiMisiData.misiImageUrl && (
-                    <div className="mt-6">
+                    <div className="mb-6">
                       <img
                         src={visiMisiData.misiImageUrl}
                         alt="Misi Desa"
@@ -96,6 +93,9 @@ export default function VisiMisiDesaPage() {
                       />
                     </div>
                   )}
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {visiMisiData.misi}
+                  </p>
                 </div>
               </div>
             </section>

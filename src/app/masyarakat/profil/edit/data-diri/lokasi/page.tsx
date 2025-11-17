@@ -2,24 +2,70 @@
 
 import BottomNavigation from '../../../../../components/BottomNavigation';
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import HeaderCard from "../../../../../components/HeaderCard";
+import { useAuth } from '../../../../../../contexts/AuthContext';
+import { getMasyarakatByEmail } from '../../../../../../lib/masyarakatService';
 
 export default function LokasiTinggalPage() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    alamat: "Data Alamat",
+    alamat: "",
     alamatBaru: "",
-    kota: "Data Kota",
+    kota: "",
     kotaBaru: "",
-    kecamatan: "Data Kecamatan",
+    kecamatan: "",
     kecamatanBaru: "",
-    desa: "Data Desa",
+    desa: "",
     desaBaru: "",
-    dusun: "Data Dusun",
+    dusun: "",
     dusunBaru: "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Fetch user data from database
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.email) {
+        setDataLoading(false);
+        return;
+      }
+
+      console.log('🔍 EDIT LOKASI: Fetching data for:', user.email);
+
+      try {
+        const profileData = await getMasyarakatByEmail(user.email);
+        
+        if (profileData) {
+          console.log('✅ EDIT LOKASI: Profile data found:', profileData);
+          
+          setFormData(prev => ({
+            ...prev,
+            alamat: profileData.alamat || "-",
+            kecamatan: profileData.kecamatan || "-",
+            desa: profileData.desa || "-",
+          }));
+          
+          console.log('📋 EDIT LOKASI: Location data set');
+        } else {
+          console.log('❌ EDIT LOKASI: No profile data found');
+          // Fallback to AuthContext
+          setFormData(prev => ({
+            ...prev,
+            alamat: user.address || "-",
+          }));
+        }
+      } catch (error) {
+        console.error('💥 EDIT LOKASI ERROR:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -52,7 +98,14 @@ export default function LokasiTinggalPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Loading State */}
+        {dataLoading ? (
+          <div className="rounded-xl border border-gray-300 bg-white p-8 shadow-sm text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
+            <p className="text-sm text-gray-600">Memuat data...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           {/* Alamat Section */}
           <div className="rounded-xl border border-gray-300 bg-white p-4 shadow-sm">
             <label className="block text-sm font-semibold text-gray-800 mb-2">
@@ -183,6 +236,7 @@ export default function LokasiTinggalPage() {
             </button>
           </div>
         </form>
+        )}
       </div>
 
       <BottomNavigation />

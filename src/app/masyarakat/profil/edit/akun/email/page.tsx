@@ -2,17 +2,62 @@
 
 import BottomNavigation from '../../../../../components/BottomNavigation';
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import HeaderCard from "../../../../../components/HeaderCard";
+import { useAuth } from '../../../../../../contexts/AuthContext';
+import { getMasyarakatByEmail } from '../../../../../../lib/masyarakatService';
 
 export default function UbahEmailPage() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    emailSaatIni: "Data Email",
+    emailSaatIni: "",
     emailBaru: "",
     konfirmasiEmail: "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Fetch user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.email) {
+        setDataLoading(false);
+        return;
+      }
+
+      console.log('🔍 EDIT EMAIL: Fetching data for:', user.email);
+
+      try {
+        const profileData = await getMasyarakatByEmail(user.email);
+        
+        if (profileData) {
+          console.log('✅ EDIT EMAIL: Profile data found');
+          setFormData(prev => ({
+            ...prev,
+            emailSaatIni: profileData.email || user.email,
+          }));
+        } else {
+          console.log('❌ EDIT EMAIL: No profile data found, using AuthContext');
+          setFormData(prev => ({
+            ...prev,
+            emailSaatIni: user.email,
+          }));
+        }
+      } catch (error) {
+        console.error('💥 EDIT EMAIL ERROR:', error);
+        // Fallback to user email
+        setFormData(prev => ({
+          ...prev,
+          emailSaatIni: user.email,
+        }));
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -45,7 +90,14 @@ export default function UbahEmailPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Loading State */}
+        {dataLoading ? (
+          <div className="rounded-xl border border-gray-300 bg-white p-8 shadow-sm text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
+            <p className="text-sm text-gray-600">Memuat data...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email Saat Ini Section */}
           <div className="rounded-xl border border-gray-300 bg-white p-4 shadow-sm">
             <label className="block text-sm font-semibold text-gray-800 mb-2">
@@ -104,6 +156,7 @@ export default function UbahEmailPage() {
             </button>
           </div>
         </form>
+        )}
       </div>
 
       <BottomNavigation />

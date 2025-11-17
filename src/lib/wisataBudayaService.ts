@@ -13,7 +13,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
 
-// Helper function to convert image to WebP
+// Helper function to convert image to WebP with 85% quality
 async function convertToWebP(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -32,13 +32,18 @@ async function convertToWebP(file: File): Promise<Blob> {
         canvas.toBlob(
           (blob) => {
             if (blob) {
+              // Log compression info
+              const originalSize = file.size;
+              const webpSize = blob.size;
+              const compressionRatio = ((1 - webpSize / originalSize) * 100).toFixed(2);
+              console.log(`📦 WebP Conversion: ${(originalSize / 1024).toFixed(2)}KB → ${(webpSize / 1024).toFixed(2)}KB (${compressionRatio}% smaller)`);
               resolve(blob);
             } else {
               reject(new Error('Failed to convert image'));
             }
           },
           'image/webp',
-          0.9 // Quality 90%
+          0.85 // Quality 85% - balance between quality and file size
         );
       };
       img.onerror = () => reject(new Error('Failed to load image'));
@@ -49,18 +54,22 @@ async function convertToWebP(file: File): Promise<Blob> {
   });
 }
 
-// Helper function to upload single image to Firebase Storage
+// Helper function to upload single image to Firebase Storage (wisata_budaya folder)
 async function uploadImageToStorage(file: File, folder: 'wisata' | 'budaya', subfolder?: string): Promise<string> {
   try {
     // Convert to WebP
     const webpBlob = await convertToWebP(file);
     
-    // Generate filename
+    // Generate filename with timestamp and type
     const timestamp = Date.now();
-    const fileName = `${timestamp}.webp`;
+    const fileName = `${timestamp}_${folder}.webp`;
+    
+    // Path: wisata_budaya/{folder}/{subfolder}/{filename}
     const path = subfolder 
-      ? `${folder}/${subfolder}/${fileName}` 
-      : `${folder}/${fileName}`;
+      ? `wisata_budaya/${folder}/${subfolder}/${fileName}` 
+      : `wisata_budaya/${folder}/${fileName}`;
+    
+    console.log(`📤 Uploading to: ${path}`);
     
     // Upload to Firebase Storage
     const storageRef = ref(storage, path);
@@ -68,9 +77,10 @@ async function uploadImageToStorage(file: File, folder: 'wisata' | 'budaya', sub
     
     // Get download URL
     const downloadURL = await getDownloadURL(storageRef);
+    console.log(`✅ Upload success: ${downloadURL}`);
     return downloadURL;
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('❌ Error uploading image:', error);
     throw error;
   }
 }
@@ -78,13 +88,15 @@ async function uploadImageToStorage(file: File, folder: 'wisata' | 'budaya', sub
 // Helper function to upload multiple images (gallery)
 async function uploadGalleryImages(files: File[], folder: 'wisata' | 'budaya', itemId: string): Promise<string[]> {
   try {
+    console.log(`📸 Uploading ${files.length} gallery images for ${folder}/${itemId}`);
     const uploadPromises = files.map(file => 
       uploadImageToStorage(file, folder, `${itemId}/galeri`)
     );
     const urls = await Promise.all(uploadPromises);
+    console.log(`✅ All gallery images uploaded successfully`);
     return urls;
   } catch (error) {
-    console.error('Error uploading gallery images:', error);
+    console.error('❌ Error uploading gallery images:', error);
     throw error;
   }
 }
@@ -118,6 +130,8 @@ export interface BudayaItem {
   id?: string;
   judul: string;
   kategori: 'Tari' | 'Upacara' | 'Kerajinan' | 'Musik' | 'Tradisi';
+  alamat?: string;
+  lokasi?: string;
   deskripsi: string;
   sejarah?: string;
   fotoUrl?: string;

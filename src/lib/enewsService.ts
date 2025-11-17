@@ -18,7 +18,7 @@ import { db } from './firebase';
 export interface ENewsItem {
   id: string;
   judul: string;
-  tanggal: string;
+  tanggal: string; // Tanggal kegiatan (eventDate)
   deskripsi: string;
   lokasi?: string;
   gambar: string;
@@ -78,8 +78,8 @@ const normalizeENewsItem = (data: any, id: string, jenis: 'berita' | 'pengumuman
   // Handle different field name variations
   const judul = data.title || data.judul || '';
   
-  // Handle date/tanggal - multiple possible formats
-  let tanggal: any = data.createdAt || data.tanggal || data.date;
+  // Handle date/tanggal - prioritize eventDate, then fall back to other fields
+  let tanggal: any = data.eventDate || data.tanggal || data.createdAt || data.date;
   
   // Convert Firestore Timestamp to ISO string
   if (tanggal && typeof tanggal === 'object' && tanggal.toDate) {
@@ -88,7 +88,7 @@ const normalizeENewsItem = (data: any, id: string, jenis: 'berita' | 'pengumuman
     // Handle raw Firestore timestamp object
     tanggal = new Date(tanggal.seconds * 1000).toISOString();
   } else if (typeof tanggal === 'string') {
-    // If it's already a string (ISO date), keep it
+    // If it's already a string (ISO date or date string), keep it
     tanggal = tanggal;
   } else {
     // Fallback to current date

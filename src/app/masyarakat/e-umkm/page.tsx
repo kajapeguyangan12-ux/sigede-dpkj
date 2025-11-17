@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import BottomNavigation from '../../components/BottomNavigation';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Product {
   id: string;
@@ -21,28 +23,15 @@ interface Product {
   status: 'aktif' | 'tidak_aktif' | 'pending';
   rating?: number;
   jumlahProduk?: number;
-}
-
-interface Product {
-  id: string;
-  namaUsaha: string;
-  namaPemilik: string;
-  kategori: string;
-  deskripsi: string;
-  alamat: string;
-  noTelepon: string;
-  email?: string;
-  jamOperasional?: string;
-  hargaRataRata?: string;
-  fotoUsaha?: string[];
-  status: 'aktif' | 'tidak_aktif' | 'pending';
-  rating?: number;
-  jumlahProduk?: number;
+  totalKunjungan?: number;
+  lastVisited?: any;
 }
 
 const categories = ['Semua', 'Makanan & Minuman', 'Fashion & Pakaian', 'Kerajinan Tangan', 'Jasa', 'Pertanian', 'Teknologi', 'Kesehatan & Kecantikan', 'Lainnya'];
 
 export default function EUMKMPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -139,13 +128,37 @@ export default function EUMKMPage() {
     }, 2000);
   };
 
-  const filteredProducts = products.filter((product) => {
-    const matchesCategory = selectedCategory === 'Semua' || product.kategori === selectedCategory;
-    const matchesSearch = product.namaUsaha.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.namaPemilik.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.deskripsi.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Handle product click - track visits and show details
+  const handleProductClick = async (product: Product) => {
+    try {
+      // Update visit count in Firestore
+      const productRef = doc(db, 'e-umkm', product.id);
+      await updateDoc(productRef, {
+        totalKunjungan: increment(1),
+        lastVisited: new Date()
+      });
+      
+      console.log(`🏪 UMKM "${product.namaUsaha}" dikunjungi. Total kunjungan bertambah.`);
+      
+      // For now, show product details in alert (you can replace with modal or navigate to detail page)
+      alert(`Detail UMKM: ${product.namaUsaha}\n\nPemilik: ${product.namaPemilik}\nKategori: ${product.kategori}\nAlamat: ${product.alamat}\nTelepon: ${product.noTelepon}\n\nDeskripsi: ${product.deskripsi}`);
+      
+    } catch (error) {
+      console.error('Error updating visit count:', error);
+      // Still show details even if visit tracking fails
+      alert(`Detail UMKM: ${product.namaUsaha}\n\nPemilik: ${product.namaPemilik}\nKategori: ${product.kategori}\nAlamat: ${product.alamat}\nTelepon: ${product.noTelepon}\n\nDeskripsi: ${product.deskripsi}`);
+    }
+  };
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesCategory = selectedCategory === 'Semua' || product.kategori === selectedCategory;
+      const matchesSearch = product.namaUsaha.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            product.namaPemilik.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            product.deskripsi.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [products, selectedCategory, searchQuery]);
 
   return (
     <main className="min-h-[100svh] bg-red-50 text-gray-800">
@@ -196,20 +209,23 @@ export default function EUMKMPage() {
                 </div>
               </a>
 
-              <a 
-                href="/masyarakat/e-umkm/toko-saya" 
-                className="group flex items-center space-x-4 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100 hover:from-red-50 hover:to-red-100 border border-gray-200/50 hover:border-red-200 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
-              >
-                <div className="p-2 rounded-xl bg-white shadow-sm group-hover:bg-red-50 transition-colors duration-300">
-                  <svg className="w-5 h-5 text-gray-600 group-hover:text-red-600 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <div>
-                  <span className="text-gray-800 font-semibold group-hover:text-red-700 transition-colors duration-300">Toko Saya</span>
-                  <p className="text-gray-500 text-sm mt-0.5">Kelola toko Anda</p>
-                </div>
-              </a>
+              {/* Toko Saya - Only for non-external users */}
+              {user?.role !== 'warga_luar_dpkj' && (
+                <a 
+                  href="/masyarakat/e-umkm/toko-saya" 
+                  className="group flex items-center space-x-4 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100 hover:from-red-50 hover:to-red-100 border border-gray-200/50 hover:border-red-200 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+                >
+                  <div className="p-2 rounded-xl bg-white shadow-sm group-hover:bg-red-50 transition-colors duration-300">
+                    <svg className="w-5 h-5 text-gray-600 group-hover:text-red-600 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-gray-800 font-semibold group-hover:text-red-700 transition-colors duration-300">Toko Saya</span>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola toko Anda</p>
+                  </div>
+                </a>
+              )}
 
               <a 
                 href="/masyarakat/e-umkm/voucher-saya" 
@@ -345,10 +361,17 @@ export default function EUMKMPage() {
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 {filteredProducts.map((product) => (
-                  <div key={product.id} className="bg-white rounded-2xl shadow-lg p-4 ring-1 ring-red-100 relative group hover:shadow-2xl hover:ring-2 hover:ring-red-300 transition-all duration-300">
+                  <div 
+                    key={product.id} 
+                    className="bg-white rounded-2xl shadow-lg p-4 ring-1 ring-red-100 relative group hover:shadow-2xl hover:ring-2 hover:ring-red-300 transition-all duration-300 cursor-pointer"
+                    onClick={() => handleProductClick(product)}
+                  >
                     {/* Bookmark Button with Animation */}
                     <button
-                      onClick={() => toggleSaveProduct(product)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSaveProduct(product);
+                      }}
                       className={`absolute top-3 right-3 p-2 rounded-full z-10 transition-all duration-300 transform hover:scale-110 active:scale-95 ${
                         savedProducts.includes(product.id)
                           ? 'bg-red-100 text-red-600 shadow-lg shadow-red-200'
@@ -396,15 +419,17 @@ export default function EUMKMPage() {
         </section>
       </div>
 
-      {/* Floating Action Button - Buat Toko */}
-      <Link href="/masyarakat/e-umkm/create">
-        <button className="fixed right-6 bottom-24 z-50 flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 active:scale-95 group">
-          <svg className="w-6 h-6 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="font-bold">Buat Toko</span>
-        </button>
-      </Link>
+      {/* Floating Action Button - Buat Toko (Only for non-external users) */}
+      {user?.role !== 'warga_luar_dpkj' && (
+        <Link href="/masyarakat/e-umkm/create">
+          <button className="fixed right-6 bottom-24 z-50 flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 active:scale-95 group">
+            <svg className="w-6 h-6 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="font-bold">Buat Toko</span>
+          </button>
+        </Link>
+      )}
 
       {/* Navigation Bar */}
       <BottomNavigation />

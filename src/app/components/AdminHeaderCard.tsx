@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 
 export default function AdminHeaderCard({ title, children, className = '' }: { title: string; children?: React.ReactNode; className?: string }) {
   return (
-  <div className={"w-full bg-gradient-to-r from-white to-gray-50 rounded-2xl shadow-sm border border-gray-200 px-8 py-6 flex items-center justify-between mb-8 -mt-10 md:-mt-14 lg:-mt-16 z-20 backdrop-blur-sm " + className}>
+  <div className={"w-full bg-gradient-to-r from-white to-gray-50 rounded-2xl shadow-sm border border-gray-200 px-8 py-6 flex items-center justify-between mb-8 -mt-10 md:-mt-14 lg:-mt-16 z-50 relative backdrop-blur-sm " + className}>
       <div className="font-bold text-3xl bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">{title}</div>
       <div className="flex items-center gap-6">{children}</div>
     </div>
@@ -84,7 +84,7 @@ export function AdminHeaderAccount({ onLogout }: { onLogout?: () => void }) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative z-[100]">
       <button
         className="rounded-lg bg-gradient-to-br from-red-100 to-red-50 p-2 ml-2 hover:from-red-200 hover:to-red-100 transition-colors shadow-sm border border-red-200"
         onClick={() => setOpen((v) => !v)}
@@ -93,7 +93,7 @@ export function AdminHeaderAccount({ onLogout }: { onLogout?: () => void }) {
         <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-red-600"><circle cx="12" cy="8" r="4"/><path d="M6 20c0-2.5 3-4 6-4s6 1.5 6 4"/></svg>
       </button>
       {open && (
-        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 z-50 animate-pop">
+        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 z-[200] animate-pop">
           <div className="absolute -top-2 right-8 w-4 h-4 bg-white rotate-45 border-t border-l border-gray-200" />
           <div className="p-6">
             <div className="flex items-center gap-4 mb-4">

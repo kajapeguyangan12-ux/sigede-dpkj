@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from '../../components/BottomNavigation';
 import { getPublishedENewsItems, subscribeToPublishedENews, type ENewsItem } from "../../../lib/enewsService";
@@ -42,10 +42,10 @@ export default function ENewsPage() {
     return () => unsubscribe();
   }, []);
 
-  const beritaData = newsData.filter(item => item.jenis === 'berita');
-  const pengumumanData = newsData.filter(item => item.jenis === 'pengumuman');
+  const beritaData = useMemo(() => newsData.filter(item => item.jenis === 'berita'), [newsData]);
+  const pengumumanData = useMemo(() => newsData.filter(item => item.jenis === 'pengumuman'), [newsData]);
 
-  const currentData = activeTab === 'berita' ? beritaData : pengumumanData;
+  const currentData = useMemo(() => activeTab === 'berita' ? beritaData : pengumumanData, [activeTab, beritaData, pengumumanData]);
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-b from-gray-50 to-gray-100">

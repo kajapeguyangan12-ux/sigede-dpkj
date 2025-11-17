@@ -18,37 +18,93 @@ export interface DataDesaItem {
   noKK: string;
   namaLengkap: string;
   nik: string;
-  jenisKelamin: string;
-  tempatLahir: string;
-  tanggalLahir: string;
-  alamat: string;
-  daerah: string;
-  statusNikah: string;
-  agama: string;
-  sukuBangsa: string;
-  kewarganegaraan: string;
-  pendidikanTerakhir: string;
-  pekerjaan: string;
-  penghasilan: string;
-  golonganDarah: string;
-  shdk: string;
+  jenisKelamin?: string;
+  tempatLahir?: string;
+  tanggalLahir?: string;
+  alamat?: string;
+  daerah?: string;
+  statusNikah?: string;
+  agama?: string;
+  sukuBangsa?: string;
+  kewarganegaraan?: string;
+  pendidikanTerakhir?: string;
+  pekerjaan?: string;
+  penghasilan?: string;
+  golonganDarah?: string;
+  shdk?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  [key: string]: any; // Untuk mendukung field dinamis
 }
 
 const COLLECTION_NAME = "data-desa";
 
 // Add new data desa item
-export const addDataDesa = async (data: Omit<DataDesaItem, "id" | "createdAt" | "updatedAt">) => {
+export const addDataDesa = async (data: any) => {
   try {
+    // Validasi field wajib
+    if (!data.noKK || !data.nik || !data.namaLengkap) {
+      throw new Error('Field wajib tidak lengkap: noKK, nik, atau namaLengkap');
+    }
+
     const docRef = await addDoc(collection(db, COLLECTION_NAME), {
       ...data,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+    
     return docRef.id;
   } catch (error) {
-    console.error("Error adding data desa:", error);
+    throw error;
+  }
+};
+
+// Find existing data by NIK
+export const findDataDesaByNIK = async (nik: string): Promise<DataDesaItem | null> => {
+  try {
+    const q = query(collection(db, COLLECTION_NAME), where("nik", "==", nik));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const doc = querySnapshot.docs[0];
+    return { id: doc.id, ...doc.data() } as DataDesaItem;
+  } catch (error) {
+    console.error("Error finding data desa by NIK:", error);
+    throw error;
+  }
+};
+
+// Add or update data desa item (upsert operation) - Optimized
+export const upsertDataDesa = async (data: any) => {
+  try {
+    // Validasi field wajib
+    if (!data.noKK || !data.nik || !data.namaLengkap) {
+      throw new Error('Field wajib tidak lengkap: noKK, nik, atau namaLengkap');
+    }
+
+    // Check if data already exists by NIK
+    const existingData = await findDataDesaByNIK(data.nik);
+    
+    if (existingData) {
+      // Update existing data - merge fields
+      const mergedData = {
+        ...data,
+        updatedAt: Timestamp.now(),
+      };
+      
+      const docRef = doc(db, COLLECTION_NAME, existingData.id!);
+      await updateDoc(docRef, mergedData);
+      return { id: existingData.id, isUpdate: true };
+    } else {
+      // Add new data
+      const newId = await addDataDesa(data);
+      return { id: newId, isUpdate: false };
+    }
+  } catch (error) {
+    console.error("Error upserting data desa:", error);
     throw error;
   }
 };

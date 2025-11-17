@@ -10,9 +10,11 @@ import {
   orderBy,
   onSnapshot,
   Timestamp,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { createLayananNotification, generateLayananMessage } from './notificationService';
 
 export interface LayananPublik {
   id?: string;
@@ -22,6 +24,7 @@ export interface LayananPublik {
   nik: string;
   noKK: string;
   alamat: string;
+  daerah?: string; // Field untuk daerah/banjar
   noTelepon?: string;
   email?: string;
   keperluan?: string;
@@ -44,9 +47,23 @@ export interface LayananPublik {
   saksiDua?: string;
   dokumenPendukung?: string[];
   catatanTambahan?: string;
-  status: 'pending' | 'diproses' | 'diterima' | 'ditolak' | 'selesai';
+  status: 'pending_admin' | 'approved_admin' | 'pending_kadus' | 'approved_kadus' | 'pending_kades' | 'approved_kades' | 'completed' | 'ditolak' | 'auto_approved';
   alasanTolak?: string;
   catatanAdmin?: string;
+  catatanKadus?: string;
+  catatanKades?: string;
+  approvedByAdmin?: boolean;
+  approvedByKadus?: boolean;
+  approvedByKades?: boolean;
+  adminApprovalDate?: Timestamp;
+  approvedAdminAt?: Timestamp; // Timestamp untuk auto-approve checker
+  kadusApprovalDate?: Timestamp;
+  kadesApprovalDate?: Timestamp;
+  autoApprovalDate?: Timestamp;
+  autoApprovedAt?: Timestamp;
+  autoApprovedReason?: string;
+  estimasiSelesai?: Timestamp;
+  buktiApproval?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   processedBy?: string;
@@ -61,7 +78,7 @@ export interface NotifikasiLayanan {
   jenisLayanan: string;
   judul: string;
   pesan: string;
-  status: 'pending' | 'diproses' | 'diterima' | 'ditolak' | 'selesai';
+  status: 'pending_admin' | 'approved_admin' | 'pending_kadus' | 'approved_kadus' | 'pending_kades' | 'approved_kades' | 'completed' | 'ditolak' | 'auto_approved';
   isRead: boolean;
   createdAt: Timestamp;
 }
@@ -74,20 +91,22 @@ export const addLayananPublik = async (data: Omit<LayananPublik, "id" | "created
   try {
     const docRef = await addDoc(collection(db, COLLECTION_LAYANAN), {
       ...data,
-      status: 'pending',
+      status: 'pending_admin',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
-    // Buat notifikasi untuk user
-    await addNotifikasiLayanan({
+    // Create notification for initial submission
+    const notificationData = generateLayananMessage('pending_admin', data.jenisLayanan);
+    
+    await createLayananNotification({
       userId: data.userId,
       layananId: docRef.id,
+      status: 'pending_admin',
+      title: notificationData.title,
+      message: notificationData.message,
       jenisLayanan: data.jenisLayanan,
-      judul: `Permohonan ${data.jenisLayanan}`,
-      pesan: `Permohonan ${data.jenisLayanan} Anda telah diterima dan sedang diproses.`,
-      status: 'pending',
-      isRead: false
+      priority: notificationData.priority
     });
 
     return docRef.id;
@@ -102,9 +121,24 @@ export const updateStatusLayanan = async (
   id: string, 
   status: LayananPublik['status'], 
   adminData: { 
-    processedBy: string; 
-    catatanAdmin?: string; 
-    alasanTolak?: string; 
+    processedBy?: string; 
+    catatanAdmin?: string;
+    catatanKadus?: string;
+    catatanKades?: string; 
+    alasanTolak?: string;
+    approvedByAdmin?: boolean;
+    approvedByKadus?: boolean;
+    approvedByKades?: boolean;
+    adminApprovalDate?: any;
+    approvedAdminAt?: any; // Timestamp untuk auto-approve checker
+    kadusApprovalDate?: any;
+    kadesApprovalDate?: any;
+    autoApprovalDate?: any;
+    autoApprovedAt?: any;
+    autoApprovedReason?: string;
+    estimasiSelesai?: any;
+    buktiApproval?: string;
+    processedAt?: any;
   }
 ) => {
   try {
@@ -112,55 +146,46 @@ export const updateStatusLayanan = async (
     
     const updateData: any = {
       status,
-      processedBy: adminData.processedBy,
-      processedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    if (adminData.catatanAdmin) {
-      updateData.catatanAdmin = adminData.catatanAdmin;
-    }
+    // Add all provided fields
+    Object.keys(adminData).forEach(key => {
+      if (adminData[key as keyof typeof adminData] !== undefined) {
+        updateData[key] = adminData[key as keyof typeof adminData];
+      }
+    });
 
-    if (adminData.alasanTolak && status === 'ditolak') {
-      updateData.alasanTolak = adminData.alasanTolak;
+    // Set processedBy if provided, otherwise keep existing
+    if (adminData.processedBy) {
+      updateData.processedBy = adminData.processedBy;
     }
 
     await updateDoc(docRef, updateData);
 
-    // Ambil data layanan untuk notifikasi
-    const layananData = await getLayananById(id);
-    if (layananData) {
-      // Buat notifikasi berdasarkan status
-      let pesan = '';
-      let judul = '';
+    // Get layanan data for notification
+    const layananDoc = await getDoc(docRef);
+    if (layananDoc.exists()) {
+      const layananData = { id: layananDoc.id, ...layananDoc.data() } as LayananPublik;
       
-      switch (status) {
-        case 'diproses':
-          judul = `${layananData.jenisLayanan} - Sedang Diproses`;
-          pesan = `Permohonan ${layananData.jenisLayanan} Anda sedang diproses oleh petugas.`;
-          break;
-        case 'diterima':
-          judul = `${layananData.jenisLayanan} - Diterima`;
-          pesan = `Selamat! Permohonan ${layananData.jenisLayanan} Anda telah diterima.`;
-          break;
-        case 'ditolak':
-          judul = `${layananData.jenisLayanan} - Ditolak`;
-          pesan = `Maaf, permohonan ${layananData.jenisLayanan} Anda ditolak. ${adminData.alasanTolak ? 'Alasan: ' + adminData.alasanTolak : ''}`;
-          break;
-        case 'selesai':
-          judul = `${layananData.jenisLayanan} - Selesai`;
-          pesan = `Permohonan ${layananData.jenisLayanan} Anda telah selesai diproses. Silakan ambil dokumen di kantor desa.`;
-          break;
-      }
-
-      await addNotifikasiLayanan({
+      // Generate professional notification message
+      const notificationData = generateLayananMessage(
+        status, 
+        layananData.jenisLayanan, 
+        layananData.buktiApproval
+      );
+      
+      // Create universal notification
+      await createLayananNotification({
         userId: layananData.userId,
         layananId: id,
-        jenisLayanan: layananData.jenisLayanan,
-        judul,
-        pesan,
         status,
-        isRead: false
+        title: notificationData.title,
+        message: notificationData.message,
+        jenisLayanan: layananData.jenisLayanan,
+        buktiApproval: layananData.buktiApproval,
+        estimasiSelesai: layananData.estimasiSelesai?.toDate?.()?.toLocaleDateString('id-ID') || undefined,
+        priority: notificationData.priority
       });
     }
 
@@ -451,11 +476,15 @@ export const getLayananStats = async () => {
     
     const stats = {
       total: allLayanan.length,
-      pending: allLayanan.filter(l => l.status === 'pending').length,
-      diproses: allLayanan.filter(l => l.status === 'diproses').length,
-      diterima: allLayanan.filter(l => l.status === 'diterima').length,
+      pending_admin: allLayanan.filter(l => l.status === 'pending_admin').length,
+      approved_admin: allLayanan.filter(l => l.status === 'approved_admin').length,
+      pending_kadus: allLayanan.filter(l => l.status === 'pending_kadus').length,
+      approved_kadus: allLayanan.filter(l => l.status === 'approved_kadus').length,
+      pending_kades: allLayanan.filter(l => l.status === 'pending_kades').length,
+      approved_kades: allLayanan.filter(l => l.status === 'approved_kades').length,
+      completed: allLayanan.filter(l => l.status === 'completed').length,
       ditolak: allLayanan.filter(l => l.status === 'ditolak').length,
-      selesai: allLayanan.filter(l => l.status === 'selesai').length,
+      auto_approved: allLayanan.filter(l => l.status === 'auto_approved').length,
       byJenis: {} as Record<string, number>
     };
 
@@ -482,6 +511,113 @@ export const deleteLayanan = async (id: string) => {
     return true;
   } catch (error) {
     console.error("Error deleting layanan:", error);
+    throw error;
+  }
+};
+
+// Approval functions for workflow
+export const approveByAdmin = async (id: string, adminData: { catatanAdmin?: string }) => {
+  try {
+    await updateStatusLayanan(id, 'approved_admin', {
+      ...adminData,
+      approvedByAdmin: true,
+      adminApprovalDate: serverTimestamp(),
+      approvedAdminAt: serverTimestamp() // Timestamp untuk auto-approve checker
+    });
+    return true;
+  } catch (error) {
+    console.error("Error approving by admin:", error);
+    throw error;
+  }
+};
+
+export const approveByKadus = async (id: string, kadusData: { catatanKadus?: string }) => {
+  try {
+    await updateStatusLayanan(id, 'approved_kadus', {
+      ...kadusData,
+      approvedByKadus: true,
+      kadusApprovalDate: serverTimestamp()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error approving by kadus:", error);
+    throw error;
+  }
+};
+
+export const approveByKades = async (id: string, kadesData: { catatanKades?: string }) => {
+  try {
+    await updateStatusLayanan(id, 'approved_kades', {
+      ...kadesData,
+      approvedByKades: true,
+      kadesApprovalDate: serverTimestamp(),
+      buktiApproval: `LAYANAN-${Date.now()}`, // Generate bukti approval
+      estimasiSelesai: new Timestamp(Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), 0) // 7 hari dari sekarang
+    });
+    return true;
+  } catch (error) {
+    console.error("Error approving by kades:", error);
+    throw error;
+  }
+};
+
+export const markAsCompleted = async (id: string) => {
+  try {
+    await updateStatusLayanan(id, 'completed', {
+      processedAt: serverTimestamp()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error marking as completed:", error);
+    throw error;
+  }
+};
+
+export const autoApprove = async (id: string, currentStatus: string) => {
+  try {
+    let nextStatus = '';
+    switch (currentStatus) {
+      case 'pending_admin':
+        nextStatus = 'approved_admin';
+        break;
+      case 'pending_kadus':
+        nextStatus = 'approved_kadus';
+        break;
+      case 'pending_kades':
+        nextStatus = 'approved_kades';
+        break;
+      default:
+        throw new Error('Invalid status for auto-approval');
+    }
+    
+    await updateStatusLayanan(id, nextStatus as any, {
+      autoApprovalDate: serverTimestamp()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error auto-approving:", error);
+    throw error;
+  }
+};
+
+export const checkAndAutoApprove = async () => {
+  try {
+    const allLayanan = await getAllLayananPublik();
+    const threeDaysAgo = new Timestamp(Math.floor(Date.now() / 1000) - (3 * 24 * 60 * 60), 0);
+    
+    const toAutoApprove = allLayanan.filter(layanan => {
+      const pendingStatuses = ['pending_admin', 'pending_kadus', 'pending_kades'];
+      return pendingStatuses.includes(layanan.status) && 
+             layanan.createdAt.seconds <= threeDaysAgo.seconds;
+    });
+
+    for (const layanan of toAutoApprove) {
+      await autoApprove(layanan.id!, layanan.status);
+    }
+
+    return toAutoApprove.length;
+  } catch (error) {
+    console.error("Error checking auto-approval:", error);
     throw error;
   }
 };

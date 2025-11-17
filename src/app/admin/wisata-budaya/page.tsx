@@ -1,7 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import AdminLayout from '../components/AdminLayout';
+
+// Fix for default marker icons in Leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: '/leaflet/marker-icon-2x.png',
+  iconUrl: '/leaflet/marker-icon.png',
+  shadowUrl: '/leaflet/marker-shadow.png',
+});
 import { 
   getAllWisata, 
   getAllBudaya, 
@@ -15,6 +26,14 @@ import {
   BudayaItem
 } from '../../../lib/wisataBudayaService';
 
+// Dynamic import Leaflet components with proper types
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+
+// Map Click Handler Component
+const MapClickHandler = dynamic(() => import('./components/MapClickHandler'), { ssr: false });
+
 type TabType = 'wisata' | 'budaya';
 type ModalMode = 'add' | 'edit';
 
@@ -25,7 +44,7 @@ export default function WisataBudayaAdminPage() {
   const [activeTab, setActiveTab] = useState<TabType>('wisata');
   const [wisataList, setWisataList] = useState<WisataItem[]>([]);
   const [budayaList, setBudayaList] = useState<BudayaItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Only for data fetching, not navigation
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modal states
@@ -61,6 +80,13 @@ export default function WisataBudayaAdminPage() {
   const [existingGaleri, setExistingGaleri] = useState<string[]>([]);
   const [galeriToDelete, setGaleriToDelete] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Map modal states
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-8.6492, 115.2191]); // Bali center
+  const [selectedCoordinates, setSelectedCoordinates] = useState<[number, number] | null>(null);
+  const [tempLocationName, setTempLocationName] = useState('');
+  const [mapMode, setMapMode] = useState<'wisata' | 'budaya'>('wisata');
 
   useEffect(() => {
     fetchData();
@@ -119,6 +145,60 @@ export default function WisataBudayaAdminPage() {
   const removeExistingGaleri = (url: string) => {
     setExistingGaleri(prev => prev.filter(u => u !== url));
     setGaleriToDelete(prev => [...prev, url]);
+  };
+
+  // Map handling functions
+  const openMapModal = (mode: 'wisata' | 'budaya') => {
+    setMapMode(mode);
+    setSelectedCoordinates(null);
+    setTempLocationName('');
+    setShowMapModal(true);
+  };
+
+  const handleMapClick = async (lat: number, lng: number) => {
+    setSelectedCoordinates([lat, lng]);
+    
+    // Reverse geocoding to get location name
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+      );
+      const data = await response.json();
+      
+      if (data && data.display_name) {
+        const locationName = data.display_name;
+        setTempLocationName(locationName);
+      } else {
+        setTempLocationName(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      }
+    } catch (error) {
+      console.error('Error getting location name:', error);
+      setTempLocationName(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    }
+  };
+
+  const confirmLocationSelection = () => {
+    if (selectedCoordinates && tempLocationName) {
+      const coordinatesString = `${selectedCoordinates[0]},${selectedCoordinates[1]}`;
+      
+      if (mapMode === 'wisata') {
+        setWisataForm({
+          ...wisataForm,
+          lokasi: tempLocationName,
+          alamat: tempLocationName,
+          // Store coordinates in jarak field as additional info
+          jarak: coordinatesString
+        });
+      } else {
+        setBudayaForm({
+          ...budayaForm,
+          lokasi: tempLocationName,
+          // We could add coordinates to deskripsi or create custom field
+          deskripsi: `${budayaForm.deskripsi || ''}\n[Koordinat: ${coordinatesString}]`.trim()
+        });
+      }
+      setShowMapModal(false);
+    }
   };
 
   const openAddModal = () => {
@@ -413,15 +493,7 @@ export default function WisataBudayaAdminPage() {
 
           {/* Content List */}
           <div className="p-8 bg-gradient-to-br from-gray-50 to-white">
-            {loading ? (
-              <div className="py-16 text-center">
-                <div className="relative inline-block">
-                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600"></div>
-                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-600 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
-                </div>
-                <p className="text-gray-500 mt-6 font-medium">Memuat data...</p>
-              </div>
-            ) : currentList.length === 0 ? (
+            {currentList.length === 0 && !loading ? (
               <div className="py-16 text-center">
                 <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
                   <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -572,7 +644,7 @@ export default function WisataBudayaAdminPage() {
                           ? setWisataForm({...wisataForm, kategori: e.target.value as any})
                           : setBudayaForm({...budayaForm, kategori: e.target.value as any})
                         }
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                         required
                       >
                         <option value="">Pilih kategori</option>
@@ -600,11 +672,14 @@ export default function WisataBudayaAdminPage() {
                                 alamat: value // Sync alamat dengan lokasi
                               });
                             }}
+                            onClick={() => openMapModal('wisata')}
                             placeholder="Klik Untuk Memilih Lokasi"
-                            className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white text-gray-900 placeholder-gray-500"
+                            readOnly
                           />
                           <button
                             type="button"
+                            onClick={() => openMapModal('wisata')}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -622,11 +697,15 @@ export default function WisataBudayaAdminPage() {
                         <div className="relative">
                           <input
                             type="text"
+                            value={budayaForm.lokasi || ''}
+                            onClick={() => openMapModal('budaya')}
                             placeholder="Klik Untuk Memilih Lokasi"
-                            className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-white text-gray-900 placeholder-gray-500"
+                            readOnly
                           />
                           <button
                             type="button"
+                            onClick={() => openMapModal('budaya')}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -650,7 +729,7 @@ export default function WisataBudayaAdminPage() {
                           ? setWisataForm({...wisataForm, judul: e.target.value})
                           : setBudayaForm({...budayaForm, judul: e.target.value})
                         }
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder-gray-500"
                         required
                       />
                     </div>
@@ -667,7 +746,7 @@ export default function WisataBudayaAdminPage() {
                           : setBudayaForm({...budayaForm, deskripsi: e.target.value})
                         }
                         rows={5}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white text-gray-900 placeholder-gray-500"
                         required
                       />
                     </div>
@@ -687,9 +766,9 @@ export default function WisataBudayaAdminPage() {
                         />
                         <label
                           htmlFor="photo-input"
-                          className="flex items-center justify-between w-full px-4 py-2.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                          className="flex items-center justify-between w-full px-4 py-2.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white"
                         >
-                          <span className="text-gray-500">
+                          <span className="text-gray-700">
                             {photoFile ? photoFile.name : 'Klik Untuk memilih Gambar'}
                           </span>
                           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -715,9 +794,9 @@ export default function WisataBudayaAdminPage() {
                         />
                         <label
                           htmlFor="galeri-input"
-                          className="flex items-center justify-between w-full px-4 py-2.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                          className="flex items-center justify-between w-full px-4 py-2.5 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white"
                         >
-                          <span className="text-gray-500">
+                          <span className="text-gray-700">
                             {galeriFiles.length > 0 ? `${galeriFiles.length} gambar dipilih` : 'Klik untuk upload galeri'}
                           </span>
                           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -935,6 +1014,92 @@ export default function WisataBudayaAdminPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map Modal */}
+      {showMapModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-800">
+                  Pilih Lokasi {mapMode === 'wisata' ? 'Wisata' : 'Budaya'}
+                </h3>
+                <button
+                  onClick={() => setShowMapModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-gray-600 mt-2">
+                Klik pada peta untuk memilih lokasi yang diinginkan
+              </p>
+            </div>
+
+            {/* Map Container */}
+            <div className="flex-1 relative">
+              {typeof window !== 'undefined' && (
+                <MapContainer
+                  center={mapCenter}
+                  zoom={13}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  />
+                  <MapClickHandler onMapClick={handleMapClick} />
+                  {selectedCoordinates && (
+                    <Marker position={selectedCoordinates} />
+                  )}
+                </MapContainer>
+              )}
+            </div>
+
+            {/* Selected Location Info */}
+            {selectedCoordinates && (
+              <div className="p-4 border-t border-gray-200 bg-gray-50">
+                <div className="mb-3">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Lokasi Terpilih:
+                  </label>
+                  <p className="text-gray-600 text-sm">{tempLocationName}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-semibold text-gray-700">Latitude:</span>
+                    <span className="text-gray-600 ml-2">{selectedCoordinates[0].toFixed(6)}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Longitude:</span>
+                    <span className="text-gray-600 ml-2">{selectedCoordinates[1].toFixed(6)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Footer Actions */}
+            <div className="p-6 border-t border-gray-200 flex gap-3">
+              <button
+                onClick={() => setShowMapModal(false)}
+                className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmLocationSelection}
+                disabled={!selectedCoordinates}
+                className="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
+              >
+                Pilih Lokasi
+              </button>
             </div>
           </div>
         </div>

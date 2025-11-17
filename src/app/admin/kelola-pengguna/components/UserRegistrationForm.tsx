@@ -1,44 +1,95 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '../../../../lib/firebase';
 import { UserRole } from '../../../masyarakat/lib/useCurrentUser';
 import { roleDescriptions, getRoleTitle, getRoleDescription } from '../../../../lib/rolePermissions';
 import userManagementService, { CreateUserData } from '../../../../lib/userManagementService';
+import superAdminService, { CreateSuperAdminData } from '../../../../lib/superAdminService';
 import { useCurrentUser } from '../../../masyarakat/lib/useCurrentUser';
 import AdminRoleManager from './AdminRoleManager';
+import { getDataDesa } from '../../../../lib/dataDesaService';
 
 interface UserRegistrationFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  fixedRole?: UserRole | 'masyarakat_dpkj' | 'masyarakat_luar_dpkj'; // Role yang tidak bisa diubah
 }
 
-export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegistrationFormProps) {
+export default function UserRegistrationForm({ onSuccess, onCancel, fixedRole }: UserRegistrationFormProps) {
   const router = useRouter();
   const { user: currentUser, loading: userLoading } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [bypassMode, setBypassMode] = useState(false);
+
 
   // Form state
   const [formData, setFormData] = useState({
     displayName: '',        // Nama
-    role: 'warga_dpkj' as UserRole,  // Role
+    role: (fixedRole || 'warga_dpkj') as UserRole,  // Role (locked if fixedRole provided)
     userName: '',           // User Name  
     phoneNumber: '',        // No. Telp
     email: '',             // Email
     password: '',          // Kata Sandi
-    confirmPassword: ''    // Konfirmasi Kata Sandi
+    confirmPassword: '',   // Konfirmasi Kata Sandi
+    daerah: ''             // Daerah (untuk Kepala Dusun)
   });
+  
+  const [daerahOptions, setDaerahOptions] = useState<string[]>([]);
+  const [loadingDaerah, setLoadingDaerah] = useState(false);
+
+  // Fetch daerah options from data-desa
+  useEffect(() => {
+    const fetchDaerahOptions = async () => {
+      if (formData.role === 'kepala_dusun') {
+        setLoadingDaerah(true);
+        try {
+          const dataWarga = await getDataDesa();
+          const uniqueDaerah = [...new Set(dataWarga
+            .map(item => {
+              // Extract name from formats like "6 TARUNA SARI" or just "TARUNA SARI"
+              if (item.daerah && item.daerah.includes(' ')) {
+                const parts = item.daerah.split(' ');
+                return parts.slice(1).join(' '); // Get name part only
+              }
+              return item.daerah;
+            })
+            .filter(daerah => daerah && daerah.trim() !== ''))]
+            .sort();
+          
+          setDaerahOptions(uniqueDaerah as string[]);
+          console.log('📍 Daerah options loaded:', uniqueDaerah);
+        } catch (error) {
+          console.error('Error fetching daerah:', error);
+        } finally {
+          setLoadingDaerah(false);
+        }
+      }
+    };
+    
+    fetchDaerahOptions();
+  }, [formData.role]);
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Special handling for phone number
+    if (name === 'phoneNumber') {
+      // Only allow numbers and + symbol, remove spaces and dashes
+      const cleanValue = value.replace(/[^0-9+]/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [name]: cleanValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
     // Clear errors when user starts typing
     if (error) setError('');
   };
@@ -47,6 +98,12 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
   const validateForm = (): boolean => {
     if (!formData.email || !formData.password || !formData.displayName || !formData.role) {
       setError('Harap isi semua field yang wajib');
+      return false;
+    }
+    
+    // Validate daerah for Kepala Dusun
+    if (formData.role === 'kepala_dusun' && !formData.daerah) {
+      setError('Harap pilih daerah untuk Kepala Dusun');
       return false;
     }
 
@@ -66,121 +123,102 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
       return false;
     }
 
-    return true;
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    console.log('🎯 FORM: Submit started');
-    console.log('📊 FORM: Current state:', {
-      bypassMode,
-      userLoading,
-      currentUser: currentUser ? 'exists' : 'null',
-      formData
-    });
-    
-    const formValid = validateForm();
-    console.log('📋 FORM: Form validation result:', formValid);
-    if (!formValid) {
-      console.log('❌ FORM: Form validation failed, stopping');
-      return;
-    }
-    
-    // Tunggu sampai user loading selesai
-    if (userLoading) {
-      console.log('⏳ FORM: User still loading, waiting...');
-      setError('Mohon tunggu, sedang memuat data user...');
-      return;
-    }
-    
-    // Debug info
-    console.log('👤 FORM: Current user:', currentUser);
-    console.log('🏷️ FORM: User role:', currentUser?.role);
-    
-    // Set createdBy dengan prioritas berbeda
-    const currentAuthUser = auth.currentUser;
-    const createdBy = currentUser?.uid || currentAuthUser?.uid || `bypass-${Date.now()}`;
-    console.log('📝 FORM: CreatedBy determined as:', createdBy);
-    
-    // Validasi berdasarkan currentUser dengan role yang lebih lengkap
-    if (!currentUser && !bypassMode) {
-      console.log('❌ FORM: No current user and no bypass mode');
-      setError('Tidak dapat memverifikasi status login. Silakan refresh halaman atau login ulang.');
-      return;
-    }
-    
-    // SIMPLIFIED CHECK: Allow if bypass mode is active
-    if (bypassMode) {
-      console.log('🚀 FORM: BYPASS MODE active - user creation allowed');
-    } else {
-      console.log('🔒 FORM: Normal validation mode');
+    // Validate Indonesian phone number
+    if (formData.phoneNumber && formData.phoneNumber.trim() !== '') {
+      const phoneRegex = /^(08|628|\+628)[0-9]{8,12}$/;
+      if (!phoneRegex.test(formData.phoneNumber)) {
+        setError('Format nomor telepon tidak valid. Gunakan format: 08xxxxxxxxxx (10-13 digit) atau +628xxxxxxxxx');
+        return false;
+      }
       
-      // Check Firebase Auth first
-      const firebaseUser = auth.currentUser;
-      console.log('🔥 FORM: Firebase user:', firebaseUser ? 'exists' : 'null');
-      
-      // Development mode detection
-      const isDevelopment = process.env.NODE_ENV === 'development' || 
-                           window.location.hostname === 'localhost' || 
-                           window.location.hostname.includes('127.0.0.1');
-      
-      console.log('🧪 FORM: Development mode:', isDevelopment);
-      
-      if (isDevelopment && firebaseUser) {
-        // Allow in development mode with any Firebase user
-        console.log('🚀 FORM: DEVELOPMENT MODE - allowing user creation for Firebase authenticated user');
-      } else {
-        console.log('🔍 FORM: Strict validation for production');
-        
-        // Strict validation for production
-        const allowedRoles = ['administrator', 'admin_desa'];
-        
-        if (!currentUser || !currentUser.uid) {
-          console.log('❌ FORM: No current user or UID');
-          setError('Tidak dapat memverifikasi status login. Silakan aktifkan Bypass Mode atau setup role administrator terlebih dahulu.');
-          return;
-        }
-        
-        if (!allowedRoles.includes(currentUser.role)) {
-          console.log('❌ FORM: Role not allowed:', currentUser.role);
-          setError(`Akses ditolak. Role Anda (${currentUser.role}) tidak memiliki izin untuk membuat user baru. Silakan aktifkan Bypass Mode atau setup role administrator.`);
-          return;
-        }
-        
-        console.log('✅ FORM: Role validation passed');
+      // Additional length check
+      const phoneLength = formData.phoneNumber.replace(/^\+/, '').length;
+      if (phoneLength < 10 || phoneLength > 15) {
+        setError('Nomor telepon harus 10-15 digit');
+        return false;
       }
     }
 
-    console.log('🔄 FORM: Setting loading state...');
+    return true;
+  };
+
+  // Handle form submission - Simplified like super-admin page
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    console.log(' FORM: Submit started');
+    console.log(' FORM: Form data:', formData);
+    
+    const formValid = validateForm();
+    if (!formValid) {
+      console.log(' FORM: Form validation failed');
+      return;
+    }
+    
+    // Set createdBy - use current user if available, otherwise 'system'
+    const currentAuthUser = auth.currentUser;
+    const createdBy = currentUser?.uid || currentAuthUser?.uid || 'system';
+    console.log(' FORM: CreatedBy:', createdBy);
+
+    console.log(' FORM: Setting loading state...');
     setLoading(true);
     setError('');
 
     try {
-      console.log('🚀 FORM: Starting user creation process...');
-      console.log('📝 FORM: Form data:', formData);
-      console.log('👤 FORM: Created by:', createdBy);
-      console.log('🔧 FORM: Bypass mode:', bypassMode);
+      console.log(' FORM: Starting user creation process...');
       
-      const userData: CreateUserData = {
-        email: formData.email,
-        password: formData.password,
-        displayName: formData.displayName,
-        role: formData.role,
-        userName: formData.userName || undefined,
-        phoneNumber: formData.phoneNumber || undefined,
-      };
+  // Check if creating admin user (administrator or admin_desa)
+      const isAdminRole = formData.role === 'administrator' || formData.role === 'admin_desa';
+      
+      if (isAdminRole) {
+        console.log('🔐 FORM: Creating Super Admin user...');
+        
+        const superAdminData: CreateSuperAdminData = {
+          email: formData.email,
+          password: formData.password,
+          displayName: formData.displayName,
+          userName: formData.userName || undefined,
+          role: formData.role as 'administrator' | 'admin_desa',
+          phoneNumber: formData.phoneNumber || undefined,
+        };
 
-      console.log('📦 FORM: UserData prepared:', userData);
-      console.log('📞 FORM: Calling userManagementService.createUser...');
-      
-      const result = await userManagementService.createUser(userData, createdBy);
-      
-      console.log('✅ FORM: Service call completed successfully!');
-      console.log('🎉 FORM: Result:', result);
-      
-      setSuccess(`✅ Profile user ${formData.displayName} berhasil dibuat dengan role ${getRoleTitle(formData.role)}!\n\n⚠️ CATATAN: User ini dibuat sebagai profile saja. User perlu mendaftar sendiri dengan email ini untuk bisa login ke sistem.`);
+        console.log('📦 FORM: SuperAdmin data prepared:', superAdminData);
+        const result = await superAdminService.createSuperAdmin(superAdminData, createdBy);
+        
+        console.log('✅ FORM: Super Admin created successfully!');
+        console.log('🎉 FORM: Result:', result);
+        
+        setSuccess(`✅ Super Admin ${formData.displayName} berhasil dibuat dengan role ${getRoleTitle(formData.role)}!
+        
+📧 Email: ${formData.email}
+🔑 Password: ${formData.password}
+👤 Role: ${getRoleTitle(formData.role)}
+💾 Data tersimpan di: Firestore > Super_admin collection
+
+⚠️ PENTING: Simpan informasi login ini untuk diberikan kepada admin yang bersangkutan. Admin dapat langsung login dengan kredensial ini.`);
+        
+      } else {
+        console.log('👤 FORM: Creating regular user...');
+        
+        const userData: CreateUserData = {
+          email: formData.email,
+          password: formData.password,
+          displayName: formData.displayName,
+          role: formData.role,
+          userName: formData.userName || undefined,
+          phoneNumber: formData.phoneNumber || undefined,
+        };
+
+        console.log('📦 FORM: UserData prepared:', userData);
+        const result = await userManagementService.createUser(userData, createdBy);
+        
+        console.log('✅ FORM: User created successfully!');
+        console.log('🎉 FORM: Result:', result);
+        
+        setSuccess(`✅ Profile user ${formData.displayName} berhasil dibuat dengan role ${getRoleTitle(formData.role)}!
+
+⚠️ CATATAN: User ini dibuat sebagai profile saja. User perlu mendaftar sendiri dengan email ini untuk bisa login ke sistem.`);
+      }
       
       // Reset form
       setFormData({
@@ -190,7 +228,8 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
         phoneNumber: '',
         email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        daerah: ''
       });
 
       // Call success callback after longer delay to let admin read the message
@@ -208,6 +247,7 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
 
   // Available roles for registration (exclude unknown)
   const availableRoles: UserRole[] = [
+    'super_admin',
     'administrator',
     'admin_desa', 
     'kepala_desa',
@@ -316,70 +356,30 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
           </div>
         )}
 
-        {/* Debug Info - hanya tampil jika ada masalah */}
-        {(userLoading || !currentUser || auth.currentUser) && (
-          <div className="mb-8 mx-auto max-w-2xl">
-            <div className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-2xl shadow-lg">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-yellow-900 text-lg mb-2">Status Autentikasi</h4>
-                  <div className="text-sm text-yellow-800 space-y-1 mb-4">
-                    <div><strong>Loading:</strong> {userLoading ? 'Ya' : 'Tidak'}</div>
-                    <div><strong>Firestore User:</strong> {currentUser ? 'Login' : 'Tidak Login'}</div>
-                    <div><strong>Email:</strong> {currentUser?.email || auth.currentUser?.email || 'N/A'}</div>
-                    <div><strong>Role:</strong> {currentUser?.role || 'N/A'}</div>
-                    <div><strong>Display Name:</strong> {currentUser?.displayName || auth.currentUser?.displayName || 'N/A'}</div>
-                    <div><strong>UID:</strong> {currentUser?.uid || auth.currentUser?.uid || 'N/A'}</div>
-                    <div><strong>Firebase Auth:</strong> {auth.currentUser ? '✅ Login' : '❌ Tidak Login'}</div>
-                    <div><strong>Bypass Mode:</strong> {bypassMode ? '✅ Aktif' : '❌ Tidak Aktif'}</div>
-                  </div>
-                  
-                  {/* Development Controls */}
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBypassMode(!bypassMode);
-                        setError(''); // Clear any existing errors
-                        console.log('Bypass mode toggled:', !bypassMode);
-                      }}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                        bypassMode 
-                          ? 'bg-red-500 text-white hover:bg-red-600' 
-                          : 'bg-green-500 text-white hover:bg-green-600'
-                      }`}
-                    >
-                      {bypassMode ? 'Nonaktifkan Bypass' : 'Aktifkan Bypass Mode'}
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBypassMode(true);
-                        setError('');
-                        console.log('🚀 Force bypass mode activated');
-                      }}
-                      className="px-3 py-1 rounded-lg text-xs font-semibold bg-purple-500 text-white hover:bg-purple-600 transition-colors"
-                    >
-                      Force Bypass
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => window.location.reload()}
-                      className="px-3 py-1 rounded-lg text-xs font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-                    >
-                      Refresh Halaman
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Super Admin Quick Create (Development Only) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+            <h4 className="font-bold text-purple-800 mb-2">👑 Quick Super Admin Test (Dev Only)</h4>
+            <button
+              onClick={() => {
+                setFormData({
+                  displayName: 'Test Super Admin',
+                  role: 'administrator' as UserRole,
+                  userName: 'testsuperadmin',
+                  phoneNumber: '081234567890',
+                  email: 'testsuperadmin@dpkj.com',
+                  password: 'admin123456',
+                  confirmPassword: 'admin123456',
+                  daerah: ''
+                });
+              }}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded text-sm font-semibold transition-colors"
+            >
+              Fill Test Data
+            </button>
+            <p className="text-xs text-purple-700 mt-2">
+              Mengisi form dengan data test untuk Super Admin. Klik untuk auto-fill, lalu submit.
+            </p>
           </div>
         )}
 
@@ -454,7 +454,12 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
                       name="role"
                       value={formData.role}
                       onChange={handleInputChange}
-                      className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-red-500/10 focus:border-red-400 focus:bg-white transition-all duration-300 text-gray-900 appearance-none cursor-pointer shadow-sm hover:shadow-md font-medium"
+                      disabled={!!fixedRole}
+                      className={`w-full px-6 py-4 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-red-500/10 focus:border-red-400 transition-all duration-300 text-gray-900 appearance-none shadow-sm font-medium ${
+                        fixedRole 
+                          ? 'bg-gray-100 cursor-not-allowed opacity-75' 
+                          : 'bg-gray-50/80 focus:bg-white cursor-pointer hover:shadow-md'
+                      }`}
                       required
                     >
                       {availableRoles.map(role => (
@@ -469,7 +474,109 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
                       </svg>
                     </div>
                   </div>
+                  
+                  {/* Fixed Role Info */}
+                  {fixedRole && (
+                    <div className="mt-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-blue-900 text-sm mb-1">
+                            🔒 Role Terkunci
+                          </h4>
+                          <p className="text-xs text-blue-800">
+                            Role otomatis disesuaikan dengan komponen <strong>{getRoleTitle(fixedRole as UserRole)}</strong> dan tidak dapat diubah.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Super Admin Info */}
+                  {!fixedRole && (formData.role === 'administrator' || formData.role === 'admin_desa') && (
+                    <div className="mt-3 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-purple-900 text-sm mb-1">
+                            👑 Mode Super Admin
+                          </h4>
+                          <div className="text-xs text-purple-800 space-y-1">
+                            <div>✅ Dapat dibuat tanpa login terlebih dahulu</div>
+                            <div>✅ Data akan tersimpan di collection Super_admin</div>
+                            <div>✅ Langsung dapat login setelah dibuat</div>
+                            <div>⚠️ Gunakan email dan password yang aman!</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Daerah - Only for Kepala Dusun */}
+                {formData.role === 'kepala_dusun' && (
+                  <div>
+                    <label htmlFor="daerah" className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <div className="w-5 h-5 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-3 h-3 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                      Daerah <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="daerah"
+                        name="daerah"
+                        value={formData.daerah}
+                        onChange={handleInputChange}
+                        disabled={loadingDaerah}
+                        className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-400 focus:bg-white transition-all duration-300 text-gray-900 shadow-sm hover:shadow-md font-medium appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                        required
+                      >
+                        <option value="">
+                          {loadingDaerah ? 'Memuat daerah...' : 'Pilih Daerah'}
+                        </option>
+                        {daerahOptions.map((daerah) => (
+                          <option key={daerah} value={daerah}>
+                            {daerah}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-orange-400 pointer-events-none">
+                        {loadingDaerah ? (
+                          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-xl">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <p className="text-xs text-orange-800">
+                          <strong>Info:</strong> Kepala Dusun bertanggung jawab atas daerah tertentu. Pilih daerah yang sesuai dari data penduduk desa.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* User Name */}
                 <div>
@@ -545,8 +652,12 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
                       name="phoneNumber"
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
+                      pattern="^(08|628|\+628)[0-9]{8,12}$"
+                      minLength={10}
+                      maxLength={15}
+                      title="Format nomor telepon: 08xxxxxxxxxx (10-13 digit) atau +628xxxxxxxxx"
                       className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-400 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-500 shadow-sm hover:shadow-md font-medium"
-                      placeholder="08xxxxxxxxxx"
+                      placeholder="08xxxxxxxxxx (contoh: 081234567890)"
                     />
                     <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,8 +1,10 @@
 "use client";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { AdminProvider } from './AdminContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { hasPermission } from '../../../lib/rolePermissions';
+import { UserRole } from '../../masyarakat/lib/useCurrentUser';
 // import AuthGuard from '../../components/AuthGuard';
 import Image from 'next/image';
 
@@ -34,40 +36,23 @@ function RenderIcon({ name, className = '' }: { name: string; className?: string
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [animateMenu, setAnimateMenu] = useState(false);
 
-  // Simple auth check - redirect if not authenticated
-  React.useEffect(() => {
-    // Check if we're in the middle of logout process
-    const isLoggingOut = sessionStorage.getItem('admin_logout_in_progress');
-    if (isLoggingOut) {
-      console.log('⏳ AdminLayout: Logout in progress, skipping auth check');
-      return;
-    }
-
-    const storedUser = localStorage.getItem('sigede_auth_user');
-    if (!storedUser) {
-      console.log('❌ AdminLayout: No stored user found, redirecting to login');
-      window.location.href = '/admin/login';
-      return;
-    }
-    
-    try {
-      const userData = JSON.parse(storedUser);
-      const validAdminRoles = ['administrator', 'admin_desa', 'kepala_desa'];
-      
-      if (!userData || !userData.role || !validAdminRoles.includes(userData.role)) {
-        console.log('❌ AdminLayout: Invalid user role:', userData?.role, '- redirecting to login');
-        localStorage.removeItem('sigede_auth_user');
-        window.location.href = '/admin/login';
-      } else {
-        console.log('✅ AdminLayout: Valid admin user:', userData.role);
-      }
-    } catch (e) {
-      console.log('❌ AdminLayout: Invalid user data, redirecting to login');
-      localStorage.removeItem('sigede_auth_user');
-      window.location.href = '/admin/login';
-    }
+  // Initialize animations
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+      const menuTimer = setTimeout(() => {
+        setAnimateMenu(true);
+      }, 300);
+      return () => clearTimeout(menuTimer);
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
+
+  // Note: Auth check is now handled by /admin/layout.tsx
+  // This component only handles UI layout (sidebar, navigation, etc.)
 
   // Handle logout
   const handleLogout = async () => {
@@ -114,43 +99,51 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  const menuItems = [
-    { label: 'Home', path: '/admin/home' },
-    { label: 'Kelola Pengguna', path: '/admin/kelola-pengguna' },
-    { label: 'E-News', path: '/admin/e-news' },
-    { label: 'Profil Desa', path: '/admin/profil-desa' },
-    { label: 'Regulasi Desa', path: '/admin/regulasi' },
-    { label: 'Keuangan', path: '/admin/keuangan' },
-    { label: 'Data Desa', path: '/admin/data-desa' },
-    { label: 'Layanan Publik', path: '/admin/layanan-publik' },
-    { label: 'IKM', path: '/admin/ikm' },
-    { label: 'Wisata & Budaya', path: '/admin/wisata-budaya' },
-    { label: 'Pengaduan', path: '/admin/pengaduan' },
-    { label: 'E-UMKM', path: '/admin/e-umkm' },
-    { label: 'Pengaturan', path: '/admin/pengaturan' },
+  // Define all menu items with their permission keys
+  const allMenuItems = [
+    { label: 'Home', path: '/admin/home', key: null }, // Home always accessible
+    { label: 'Super Admin', path: '/admin/super-admin', key: 'super-admin' },
+    { label: 'Kelola Pengguna', path: '/admin/kelola-pengguna', key: 'kelola-pengguna' },
+    { label: 'E-News', path: '/admin/e-news', key: 'e-news' },
+    { label: 'Profil Desa', path: '/admin/profil-desa', key: 'profil-desa' },
+    { label: 'Regulasi Desa', path: '/admin/regulasi', key: 'regulasi-desa' },
+    { label: 'Keuangan', path: '/admin/keuangan', key: 'keuangan' },
+    { label: 'Data Desa', path: '/admin/data-desa', key: 'data-desa' },
+    { label: 'Layanan Publik', path: '/admin/layanan-publik', key: 'layanan-publik' },
+    { label: 'IKM', path: '/admin/ikm', key: 'ikm' },
+    { label: 'Wisata & Budaya', path: '/admin/wisata-budaya', key: 'wisata-budaya' },
+    { label: 'Pengaduan', path: '/admin/pengaduan', key: 'pengaduan' },
+    { label: 'E-UMKM', path: '/admin/e-umkm', key: 'e-umkm' },
+    { label: 'Pengaturan', path: '/admin/pengaturan', key: null }, // Settings always accessible
   ];
+
+  // Filter menu items based on user role
+  const menuItems = allMenuItems.filter(item => {
+    if (item.key === null) return true; // Always show Home and Settings
+    if (!user?.role) return false; // No role, hide all permission-based items
+    return hasPermission(user.role as UserRole, item.key as any, 'read');
+  });
   // Find active index by matching pathname
   const activeIndex = menuItems.findIndex(item => pathname?.startsWith(item.path));
   // top-right account avatar removed per request
 
 
   return (
-    <>
-      <AdminProvider>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50 flex font-sans text-gray-800 relative overflow-hidden">
+    <AdminProvider>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50 relative">
         {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -left-32 w-80 h-80 bg-gradient-to-br from-red-200/20 to-pink-200/20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-32 -right-40 w-96 h-96 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-full blur-3xl"></div>
+          <div className="absolute -top-40 -left-32 w-80 h-80 bg-gradient-to-br from-red-200/20 to-pink-200/20 rounded-full blur-3xl animate-floating"></div>
+          <div className="absolute -bottom-32 -right-40 w-96 h-96 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-full blur-3xl animate-floating-delayed"></div>
         </div>
 
-        {/* Professional Sidebar */}
-        <aside className="hidden md:flex md:w-80 flex-col bg-white/95 backdrop-blur-xl border-r border-gray-200/50 shadow-2xl relative z-10 h-screen overflow-hidden">
+        {/* Desktop Sidebar - Fixed Position */}
+        <aside className={`hidden md:flex md:w-80 flex-col bg-white/95 backdrop-blur-xl border-r border-gray-200/50 shadow-2xl fixed top-0 left-0 h-screen z-30 transition-all duration-700 ${isLoaded ? 'animate-slide-in-left' : 'opacity-0 -translate-x-full'}`}>
           {/* Sidebar Background Pattern */}
           <div className="absolute inset-0 bg-gradient-to-b from-white via-gray-50/30 to-blue-50/40"></div>
           
-          {/* Logo Section */}
-          <div className="relative flex items-center justify-center py-8 mb-4">
+          {/* Logo Section with Animation */}
+          <div className={`relative flex items-center justify-center py-8 mb-4 transition-all duration-500 ${isLoaded ? 'animate-bounce-in' : 'opacity-0 scale-50'}`}>
             <div className="relative">
               <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-500">
                 <Image 
@@ -161,21 +154,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   className="w-16 h-16 object-contain filter brightness-0 invert"
                 />
               </div>
-              <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white shadow-lg"></div>
+              <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white shadow-lg animate-pulse"></div>
             </div>
           </div>
 
-          {/* Brand Title */}
-          <div className="relative text-center mb-6 px-6">
+          {/* Brand Title with Animation */}
+          <div className={`relative text-center mb-6 px-6 transition-all duration-500 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-4'}`} style={{ animationDelay: '200ms' }}>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent mb-2">
               SiGede DPKJ
             </h1>
             <p className="text-sm text-gray-500 font-medium">Admin Dashboard</p>
           </div>
 
-          {/* User Info Section */}
+          {/* User Info Section with Animation */}
           {user && (
-            <div className="mx-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100/50 shadow-lg">
+            <div className={`mx-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100/50 shadow-lg transition-all duration-500 ${isLoaded ? 'animate-scale-in' : 'opacity-0 scale-90'}`} style={{ animationDelay: '400ms' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                   <span className="text-white text-sm font-bold">
@@ -191,13 +184,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   </p>
                 </div>
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    console.log('🚪 Direct Logout: Clearing all data and redirecting');
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    window.location.href = '/admin/login';
-                  }}
+                  onClick={handleLogout}
                   data-logout-btn
                   className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors duration-200"
                   title="Logout"
@@ -210,23 +197,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           )}
 
-          {/* Navigation */}
+          {/* Navigation with Staggered Animation */}
           <nav className="relative flex-1 px-4 space-y-2 overflow-y-auto sidebar-scroll">
             {menuItems.map((item, idx) => {
               const isActive = activeIndex === idx;
               const iconColors = [
                 'from-red-500 to-pink-600',      // Home
-                'from-blue-500 to-indigo-600',   // Kelola Pengguna  
-                'from-green-500 to-emerald-600', // E-News
-                'from-purple-500 to-violet-600', // Profil Desa
-                'from-orange-500 to-red-600',    // Regulasi
-                'from-cyan-500 to-blue-600',     // Keuangan
-                'from-pink-500 to-rose-600',     // Data Desa
-                'from-indigo-500 to-purple-600', // Layanan Publik
-                'from-teal-500 to-green-600',    // IKM
-                'from-yellow-500 to-orange-600', // Wisata & Budaya
-                'from-violet-500 to-purple-600', // Pengaduan
-                'from-emerald-500 to-teal-600',  // E-UMKM
+                'from-blue-500 to-indigo-600',   // Super Admin
+                'from-green-500 to-emerald-600', // Kelola Pengguna  
+                'from-purple-500 to-violet-600', // E-News
+                'from-orange-500 to-red-600',    // Profil Desa
+                'from-cyan-500 to-blue-600',     // Regulasi
+                'from-pink-500 to-rose-600',     // Keuangan
+                'from-indigo-500 to-purple-600', // Data Desa
+                'from-teal-500 to-green-600',    // Layanan Publik
+                'from-yellow-500 to-orange-600', // IKM
+                'from-violet-500 to-purple-600', // Wisata & Budaya
+                'from-emerald-500 to-teal-600',  // Pengaduan
+                'from-amber-500 to-orange-600',  // E-UMKM
                 'from-gray-500 to-slate-600'     // Pengaturan
               ];
               
@@ -234,11 +222,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <button
                   key={item.label}
                   onClick={() => window.location.href = item.path}
-                  className={`group relative w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-medium transition-all duration-300 transform hover:scale-105 ${
+                  className={`group relative w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-medium transition-all duration-500 transform hover:scale-105 ${
+                    animateMenu ? 'animate-stagger-fade-in' : 'opacity-0'
+                  } ${
                     isActive 
                       ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-xl shadow-red-200' 
                       : 'text-gray-700 hover:bg-white/80 hover:shadow-lg'
                   }`}
+                  style={{
+                    animationDelay: `${600 + (idx * 100)}ms`,
+                    animationFillMode: 'both'
+                  }}
                 >
                   {/* Icon Container */}
                   <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
@@ -301,10 +295,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-      {/* Enhanced Mobile Navigation */}
-      <div className="md:hidden w-full bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-xl relative z-20">
+        {/* Mobile Navigation - Fixed Top */}
+        <div className={`md:hidden fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-xl z-50 transition-all duration-500 ${isLoaded ? 'animate-slide-in-right' : 'opacity-0 translate-y-[-20px]'}`}>
         {/* Mobile Header */}
-        <div className="px-4 py-3 flex items-center justify-between">
+        <div className={`px-4 py-3 flex items-center justify-between transition-all duration-500 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '300ms' }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-lg">
               <Image 
@@ -322,45 +316,49 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
         
-        {/* Mobile Menu Scroll */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 px-4 scrollbar-hide">
+        {/* Mobile Menu Scroll with Animation */}
+        <div className={`flex items-center gap-2 overflow-x-auto pb-3 px-4 scrollbar-hide transition-all duration-500 ${animateMenu ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '500ms' }}>
           {menuItems.map((item, idx) => {
             const isActive = activeIndex === idx;
             return (
               <button
                 key={item.label}
                 onClick={() => window.location.href = item.path}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-500 transform hover:scale-105 ${
+                  animateMenu ? 'animate-stagger-fade-in' : 'opacity-0'
+                } ${
                   isActive 
                     ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-lg shadow-red-200' 
                     : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
                 }`}
+                style={{
+                  animationDelay: `${700 + (idx * 50)}ms`,
+                  animationFillMode: 'both'
+                }}
               >
                 {item.label}
               </button>
             );
           })}
         </div>
-      </div>
-
-      {/* Enhanced Main Content */}
-      <main className="flex-1 relative z-10 md:px-8 px-4 py-6 md:py-8 overflow-auto">
-        {/* Professional Content Container */}
-        <div className="max-w-full mx-auto">
-          {children}
         </div>
-        
-        {/* Floating Action Button (Optional) */}
-        <div className="fixed bottom-8 right-8 z-50 md:hidden">
+
+        {/* Main Content Area */}
+        <main className={`md:ml-80 pt-32 md:pt-0 min-h-screen transition-all duration-700 ${isLoaded ? 'animate-slide-in-right' : 'opacity-0 translate-x-8'}`}>
+          <div className={`px-4 md:px-8 py-6 md:py-8 max-w-full transition-all duration-500 ${isLoaded ? 'animate-page-enter' : 'opacity-0'}`} style={{ animationDelay: '800ms' }}>
+            {children}
+          </div>
+        </main>
+
+        {/* Floating Action Button */}
+        <div className={`fixed bottom-8 right-8 z-50 md:hidden transition-all duration-500 ${isLoaded ? 'animate-bounce-in' : 'opacity-0 scale-0'}`} style={{ animationDelay: '1200ms' }}>
           <button className="w-14 h-14 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-2xl flex items-center justify-center text-white hover:shadow-red-200 hover:shadow-2xl transform hover:scale-110 transition-all duration-300">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
           </button>
         </div>
-      </main>
-        </div>
-      </AdminProvider>
-    </>
+      </div>
+    </AdminProvider>
   );
 }

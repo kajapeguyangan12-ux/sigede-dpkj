@@ -5,7 +5,50 @@ import Link from "next/link";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
+import { uploadPopupIklan } from "@/lib/popupIklanService";
 import AdminLayout from "../components/AdminLayout";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useRouter } from "next/navigation";
+
+// Helper function untuk konversi image ke WebP dengan kualitas 85%
+async function convertToWebP(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const originalSize = file.size;
+              const webpSize = blob.size;
+              const compressionRatio = ((1 - webpSize / originalSize) * 100).toFixed(2);
+              console.log(`📦 WebP Conversion: ${(originalSize / 1024).toFixed(2)}KB → ${(webpSize / 1024).toFixed(2)}KB (${compressionRatio}% smaller)`);
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to convert image'));
+            }
+          },
+          'image/webp',
+          0.85
+        );
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
 
 interface PengaturanHome {
   judulSelamatDatang: string;
@@ -24,7 +67,10 @@ interface PengaturanHome {
 }
 
 export default function PengaturanPage() {
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { logout } = useAuth();
+  
+  const [loading, setLoading] = useState(false); // Only for data operations, not navigation
   const [saving, setSaving] = useState(false);
   const [pengaturan, setPengaturan] = useState<PengaturanHome>({
     judulSelamatDatang: "Ucapan Selamat Datang",
@@ -216,9 +262,20 @@ export default function PengaturanPage() {
 
   const uploadImage = async (file: File, path: string): Promise<string> => {
     try {
-      const storageRef = ref(storage, `pengaturan/${path}`);
-      await uploadBytes(storageRef, file);
+      console.log(`🖼️ Converting ${path} to WebP...`);
+      const webpBlob = await convertToWebP(file);
+      
+      // Ganti ekstensi file dengan .webp
+      const webpPath = path.replace(/\.(jpg|jpeg|png|gif)$/i, '.webp');
+      const storageRef = ref(storage, `pengaturan/${webpPath}`);
+      
+      console.log(`⬆️ Uploading ${webpPath} to Firebase Storage...`);
+      await uploadBytes(storageRef, webpBlob, {
+        contentType: 'image/webp',
+      });
+      
       const url = await getDownloadURL(storageRef);
+      console.log(`✅ Upload successful: ${webpPath}`);
       return url;
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -239,33 +296,34 @@ export default function PengaturanPage() {
 
       // Upload foto kepala desa jika ada file baru
       if (fileKepalaDesa.current?.files?.[0]) {
+        console.log('📸 Uploading foto kepala desa...');
         fotoKepalaDesaUrl = await uploadImage(
           fileKepalaDesa.current.files[0],
-          "kepala-desa.jpg"
+          "kepala-desa.webp"
         );
       }
 
       // Upload foto ucapan selamat datang jika ada file baru
       if (fileUcapan.current?.files?.[0]) {
+        console.log('📸 Uploading foto ucapan selamat datang...');
         fotoUcapanUrl = await uploadImage(
           fileUcapan.current.files[0],
-          "ucapan-selamat-datang.jpg"
+          "ucapan-selamat-datang.webp"
         );
       }
 
-      // Upload foto popup jika ada file baru
+      // Upload foto popup jika ada file baru dengan WebP conversion
       if (filePopup.current?.files?.[0]) {
-        popupFotoUrl = await uploadImage(
-          filePopup.current.files[0],
-          "popup-iklan.jpg"
-        );
+        console.log('📸 Uploading popup iklan with WebP conversion...');
+        popupFotoUrl = await uploadPopupIklan(filePopup.current.files[0]);
       }
 
       // Upload slideshow photos jika ada file baru
       if (slideshowFiles.length > 0) {
+        console.log(`📸 Uploading ${slideshowFiles.length} slideshow photos...`);
         const uploadPromises = slideshowFiles.map((file, index) => {
           const timestamp = Date.now();
-          return uploadImage(file, `slideshow-${timestamp}-${index}.jpg`);
+          return uploadImage(file, `slideshow-${timestamp}-${index}.webp`);
         });
         const newUrls = await Promise.all(uploadPromises);
         slideshowUrls = newUrls;
@@ -300,37 +358,104 @@ export default function PengaturanPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/admin/login');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+    }
+  };
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-red-500 to-pink-600 rounded-2xl shadow-xl mb-6 overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-center gap-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        {/* Enhanced Header */}
+        <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 relative z-40 overflow-hidden max-w-7xl mx-auto mt-6">
+          {/* Floating Background Elements */}
+          <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-gray-400/10 to-slate-400/10 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-slate-400/10 to-zinc-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-zinc-400/5 to-gray-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
+
+          {/* Enhanced AdminHeaderCard with better styling */}
+          <div className="w-full bg-gradient-to-r from-white via-gray-50/30 to-slate-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
+            {/* Enhanced Title Section */}
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 bg-gradient-to-br from-gray-500 to-slate-600 rounded-2xl flex items-center justify-center shadow-xl shadow-gray-500/25 transform hover:scale-105 transition-all duration-300">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-gray-800 to-zinc-800 bg-clip-text text-transparent mb-2">
+                  Pengaturan
+                </h1>
+                <p className="text-slate-600 font-medium text-lg">
+                  Kelola tampilan beranda masyarakat
+                </p>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 font-semibold">
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
+                    Konfigurasi Sistem
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600 font-semibold">
+                    <div className="w-2 h-2 bg-slate-500 rounded-full animate-pulse"></div>
+                    Home Page Settings
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Enhanced Controls Section */}
+            <div className="flex items-center gap-6 relative z-10">
+              {/* Back Button */}
               <Link href="/admin/home">
-                <button className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group">
+                  <svg className="w-6 h-6 text-gray-600 group-hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                </button>
+                </div>
               </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-white">Pengaturan Home Page</h1>
-                <p className="text-white/90 text-sm mt-1">Kelola tampilan beranda masyarakat</p>
+              
+              {/* Enhanced Account Section */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-50 hover:to-gray-100 transition-all duration-300 cursor-pointer shadow-md">
+                  <svg
+                    width="24"
+                    height="24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    className="text-gray-600"
+                  >
+                    <path d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 01-7.5-7.5h2A5.5 5.5 0 0110 10z"/>
+                  </svg>
+                </div>
+                
+                <button
+                  onClick={handleLogout}
+                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    className="text-red-600 group-hover:text-red-700"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
         </div>
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Judul Section */}
@@ -746,6 +871,7 @@ export default function PengaturanPage() {
             </button>
           </div>
         </form>
+        </div>
       </div>
     </AdminLayout>
   );

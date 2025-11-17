@@ -7,11 +7,27 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../../../lib/firebase';
 import HeaderCard from "../../../../../components/HeaderCard";
 import BottomNavigation from '../../../../../components/BottomNavigation';
+import dynamic from 'next/dynamic';
+
+// Dynamic import untuk Leaflet Map dengan SSR disabled
+const LeafletMapViewer = dynamic(() => import('@/components/LeafletMapViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[300px] rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-purple-500 mx-auto mb-3"></div>
+        <p className="text-sm text-gray-600 font-medium">Memuat peta...</p>
+      </div>
+    </div>
+  )
+});
 
 type BudayaDetail = {
   id: string;
   judul: string;
   kategori: string;
+  alamat?: string;
+  lokasi?: string;
   deskripsi: string;
   sejarah?: string;
   fotoUrl?: string;
@@ -25,7 +41,7 @@ export default function BudayaDetailPage() {
   const router = useRouter();
   const [budaya, setBudaya] = useState<BudayaDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"info" | "history" | "gallery">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "history" | "location" | "gallery">("info");
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
@@ -157,6 +173,7 @@ export default function BudayaDetailPage() {
           {[
             { id: "info", label: "Info", icon: "ℹ️" },
             { id: "history", label: "Sejarah", icon: "📜" },
+            ...(budaya.lokasi ? [{ id: "location", label: "Lokasi", icon: "📍" }] : []),
             { id: "gallery", label: "Galeri", icon: "🖼️" }
           ].map((tab) => (
             <button
@@ -221,6 +238,46 @@ export default function BudayaDetailPage() {
                   <p className="text-gray-500 text-sm">Informasi sejarah belum tersedia</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === "location" && budaya.lokasi && (
+            <div className="rounded-3xl bg-white/80 backdrop-blur-sm shadow-xl ring-1 ring-purple-200 p-6">
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center gap-2 text-lg font-bold text-gray-800 mb-3">
+                    <svg className="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    Lokasi GPS
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-xl mb-4">
+                    <p className="text-gray-700 text-sm font-mono">{budaya.lokasi}</p>
+                  </div>
+                </div>
+
+                {/* Leaflet Map */}
+                <LeafletMapViewer 
+                  location={budaya.lokasi}
+                  title={budaya.judul}
+                  address={budaya.alamat}
+                />
+
+                {/* Google Maps Button */}
+                <button 
+                  onClick={() => {
+                    const query = encodeURIComponent(`${budaya.judul}${budaya.alamat ? ', ' + budaya.alamat : ''}`);
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+                  }}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 px-6 rounded-2xl text-base font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Buka di Google Maps
+                </button>
+              </div>
             </div>
           )}
 

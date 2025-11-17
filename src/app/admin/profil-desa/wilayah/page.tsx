@@ -19,11 +19,13 @@ export default function WilayahDesaAdminPage() {
   const router = useRouter();
   const { logout } = useAuth();
   const [wilayahData, setWilayahData] = useState<WilayahContent | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Only for data operations
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'main' | 'dusun'>('main');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [showImageModal, setShowImageModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingDusunIndex, setEditingDusunIndex] = useState<number | null>(null);
@@ -72,19 +74,26 @@ export default function WilayahDesaAdminPage() {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      // Create preview URL
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
     }
   };
 
   const handleEdit = () => {
     if (wilayahData) {
       setIsEditMode(true);
-      setModalType('dusun');
+      setModalType('main'); // Set ke 'main' untuk edit deskripsi dan foto
       setFormData({
         description: wilayahData.deskripsi || "",
         namaDusun: "",
         luasDusun: "",
         garisKeliling: "",
       });
+      // Set preview from existing photo
+      if (wilayahData.fotoUrl) {
+        setPreviewUrl(wilayahData.fotoUrl);
+      }
       setShowModal(true);
     }
   };
@@ -116,6 +125,10 @@ export default function WilayahDesaAdminPage() {
   };
 
   const handleCloseModal = () => {
+    // Cleanup preview URL if it's a blob URL
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setShowModal(false);
     setIsEditMode(false);
     setEditingDusunIndex(null);
@@ -126,6 +139,7 @@ export default function WilayahDesaAdminPage() {
       luasDusun: "",
       garisKeliling: "",
     });
+    setPreviewUrl("");
   };
 
   const handleDelete = async (indexToDelete: number) => {
@@ -165,27 +179,17 @@ export default function WilayahDesaAdminPage() {
       if (modalType === 'main') {
         let fotoUrl = wilayahData?.fotoUrl || '';
         
-        // Upload foto jika ada file yang dipilih
+        // Upload foto jika ada file yang dipilih - akan otomatis dikonversi ke WebP
         if (selectedFile) {
-          const fileName = `wilayah-${Date.now()}`;
+          const timestamp = Date.now();
+          const fileName = `${timestamp}_wilayah.webp`;
           fotoUrl = await uploadImageToStorage(selectedFile, fileName);
-        }
-
-        const dusunDataForMain: WilayahDusunEntry[] = [];
-        
-        // Jika ada data dusun yang diisi di modal main, tambahkan
-        if (formData.namaDusun.trim()) {
-          dusunDataForMain.push({
-            namaDusun: formData.namaDusun,
-            luasDusun: formData.luasDusun,
-            garisKeliling: formData.garisKeliling,
-          });
         }
 
         const wilayahContent: Omit<WilayahContent, 'id' | 'createdAt' | 'updatedAt'> = {
           deskripsi: formData.description || '',
           fotoUrl: fotoUrl,
-          dusunData: dusunDataForMain,
+          dusunData: wilayahData?.dusunData || [], // Pertahankan data dusun existing
         };
 
         await saveWilayahContent(wilayahContent);
@@ -344,12 +348,7 @@ export default function WilayahDesaAdminPage() {
         </div>
         
         <div>
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Memuat data wilayah...</p>
-            </div>
-          ) : wilayahData ? (
+          {wilayahData ? (
             <>
               {/* Foto dan Deskripsi Utama */}
               <div className="mb-8">
@@ -610,106 +609,107 @@ export default function WilayahDesaAdminPage() {
                 {modalType === 'main' && (
                   <div>
                     <label className="text-base font-semibold text-gray-700 block mb-3">Upload Foto</label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="flex-1 px-5 py-4 rounded-2xl border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:border-red-500 transition-colors text-base"
-                      />
+                    
+                    {/* Hidden File Input */}
+                    <input
+                      type="file"
+                      id="fileInput"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    
+                    {/* Button Pilih Foto */}
+                    {!previewUrl && (
                       <button
                         type="button"
-                        className="p-4 rounded-2xl bg-gray-200 hover:bg-gray-300 transition-colors"
-                        title="Foto akan otomatis dikonversi ke format WebP"
+                        onClick={() => document.getElementById('fileInput')?.click()}
+                        className="w-full flex items-center justify-center gap-3 px-6 py-5 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-red-500 hover:bg-red-50 transition-all duration-300 group"
                       >
-                        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-600">
-                          <rect x="3" y="3" width="18" height="18" rx="2"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <path d="M21 15l-5-5L5 21"/>
-                        </svg>
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="p-4 rounded-full bg-red-100 group-hover:bg-red-200 transition-colors">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-red-600">
+                              <rect x="3" y="3" width="18" height="18" rx="2"/>
+                              <circle cx="8.5" cy="8.5" r="1.5"/>
+                              <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-base font-semibold text-gray-700">Pilih Foto</p>
+                            <p className="text-sm text-gray-500 mt-1">Format: JPG, PNG, GIF. Akan dikonversi ke WebP</p>
+                          </div>
+                        </div>
                       </button>
-                    </div>
-                    {selectedFile && (
+                    )}
+                    
+                    {selectedFile && !previewUrl && (
                       <p className="text-sm text-green-600 mt-2">
                         ✓ File dipilih: {selectedFile.name} (akan dikonversi ke WebP)
                       </p>
                     )}
-                  </div>
-                )}
-
-                {/* Data Dusun yang Ada */}
-                {isEditMode && wilayahData?.dusunData && wilayahData.dusunData.length > 0 && (
-                  <div className="bg-blue-50 rounded-2xl p-6 border border-blue-200">
-                    <label className="text-base font-semibold text-blue-800 block mb-4">Data Dusun Saat Ini</label>
-                    <div className="space-y-3">
-                      {wilayahData.dusunData.map((dusun, index) => (
-                        <div key={index} className="bg-white p-4 rounded-xl border border-blue-200 flex justify-between items-center">
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-800">{dusun.namaDusun}</div>
-                            <div className="text-sm text-gray-600">
-                              Luas: {dusun.luasDusun} m² • Keliling: {dusun.garisKeliling} km
+                    
+                    {/* Preview Foto */}
+                    {previewUrl && (
+                      <div className="mt-4">
+                        <label className="text-sm font-semibold text-gray-700 block mb-2">Preview Foto:</label>
+                        <div className="relative">
+                          <div 
+                            className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-gray-300 cursor-pointer hover:border-red-500 transition-colors group"
+                            onClick={() => setShowImageModal(true)}
+                          >
+                            <img 
+                              src={previewUrl} 
+                              alt="Preview" 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-3">
+                                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-800">
+                                  <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/>
+                                </svg>
+                              </div>
                             </div>
                           </div>
+                          
+                          {/* Tombol Hapus Preview */}
                           <button
                             type="button"
-                            onClick={() => {
-                              if (confirm(`Hapus data dusun "${dusun.namaDusun}"?`)) {
-                                const updatedData = wilayahData.dusunData.filter((_, i) => i !== index);
-                                setWilayahData({
-                                  ...wilayahData,
-                                  dusunData: updatedData
-                                });
-                              }
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPreviewUrl("");
+                              setSelectedFile(null);
+                              const input = document.getElementById('fileInput') as HTMLInputElement;
+                              if (input) input.value = '';
                             }}
-                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                            title={`Hapus ${dusun.namaDusun}`}
+                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors z-10"
+                            title="Hapus foto"
                           >
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/>
+                            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M18 6L6 18M6 6l12 12"/>
                             </svg>
                           </button>
                         </div>
-                      ))}
-                    </div>
+                        
+                        <p className="text-xs text-gray-500 mt-2 text-center">Klik untuk melihat ukuran penuh</p>
+                        
+                        {/* Button Ganti Foto */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            document.getElementById('fileInput')?.click();
+                          }}
+                          className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                        >
+                          <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                          </svg>
+                          <span>Ganti Foto</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
-
-                {/* Isi Tabel Luas Wilayah */}
-                <div className="bg-gray-100 rounded-2xl p-6">
-                  <label className="text-base font-semibold text-gray-700 block mb-5 text-center">
-                    {modalType === 'main' ? 'Isi Tabel Luas Wilayah (Opsional)' : 'Isi Tabel Luas Wilayah'}
-                  </label>
-                  
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      name="namaDusun"
-                      value={formData.namaDusun}
-                      onChange={handleInputChange}
-                      placeholder="Nama Dusun"
-                      className="w-full px-5 py-3 rounded-xl border border-gray-300 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-500 transition-colors text-base"
-                      required={modalType === 'dusun'}
-                    />
-                    <input
-                      type="number"
-                      name="luasDusun"
-                      value={formData.luasDusun}
-                      onChange={handleInputChange}
-                      placeholder="Luas Dusun (m2)"
-                      className="w-full px-5 py-3 rounded-xl border border-gray-300 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-500 transition-colors text-base"
-                      required={modalType === 'dusun'}
-                    />
-                    <input
-                      type="number"
-                      name="garisKeliling"
-                      value={formData.garisKeliling}
-                      onChange={handleInputChange}
-                      placeholder="Garis Keliling (Km)"
-                      className="w-full px-5 py-3 rounded-xl border border-gray-300 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-500 transition-colors text-base"
-                      required={modalType === 'dusun'}
-                    />
-                  </div>
-                </div>
 
                 {/* Buttons */}
                 <div className="flex gap-4 pt-6">
@@ -739,6 +739,40 @@ export default function WilayahDesaAdminPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Pop-up Foto Full Size */}
+        {showImageModal && previewUrl && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowImageModal(false)}
+            ></div>
+            
+            {/* Modal Content */}
+            <div className="relative z-10 max-w-5xl max-h-[90vh] w-full">
+              {/* Close Button */}
+              <button
+                onClick={() => setShowImageModal(false)}
+                className="absolute -top-12 right-0 text-white hover:text-red-400 transition-colors p-2 rounded-full bg-black/50 hover:bg-black/70"
+                title="Tutup"
+              >
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+              
+              {/* Image */}
+              <div className="bg-white rounded-2xl p-4 shadow-2xl">
+                <img 
+                  src={previewUrl} 
+                  alt="Full size preview" 
+                  className="w-full h-auto max-h-[80vh] object-contain rounded-xl"
+                />
+              </div>
             </div>
           </div>
         )}

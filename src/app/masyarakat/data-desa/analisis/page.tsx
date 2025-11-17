@@ -1,339 +1,835 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import HeaderCard from "../../../components/HeaderCard";
 import BottomNavigation from "../../../components/BottomNavigation";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { canAccessDataDesaAnalisis } from "@/lib/rolePermissions";
+import { UserRole } from "../../lib/useCurrentUser";
 
-interface ChartData {
-  name: string;
-  value: number;
-  [key: string]: string | number;
+// Add keyframes for SaaS-style animations
+const styles = `
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-30px) scale(0.97);
+      max-height: 0;
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      max-height: 2000px;
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      max-height: 2000px;
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-30px) scale(0.97);
+      max-height: 0;
+    }
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 35px rgba(59, 130, 246, 0.6);
+    }
+  }
+  
+  .animate-slideDown {
+    animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  
+  .animate-slideUp {
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+  
+  .animate-fadeIn {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .animate-scaleIn {
+    animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 3s infinite;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    background-size: 200% 100%;
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .gradient-border {
+    position: relative;
+    background: white;
+    border-radius: 24px;
+  }
+  
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 24px;
+    padding: 2px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement("style");
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
 }
 
-interface PendudukData {
+interface MasyarakatData {
+  id: string;
+  nama?: string;
+  displayName?: string;
+  tanggalLahir?: string;
   jenisKelamin?: string;
+  agama?: string;
   pekerjaan?: string;
   pendidikan?: string;
+  dusun?: string;
+  statusPerkawinan?: string;
+  kewarganegaraan?: string;
+  sukuBangsa?: string;
 }
 
-// Warna untuk chart
-const COLORS = ["#ef4444", "#f87171", "#fca5a5", "#fecaca", "#fee2e2"];
-const BAR_COLORS = ["#dc2626", "#ef4444"];
+interface FilterState {
+  dusun: string;
+  jenisKelamin: string;
+  agama: string;
+  sukuBangsa: string;
+  pendidikan: string;
+  pekerjaan: string;
+  kewarganegaraan: string;
+  statusPerkawinan: string;
+}
 
-// Custom Tooltip untuk chart
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white rounded-lg shadow-lg p-3 border border-red-200">
-        <p className="text-sm font-semibold text-gray-800">{payload[0].payload.name}</p>
-        <p className="text-sm font-bold text-red-600">{payload[0].value}</p>
-      </div>
-    );
-  }
-  return null;
-};
+interface AgeGroup {
+  range: string;
+  count: number;
+  percentage: number;
+}
 
-export default function AnalisisPage() {
-  const [isLoaded, setIsLoaded] = useState(false);
+export default function AnalisisDataPage() {
+  const router = useRouter();
+  
+  // Access control check
+  useEffect(() => {
+    const checkAccess = () => {
+      try {
+        const storedUser = localStorage.getItem('sigede_auth_user');
+        if (!storedUser) {
+          router.push('/masyarakat/login');
+          return;
+        }
+        
+        const userData = JSON.parse(storedUser);
+        const userRole = userData.role as UserRole;
+        
+        if (!canAccessDataDesaAnalisis(userRole)) {
+          console.log('❌ Access denied to data analisis for role:', userRole);
+          router.push('/masyarakat/data-desa');
+          return;
+        }
+        
+        console.log('✅ Access granted to data analisis for role:', userRole);
+      } catch (error) {
+        console.error('❌ Error checking analisis access:', error);
+        router.push('/masyarakat/login');
+      }
+    };
+    
+    checkAccess();
+  }, [router]);
+  
+  const [allData, setAllData] = useState<MasyarakatData[]>([]);
+  const [filteredData, setFilteredData] = useState<MasyarakatData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [jenisKelaminData, setJenisKelaminData] = useState<ChartData[]>([]);
-  const [pekerjaanData, setPekerjaanData] = useState<ChartData[]>([]);
-  const [pendidikanData, setPendidikanData] = useState<ChartData[]>([]);
-  const [totalPenduduk, setTotalPenduduk] = useState(0);
+  const [targetAge, setTargetAge] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const [filters, setFilters] = useState<FilterState>({
+    dusun: "",
+    jenisKelamin: "",
+    agama: "",
+    sukuBangsa: "",
+    pendidikan: "",
+    pekerjaan: "",
+    kewarganegaraan: "",
+    statusPerkawinan: "",
+  });
+
+  // Filter options
+  const filterOptions = {
+    dusun: ["Dauh Puri Kaja", "Denpasar Utara"],
+    jenisKelamin: ["Laki-laki", "Perempuan"],
+    agama: ["Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu"],
+    sukuBangsa: ["Bali", "Jawa", "Sunda", "Batak", "Minang", "Bugis", "Lainnya"],
+    pendidikan: ["Tidak Sekolah", "SD", "SMP", "SMA", "D3", "S1", "S2", "S3"],
+    pekerjaan: ["Petani", "Pedagang", "PNS", "Swasta", "Wiraswasta", "Pelajar", "Mahasiswa", "Tidak Bekerja"],
+    kewarganegaraan: ["WNI", "WNA"],
+    statusPerkawinan: ["Belum Kawin", "Kawin", "Cerai Hidup", "Cerai Mati"],
+  };
 
   useEffect(() => {
-    fetchDataFromFirebase();
-    setIsLoaded(true);
+    fetchAllMasyarakat();
   }, []);
 
-  const fetchDataFromFirebase = async () => {
+  useEffect(() => {
+    applyFilters();
+  }, [filters, allData]);
+
+  useEffect(() => {
+    if (filteredData.length > 0) {
+      calculateAgeGroups();
+    }
+  }, [filteredData]);
+
+  const handleToggleFilter = () => {
+    if (showFilterPanel) {
+      // Trigger closing animation
+      setIsClosing(true);
+      setTimeout(() => {
+        setShowFilterPanel(false);
+        setIsClosing(false);
+      }, 400); // Match animation duration
+    } else {
+      // Open immediately
+      setShowFilterPanel(true);
+    }
+  };
+
+  const fetchAllMasyarakat = async () => {
     try {
       setLoading(true);
-      const querySnapshot = await getDocs(collection(db, "penduduk"));
-      const allData: PendudukData[] = [];
+      const masyarakatRef = collection(db, "masyarakat");
+      const snapshot = await getDocs(masyarakatRef);
       
-      querySnapshot.forEach((doc) => {
-        allData.push(doc.data() as PendudukData);
-      });
-
-      console.log('Total data penduduk:', allData.length);
-      setTotalPenduduk(allData.length);
-
-      // Hitung Jenis Kelamin
-      const jenisKelaminCount: { [key: string]: number } = {};
-      allData.forEach((item) => {
-        const jk = item.jenisKelamin || 'Tidak Diketahui';
-        jenisKelaminCount[jk] = (jenisKelaminCount[jk] || 0) + 1;
-      });
-      const jkData: ChartData[] = Object.entries(jenisKelaminCount).map(([name, value]) => ({
-        name,
-        value
+      const data: MasyarakatData[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as Omit<MasyarakatData, 'id'>
       }));
-      setJenisKelaminData(jkData);
-      console.log('Jenis Kelamin:', jkData);
 
-      // Hitung Pekerjaan
-      const pekerjaanCount: { [key: string]: number } = {};
-      allData.forEach((item) => {
-        const pekerjaan = item.pekerjaan || 'Tidak Diketahui';
-        pekerjaanCount[pekerjaan] = (pekerjaanCount[pekerjaan] || 0) + 1;
-      });
-      const pkrjData: ChartData[] = Object.entries(pekerjaanCount).map(([name, value]) => ({
-        name,
-        value
-      }));
-      setPekerjaanData(pkrjData);
-      console.log('Pekerjaan:', pkrjData);
-
-      // Hitung Pendidikan
-      const pendidikanCount: { [key: string]: number } = {};
-      allData.forEach((item) => {
-        const pendidikan = item.pendidikan || 'Tidak Diketahui';
-        pendidikanCount[pendidikan] = (pendidikanCount[pendidikan] || 0) + 1;
-      });
-      const pndData: ChartData[] = Object.entries(pendidikanCount).map(([name, value]) => ({
-        name,
-        value
-      }));
-      setPendidikanData(pndData);
-      console.log('Pendidikan:', pndData);
-
+      console.log('Data loaded:', data.length, 'records');
+      setAllData(data);
+      setFilteredData(data);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      alert('Gagal memuat data dari Firebase');
+      console.error("Error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <main className="min-h-[100svh] bg-gradient-to-br from-red-50 via-white to-red-50 text-gray-800">
-      <div className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-6xl px-3 sm:px-4 pb-20 pt-4">
-        {/* Header with Back Button */}
-        <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-2xl sm:rounded-3xl shadow-xl mb-4 sm:mb-6 overflow-hidden">
-          <div className="p-4 sm:p-6">
-            <div className="flex items-center gap-3 sm:gap-4">
-              {/* Back Button */}
-              <Link href="/masyarakat/data-desa">
-                <button className="p-2 sm:p-2.5 bg-white/20 hover:bg-white/30 rounded-xl transition-all">
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-              </Link>
-              
-              {/* Title */}
-              <div className="flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-white">Analisis Data</h1>
-                <p className="text-xs sm:text-sm text-red-100 mt-1">Visualisasi Data Desa Dauh Puri Kaja</p>
+  const calculateAge = (birthDate: string): number => {
+    if (!birthDate) return 0;
+    
+    try {
+      const birth = new Date(birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      
+      return age;
+    } catch (error) {
+      return 0;
+    }
+  };
+
+  const calculateAgeGroups = () => {
+    const groups = [
+      { range: "0-5", min: 0, max: 5, count: 0 },
+      { range: "6-12", min: 6, max: 12, count: 0 },
+      { range: "13-17", min: 13, max: 17, count: 0 },
+      { range: "18-25", min: 18, max: 25, count: 0 },
+      { range: "26-35", min: 26, max: 35, count: 0 },
+      { range: "36-45", min: 36, max: 45, count: 0 },
+      { range: "46-55", min: 46, max: 55, count: 0 },
+      { range: "56-65", min: 56, max: 65, count: 0 },
+      { range: ">65", min: 66, max: 999, count: 0 },
+    ];
+
+    filteredData.forEach(person => {
+      if (person.tanggalLahir) {
+        const age = calculateAge(person.tanggalLahir);
+        const group = groups.find(g => age >= g.min && age <= g.max);
+        if (group) group.count++;
+      }
+    });
+
+    const total = filteredData.length;
+    const ageGroupsWithPercentage = groups.map(g => ({
+      range: g.range,
+      count: g.count,
+      percentage: total > 0 ? (g.count / total) * 100 : 0,
+    }));
+
+    setAgeGroups(ageGroupsWithPercentage);
+  };
+
+  const applyFilters = () => {
+    let result = [...allData];
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        result = result.filter(item => {
+          const itemValue = item[key as keyof MasyarakatData];
+          return itemValue?.toString().toLowerCase() === value.toLowerCase();
+        });
+      }
+    });
+
+    setFilteredData(result);
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      dusun: "",
+      jenisKelamin: "",
+      agama: "",
+      sukuBangsa: "",
+      pendidikan: "",
+      pekerjaan: "",
+      kewarganegaraan: "",
+      statusPerkawinan: "",
+    });
+  };
+
+  const activeFiltersCount = Object.values(filters).filter(v => v !== "").length;
+
+  const predictAgeCount = () => {
+    if (!targetAge) return 0;
+    
+    const targetAgeNum = parseInt(targetAge);
+    if (isNaN(targetAgeNum)) return 0;
+
+    return filteredData.filter(person => {
+      if (!person.tanggalLahir) return false;
+      const age = calculateAge(person.tanggalLahir);
+      return age === targetAgeNum;
+    }).length;
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="mx-auto w-full max-w-md px-4 pb-20 pt-4">
+          <HeaderCard title="Analisis Data" backUrl="/masyarakat/data-desa" showBackButton={true} />
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 mx-auto"></div>
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-t-blue-600 border-r-transparent border-b-transparent border-l-transparent mx-auto absolute top-0 left-1/2 -translate-x-1/2"></div>
               </div>
+              <p className="text-gray-600 mt-4 font-medium">Memuat data analisis...</p>
+              <p className="text-gray-400 text-sm mt-1">Mohon tunggu sebentar</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Background Decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-200/30 to-indigo-200/30 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-200/30 to-pink-200/30 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
+      </div>
+
+      <div className="relative mx-auto w-full max-w-md px-4 pb-20 pt-4">
+        <HeaderCard title="Analisis Data" backUrl="/masyarakat/data-desa" showBackButton={true} />
+
+        {/* Summary Card - SaaS Style */}
+        <div className="mb-6 relative group animate-scaleIn">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
+          <div className="relative glass-effect rounded-3xl p-8 shadow-2xl border border-white/40">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 shadow-2xl mb-5 animate-float">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div className="mb-2">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-full border border-blue-200/50">
+                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse"></span>
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Total Penduduk</span>
+                </div>
+              </div>
+              <div className="relative">
+                <div className="text-6xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2 leading-none">
+                  {filteredData.length.toLocaleString()}
+                </div>
+              </div>
+              <div className="text-base text-gray-600 font-semibold">Jiwa</div>
+              
+              {activeFiltersCount > 0 && (
+                <div className="mt-6 pt-5 border-t border-gray-200/50 animate-fadeIn">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd"/>
+                      </svg>
+                      {activeFiltersCount} Filter
+                    </div>
+                    <div className="text-gray-400 font-medium">dari</div>
+                    <div className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm">
+                      {allData.length.toLocaleString()} Total
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Loading State */}
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600"></div>
-          </div>
-        ) : (
-          <>
-            {/* Charts Container */}
-            <div className="space-y-4 sm:space-y-6">
-          {/* Grafik Batang - Jenis Kelamin */}
-          <section 
-            className={`rounded-2xl sm:rounded-3xl bg-white/80 backdrop-blur-md p-4 sm:p-6 shadow-lg ring-1 ring-gray-100 transition-all duration-700 transform ${
-              isLoaded 
-                ? "opacity-100 scale-100 translate-y-0" 
-                : "opacity-0 scale-95 translate-y-4"
-            }`}
+        {/* Filter Panel Toggle - SaaS Style */}
+        <div className="mb-6 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
+          <button
+            onClick={handleToggleFilter}
+            className="w-full group relative overflow-hidden"
           >
-            <div className="mb-4 sm:mb-6">
-              <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-2">
-                Distribusi Jenis Kelamin
-              </h2>
-              <div className="w-12 h-1 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
-              <p className="text-xs text-gray-600 mt-2">Total: {totalPenduduk} Penduduk</p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px] md:h-[350px]">
-                <BarChart data={jenisKelaminData}>
-                  <CartesianGrid 
-                    strokeDasharray="3 3" 
-                    stroke="#e5e7eb"
-                  />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="#9ca3af"
-                    style={{ fontSize: "12px" }}
-                  />
-                  <YAxis 
-                    stroke="#9ca3af"
-                    style={{ fontSize: "12px" }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend 
-                    wrapperStyle={{ paddingTop: "20px" }}
-                    iconType="circle"
-                  />
-                  <Bar
-                    dataKey="value"
-                    fill="#dc2626"
-                    radius={8}
-                    animationDuration={1000}
-                    animationBegin={100}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
-
-          {/* Grafik Donat - Pekerjaan */}
-          <section 
-            className={`rounded-2xl sm:rounded-3xl bg-white/80 backdrop-blur-md p-4 sm:p-6 shadow-lg ring-1 ring-gray-100 transition-all duration-700 transform delay-150 ${
-              isLoaded 
-                ? "opacity-100 scale-100 translate-y-0" 
-                : "opacity-0 scale-95 translate-y-4"
-            }`}
-          >
-            <div className="mb-4 sm:mb-6">
-              <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-2">
-                Distribusi Pekerjaan
-              </h2>
-              <div className="w-12 h-1 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
-              <p className="text-xs text-gray-600 mt-2">Total: {totalPenduduk} Penduduk</p>
-            </div>
-
-            <div className="flex justify-center">
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px] md:h-[350px]">
-                <PieChart>
-                  <Pie
-                    data={pekerjaanData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="25%"
-                    outerRadius="75%"
-                    paddingAngle={4}
-                    dataKey="value"
-                    animationDuration={1000}
-                    animationBegin={300}
-                  >
-                    {pekerjaanData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Legend untuk Donat */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mt-6 pt-4 border-t border-gray-200">
-              {pekerjaanData.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  ></div>
-                  <span className="text-gray-700 font-medium">{item.name}</span>
-                  <span className="text-gray-500">({item.value})</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
+            <div className="relative flex items-center justify-between px-6 py-5 glass-effect rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-white/50 group-hover:border-blue-300/50">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
                 </div>
-              ))}
+                <div className="text-left">
+                  <span className="font-bold text-gray-800 block text-lg">Filter & Analisis</span>
+                  <span className="text-xs text-gray-500 font-medium">Saring data berdasarkan kategori</span>
+                </div>
+                {activeFiltersCount > 0 && (
+                  <div className="ml-3 animate-scaleIn">
+                    <div className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm rounded-full font-bold shadow-lg flex items-center gap-1.5">
+                      <span>{activeFiltersCount}</span>
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500 font-semibold hidden sm:block">
+                  {showFilterPanel ? 'Tutup' : 'Tampilkan'}
+                </span>
+                <div className={`p-2 rounded-lg bg-gray-100 group-hover:bg-gradient-to-br group-hover:from-blue-100 group-hover:to-indigo-100 transition-all duration-500 ${showFilterPanel ? 'rotate-180' : 'rotate-0'}`}>
+                  <svg className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
-          </section>
+          </button>
+        </div>
 
-          {/* Grafik Batang - Pendidikan */}
-          <section 
-            className={`rounded-2xl sm:rounded-3xl bg-white/80 backdrop-blur-md p-4 sm:p-6 shadow-lg ring-1 ring-gray-100 transition-all duration-700 transform delay-300 ${
-              isLoaded 
-                ? "opacity-100 scale-100 translate-y-0" 
-                : "opacity-0 scale-95 translate-y-4"
-            }`}
-          >
-            <div className="mb-4 sm:mb-6">
-              <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-2">
-                Distribusi Pendidikan
-              </h2>
-              <div className="w-12 h-1 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
-              <p className="text-xs text-gray-600 mt-2">Total: {totalPenduduk} Penduduk</p>
-            </div>
+        {/* Filter Panel - SaaS Style with smooth animation */}
+        {showFilterPanel && (
+          <div className={`mb-6 bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/30 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-blue-100/50 overflow-hidden ${isClosing ? 'animate-slideUp' : 'animate-slideDown'}`}>
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-3xl -z-10"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-7 animate-fadeIn">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 shadow-xl">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-black text-gray-800 text-lg">Filter Data</h3>
+                    <p className="text-xs text-gray-500 font-medium">Terapkan filter sesuai kebutuhan</p>
+                  </div>
+                </div>
+                {activeFiltersCount > 0 && (
+                  <button
+                    onClick={resetFilters}
+                    className="group/btn px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-105 animate-scaleIn flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Reset
+                  </button>
+                )}
+              </div>
 
-            <div className="overflow-x-auto">
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px] md:h-[350px]">
-                <BarChart data={pendidikanData}>
-                  <CartesianGrid 
-                    strokeDasharray="3 3" 
-                    stroke="#e5e7eb"
-                  />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="#9ca3af"
-                    style={{ fontSize: "12px" }}
-                  />
-                  <YAxis 
-                    stroke="#9ca3af"
-                    style={{ fontSize: "12px" }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar
-                    dataKey="value"
-                    fill="#ef4444"
-                    radius={8}
-                    animationDuration={1000}
-                    animationBegin={500}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
+              <div className="grid grid-cols-1 gap-5">
+                {/* Dusun */}
+                <div className="group animate-fadeIn" style={{ animationDelay: '0.05s' }}>
+                  <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    DUSUN
+                  </label>
+                  <select
+                    value={filters.dusun}
+                    onChange={(e) => setFilters({ ...filters, dusun: e.target.value })}
+                    className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-300 shadow-sm appearance-none cursor-pointer"
+                    style={{ color: filters.dusun ? '#1f2937' : '#9ca3af' }}
+                  >
+                    <option value="" className="text-gray-400">Pilih Dusun</option>
+                    {filterOptions.dusun.map(option => (
+                      <option key={option} value={option} className="text-gray-700">{option}</option>
+                    ))}
+                  </select>
+                </div>
 
-          {/* Summary Statistics */}
-          <section 
-            className={`rounded-2xl sm:rounded-3xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-4 sm:p-6 text-white shadow-xl ring-1 ring-red-200 transition-all duration-700 transform delay-500 ${
-              isLoaded 
-                ? "opacity-100 scale-100 translate-y-0" 
-                : "opacity-0 scale-95 translate-y-4"
-            }`}
-          >
-            <h2 className="text-base sm:text-lg font-bold mb-4">Ringkasan Data</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 sm:p-4">
-                <p className="text-xs sm:text-sm opacity-90">Total Penduduk</p>
-                <p className="text-2xl sm:text-3xl font-bold">{totalPenduduk}</p>
+              {/* Jenis Kelamin */}
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.1s' }}>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  JENIS KELAMIN
+                </label>
+                <select
+                  value={filters.jenisKelamin}
+                  onChange={(e) => setFilters({ ...filters, jenisKelamin: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all hover:border-indigo-300 shadow-sm appearance-none cursor-pointer"
+                  style={{ color: filters.jenisKelamin ? '#1f2937' : '#9ca3af' }}
+                >
+                  <option value="" className="text-gray-400">Pilih Jenis Kelamin</option>
+                  {filterOptions.jenisKelamin.map(option => (
+                    <option key={option} value={option} className="text-gray-700">{option}</option>
+                  ))}
+                </select>
               </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 sm:p-4">
-                <p className="text-xs sm:text-sm opacity-90">Kategori Pekerjaan</p>
-                <p className="text-2xl sm:text-3xl font-bold">{pekerjaanData.length}</p>
+
+              {/* Agama */}
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.15s' }}>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                  AGAMA
+                </label>
+                <select
+                  value={filters.agama}
+                  onChange={(e) => setFilters({ ...filters, agama: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm appearance-none cursor-pointer"
+                  style={{ color: filters.agama ? '#1f2937' : '#9ca3af' }}
+                >
+                  <option value="" className="text-gray-400">Pilih Agama</option>
+                  {filterOptions.agama.map(option => (
+                    <option key={option} value={option} className="text-gray-700">{option}</option>
+                  ))}
+                </select>
               </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 sm:p-4">
-                <p className="text-xs sm:text-sm opacity-90">Tingkat Pendidikan</p>
-                <p className="text-2xl sm:text-3xl font-bold">{pendidikanData.length}</p>
+
+              {/* Suku Bangsa */}
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.2s' }}>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
+                  SUKU BANGSA
+                </label>
+                <select
+                  value={filters.sukuBangsa}
+                  onChange={(e) => setFilters({ ...filters, sukuBangsa: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-pink-300 shadow-sm appearance-none cursor-pointer"
+                  style={{ color: filters.sukuBangsa ? '#1f2937' : '#9ca3af' }}
+                >
+                  <option value="" className="text-gray-400">Pilih Suku Bangsa</option>
+                  {filterOptions.sukuBangsa.map(option => (
+                    <option key={option} value={option} className="text-gray-700">{option}</option>
+                  ))}
+                </select>
               </div>
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 sm:p-4">
-                <p className="text-xs sm:text-sm opacity-90">Jenis Kelamin</p>
-                <p className="text-2xl sm:text-3xl font-bold">{jenisKelaminData.length}</p>
+
+              {/* Pendidikan */}
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.25s' }}>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  PENDIDIKAN
+                </label>
+                <select
+                  value={filters.pendidikan}
+                  onChange={(e) => setFilters({ ...filters, pendidikan: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all hover:border-green-300 shadow-sm appearance-none cursor-pointer"
+                  style={{ color: filters.pendidikan ? '#1f2937' : '#9ca3af' }}
+                >
+                  <option value="" className="text-gray-400">Pilih Pendidikan</option>
+                  {filterOptions.pendidikan.map(option => (
+                    <option key={option} value={option} className="text-gray-700">{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Pekerjaan */}
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.3s' }}>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                  PEKERJAAN
+                </label>
+                <select
+                  value={filters.pekerjaan}
+                  onChange={(e) => setFilters({ ...filters, pekerjaan: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all hover:border-yellow-300 shadow-sm appearance-none cursor-pointer"
+                  style={{ color: filters.pekerjaan ? '#1f2937' : '#9ca3af' }}
+                >
+                  <option value="" className="text-gray-400">Pilih Pekerjaan</option>
+                  {filterOptions.pekerjaan.map(option => (
+                    <option key={option} value={option} className="text-gray-700">{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Warga Negara */}
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.35s' }}>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                  WARGA NEGARA
+                </label>
+                <select
+                  value={filters.kewarganegaraan}
+                  onChange={(e) => setFilters({ ...filters, kewarganegaraan: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm appearance-none cursor-pointer"
+                  style={{ color: filters.kewarganegaraan ? '#1f2937' : '#9ca3af' }}
+                >
+                  <option value="" className="text-gray-400">Pilih Kewarganegaraan</option>
+                  {filterOptions.kewarganegaraan.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status Pernikahan */}
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.4s' }}>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  STATUS PERNIKAHAN
+                </label>
+                <select
+                  value={filters.statusPerkawinan}
+                  onChange={(e) => setFilters({ ...filters, statusPerkawinan: e.target.value })}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all hover:border-orange-300 shadow-sm appearance-none cursor-pointer"
+                  style={{ color: filters.statusPerkawinan ? '#1f2937' : '#9ca3af' }}
+                >
+                  <option value="" className="text-gray-400">Pilih Status Pernikahan</option>
+                  {filterOptions.statusPerkawinan.map(option => (
+                    <option key={option} value={option} className="text-gray-700">{option}</option>
+                  ))}
+                </select>
               </div>
             </div>
-          </section>
-            </div>
-          </>
+          </div>
+        </div>
         )}
+
+        {/* Prediksi Usia Penduduk - Enhanced */}
+        <div className="mb-6 bg-gradient-to-br from-white via-purple-50/40 to-pink-50/30 rounded-3xl p-6 shadow-2xl border border-purple-100/50 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800 text-lg">Prediksi Usia Penduduk</h3>
+              <p className="text-xs text-gray-500">Analisis usia berdasarkan tanggal tertentu</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Pilih Tanggal dan Target Usia */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                  PILIH TANGGAL
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-white to-purple-50 border-2 border-purple-200 rounded-xl text-base font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm"
+                  style={{ colorScheme: 'light' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" />
+                  </svg>
+                  TARGET USIA
+                </label>
+                <input
+                  type="number"
+                  value={targetAge}
+                  onChange={(e) => setTargetAge(e.target.value)}
+                  placeholder="Masukkan usia"
+                  min="0"
+                  max="120"
+                  className="w-full px-4 py-3 bg-gradient-to-r from-white to-pink-50 border-2 border-pink-200 rounded-xl text-base font-semibold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-pink-300 shadow-sm"
+                />
+              </div>
+            </div>
+
+            {targetAge && (
+              <div className="mt-5 p-6 bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 rounded-2xl shadow-2xl border border-white/20">
+                <div className="text-center text-white">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                      <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
+                    </svg>
+                    <div className="text-xs font-bold uppercase tracking-wide opacity-90">Hasil Pencarian</div>
+                  </div>
+                  <div className="text-sm mb-2 font-medium">Jumlah Penduduk Usia {targetAge} Tahun</div>
+                  <div className="text-5xl font-extrabold my-3 drop-shadow-lg">{predictAgeCount()}</div>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                    <div className="text-sm font-semibold">
+                      {filteredData.length > 0 
+                        ? ((predictAgeCount() / filteredData.length) * 100).toFixed(1) + "% dari total"
+                        : '0%'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Distribusi Kelompok Usia - Enhanced */}
+        <div className="mb-6 bg-gradient-to-br from-white via-indigo-50/30 to-blue-50/40 rounded-3xl p-6 shadow-2xl border border-indigo-100/50">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800 text-lg">Distribusi Kelompok Usia</h3>
+              <p className="text-xs text-gray-500">Visualisasi sebaran usia penduduk</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {ageGroups.map((group, index) => {
+              // Gradient colors untuk setiap kelompok usia
+              const gradients = [
+                'from-red-400 to-red-600',
+                'from-orange-400 to-orange-600',
+                'from-amber-400 to-amber-600',
+                'from-yellow-400 to-yellow-600',
+                'from-lime-400 to-lime-600',
+                'from-green-400 to-green-600',
+                'from-emerald-400 to-emerald-600',
+                'from-teal-400 to-teal-600',
+                'from-cyan-400 to-cyan-600',
+                'from-sky-400 to-sky-600',
+                'from-blue-400 to-blue-600',
+                'from-indigo-400 to-indigo-600',
+                'from-violet-400 to-violet-600',
+                'from-purple-400 to-purple-600',
+                'from-fuchsia-400 to-fuchsia-600'
+              ];
+              
+              return (
+                <div key={index} className="group hover:scale-[1.02] transition-transform duration-300">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-700">{group.range} tahun</span>
+                      <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs font-semibold text-gray-600">
+                        {group.count} orang
+                      </span>
+                    </div>
+                    <span className="text-sm font-extrabold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                      {group.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                    <div
+                      className={`bg-gradient-to-r ${gradients[index % gradients.length]} h-full rounded-full transition-all duration-700 shadow-lg`}
+                      style={{ width: group.percentage + "%" }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <BottomNavigation />

@@ -18,9 +18,10 @@ export default function VisiMisiDesaAdminPage() {
   const router = useRouter();
   const { logout } = useAuth();
   const [visiMisiData, setVisiMisiData] = useState<VisiMisiContent | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Only for data operations
   const [showModal, setShowModal] = useState(false);
   const [showImageReview, setShowImageReview] = useState<'visi' | 'misi' | null>(null);
+  const [showImageModal, setShowImageModal] = useState<'visi' | 'misi' | null>(null);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     visi: "",
@@ -80,6 +81,13 @@ export default function VisiMisiDesaAdminPage() {
   };
 
   const handleCloseModal = () => {
+    // Cleanup blob URLs
+    if (formData.visiImageUrl && formData.visiImageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.visiImageUrl);
+    }
+    if (formData.misiImageUrl && formData.misiImageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.misiImageUrl);
+    }
     setShowModal(false);
     setFormData({
       visi: "",
@@ -102,16 +110,12 @@ export default function VisiMisiDesaAdminPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, imageType: 'visi' | 'misi') => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const imageUrl = event.target?.result as string;
-        setFormData((prev) => ({
-          ...prev,
-          [`${imageType}ImageFile`]: file,
-          [`${imageType}ImageUrl`]: imageUrl,
-        }));
-      };
-      reader.readAsDataURL(file);
+      const objectUrl = URL.createObjectURL(file);
+      setFormData((prev) => ({
+        ...prev,
+        [`${imageType}ImageFile`]: file,
+        [`${imageType}ImageUrl`]: objectUrl,
+      }));
     }
   };
 
@@ -129,23 +133,27 @@ export default function VisiMisiDesaAdminPage() {
       let visiImageUrl = visiMisiData?.visiImageUrl || "";
       let misiImageUrl = visiMisiData?.misiImageUrl || "";
 
-      // Upload Visi image if selected
+      // Upload Visi image if selected - akan otomatis dikonversi ke WebP
       if (formData.visiImageFile) {
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_visi.webp`;
         visiImageUrl = await uploadImageToStorage(
           formData.visiImageFile,
-          `visi-misi/visi-${Date.now()}`
+          fileName
         );
-      } else if (formData.visiImageUrl && !formData.visiImageUrl.startsWith('data:')) {
+      } else if (formData.visiImageUrl && !formData.visiImageUrl.startsWith('blob:')) {
         visiImageUrl = formData.visiImageUrl;
       }
 
-      // Upload Misi image if selected
+      // Upload Misi image if selected - akan otomatis dikonversi ke WebP
       if (formData.misiImageFile) {
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_misi.webp`;
         misiImageUrl = await uploadImageToStorage(
           formData.misiImageFile,
-          `visi-misi/misi-${Date.now()}`
+          fileName
         );
-      } else if (formData.misiImageUrl && !formData.misiImageUrl.startsWith('data:')) {
+      } else if (formData.misiImageUrl && !formData.misiImageUrl.startsWith('blob:')) {
         misiImageUrl = formData.misiImageUrl;
       }
 
@@ -228,12 +236,7 @@ export default function VisiMisiDesaAdminPage() {
         </div>
 
         <div>
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Memuat data visi & misi...</p>
-            </div>
-          ) : visiMisiData && visiMisiData.visi ? (
+          {visiMisiData && visiMisiData.visi ? (
             <div className="bg-gradient-to-r from-white to-gray-50 rounded-2xl border border-gray-200 shadow-lg overflow-hidden p-8">
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-8">Visi & Misi Desa</h2>
@@ -382,19 +385,86 @@ export default function VisiMisiDesaAdminPage() {
                     <label className="text-sm font-semibold text-gray-700 block mb-2">
                       Foto Visi (Opsional)
                     </label>
+                    
+                    {/* Hidden File Input */}
                     <input
                       type="file"
+                      id="fileInputVisi"
                       accept="image/*"
                       onChange={(e) => handleImageChange(e, 'visi')}
-                      className="block w-full text-sm text-gray-600 file:px-4 file:py-2 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-100 file:text-red-700 hover:file:bg-red-200 transition-colors"
+                      className="hidden"
                     />
-                    {formData.visiImageUrl && (
-                      <div className="mt-3 rounded-lg overflow-hidden border-2 border-gray-300">
-                        <img
-                          src={formData.visiImageUrl}
-                          alt="Preview Visi"
-                          className="max-h-40 w-auto"
-                        />
+                    
+                    {/* Button Pilih Foto atau Preview */}
+                    {!formData.visiImageUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('fileInputVisi')?.click()}
+                        className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-red-500 hover:bg-red-50 transition-all duration-300 group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-full bg-red-100 group-hover:bg-red-200 transition-colors">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-red-600">
+                              <rect x="3" y="3" width="18" height="18" rx="2"/>
+                              <circle cx="8.5" cy="8.5" r="1.5"/>
+                              <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700">Pilih Foto</span>
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="relative">
+                        <div 
+                          className="relative rounded-xl overflow-hidden border-2 border-gray-300 cursor-pointer hover:border-red-500 transition-colors group"
+                          onClick={() => setShowImageModal('visi')}
+                        >
+                          <img
+                            src={formData.visiImageUrl}
+                            alt="Preview Visi"
+                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-2">
+                              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-800">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/>
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Tombol Hapus */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (formData.visiImageUrl.startsWith('blob:')) {
+                              URL.revokeObjectURL(formData.visiImageUrl);
+                            }
+                            setFormData(prev => ({ ...prev, visiImageUrl: "", visiImageFile: null }));
+                            const input = document.getElementById('fileInputVisi') as HTMLInputElement;
+                            if (input) input.value = '';
+                          }}
+                          className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-colors z-10"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                          </svg>
+                        </button>
+                        
+                        <p className="text-xs text-gray-500 mt-2 text-center">Klik untuk melihat ukuran penuh</p>
+                        
+                        {/* Button Ganti Foto */}
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById('fileInputVisi')?.click()}
+                          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                          </svg>
+                          <span>Ganti Foto</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -418,19 +488,86 @@ export default function VisiMisiDesaAdminPage() {
                     <label className="text-sm font-semibold text-gray-700 block mb-2">
                       Foto Misi (Opsional)
                     </label>
+                    
+                    {/* Hidden File Input */}
                     <input
                       type="file"
+                      id="fileInputMisi"
                       accept="image/*"
                       onChange={(e) => handleImageChange(e, 'misi')}
-                      className="block w-full text-sm text-gray-600 file:px-4 file:py-2 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-100 file:text-red-700 hover:file:bg-red-200 transition-colors"
+                      className="hidden"
                     />
-                    {formData.misiImageUrl && (
-                      <div className="mt-3 rounded-lg overflow-hidden border-2 border-gray-300">
-                        <img
-                          src={formData.misiImageUrl}
-                          alt="Preview Misi"
-                          className="max-h-40 w-auto"
-                        />
+                    
+                    {/* Button Pilih Foto atau Preview */}
+                    {!formData.misiImageUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('fileInputMisi')?.click()}
+                        className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-red-500 hover:bg-red-50 transition-all duration-300 group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-full bg-red-100 group-hover:bg-red-200 transition-colors">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-red-600">
+                              <rect x="3" y="3" width="18" height="18" rx="2"/>
+                              <circle cx="8.5" cy="8.5" r="1.5"/>
+                              <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700">Pilih Foto</span>
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="relative">
+                        <div 
+                          className="relative rounded-xl overflow-hidden border-2 border-gray-300 cursor-pointer hover:border-red-500 transition-colors group"
+                          onClick={() => setShowImageModal('misi')}
+                        >
+                          <img
+                            src={formData.misiImageUrl}
+                            alt="Preview Misi"
+                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-2">
+                              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-gray-800">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/>
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Tombol Hapus */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (formData.misiImageUrl.startsWith('blob:')) {
+                              URL.revokeObjectURL(formData.misiImageUrl);
+                            }
+                            setFormData(prev => ({ ...prev, misiImageUrl: "", misiImageFile: null }));
+                            const input = document.getElementById('fileInputMisi') as HTMLInputElement;
+                            if (input) input.value = '';
+                          }}
+                          className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-colors z-10"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                          </svg>
+                        </button>
+                        
+                        <p className="text-xs text-gray-500 mt-2 text-center">Klik untuk melihat ukuran penuh</p>
+                        
+                        {/* Button Ganti Foto */}
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById('fileInputMisi')?.click()}
+                          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                          </svg>
+                          <span>Ganti Foto</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -468,7 +605,41 @@ export default function VisiMisiDesaAdminPage() {
           </div>
         )}
 
-        {/* Image Review Modal */}
+        {/* Modal Pop-up Foto Full Size */}
+        {showImageModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowImageModal(null)}
+            ></div>
+            
+            {/* Modal Content */}
+            <div className="relative z-10 max-w-5xl max-h-[90vh] w-full">
+              {/* Close Button */}
+              <button
+                onClick={() => setShowImageModal(null)}
+                className="absolute -top-12 right-0 text-white hover:text-red-400 transition-colors p-2 rounded-full bg-black/50 hover:bg-black/70"
+                title="Tutup"
+              >
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+              
+              {/* Image */}
+              <div className="bg-white rounded-2xl p-4 shadow-2xl">
+                <img 
+                  src={showImageModal === 'visi' ? formData.visiImageUrl : formData.misiImageUrl} 
+                  alt={`Full size ${showImageModal}`} 
+                  className="w-full h-auto max-h-[80vh] object-contain rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Image Review Modal (for existing images in display) */}
         {showImageReview && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div

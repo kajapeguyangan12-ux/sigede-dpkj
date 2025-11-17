@@ -2,92 +2,312 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleMasyarakatLogout } from '../../../lib/masyarakatLogoutHelper';
+import { getMasyarakatByEmail } from '../../../lib/masyarakatService';
+import { getKependudukanPhotoURL } from '../../../lib/kependudukanPhotoService';
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from '../../components/BottomNavigation';
 const SiGedeLogo = "/logo/LOGO_DPKJ.png";
 
+interface UserProfile {
+  id: string;
+  nama: string;
+  email: string;
+  nik?: string;
+  noTelepon?: string;
+  alamat?: string;
+  tempatLahir?: string;
+  tanggalLahir?: string;
+  jenisKelamin?: string;
+  agama?: string;
+  pekerjaan?: string;
+  kecamatan?: string;
+  desa?: string;
+  rt?: string;
+  rw?: string;
+  userName?: string;
+  userType?: 'masyarakat' | 'warga_luar_dpkj';
+}
+
 export default function ProfilMasyarakatPage() {
-  const { logout } = useAuth();
-  
-  // Mock data; replace with real user data later
-  const user = {
-    nama: "Nama Lengkap",
-    nik: "NIK",
-    desa: "Dauh Puri Kaja",
-    role: "Role",
-  };
+  const { user, logout } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUserProfile = useCallback(async () => {
+    if (!user?.email) {
+      setLoading(false);
+      return;
+    }
+
+    // Debug: Log semua data user dari AuthContext
+    console.log('👤 USER DATA dari AuthContext:', {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      userName: user.userName,
+      phoneNumber: user.phoneNumber,
+      idNumber: user.idNumber,
+      address: user.address,
+      role: user.role,
+      status: user.status
+    });
+
+    // Set initial data from AuthContext immediately
+    const initialData: UserProfile = {
+      id: user.uid || 'user-id',
+      nama: user.displayName || user.userName || 'User',
+      email: user.email,
+      nik: user.idNumber || undefined,
+      noTelepon: user.phoneNumber || undefined,
+      userName: user.userName || undefined,
+      alamat: user.address || undefined,
+      jenisKelamin: undefined,
+      agama: undefined,
+      pekerjaan: undefined,
+      desa: undefined,
+      kecamatan: undefined,
+      rt: undefined,
+      rw: undefined,
+      userType: 'masyarakat'
+    };
+    
+    console.log('📋 INITIAL DATA yang di-set:', initialData);
+    setUserProfile(initialData);
+    setLoading(false);
+
+    // Try to fetch from database in background
+    try {
+      console.log('🔍 Fetching profile for email:', user.email);
+      const profileData = await getMasyarakatByEmail(user.email);
+      
+      if (profileData) {
+        console.log('✅ Profile data found from database:', profileData);
+        setUserProfile(profileData);
+      } else {
+        console.log('❌ No profile data found in database, using AuthContext data');
+      }
+
+      // Load profile photo if user has uid
+      if (user.uid) {
+        console.log('📸 PROFIL: Loading profile photo for:', user.uid);
+        const photoUrl = await getKependudukanPhotoURL(user.uid, 'foto_profil');
+        
+        if (photoUrl) {
+          console.log('✅ PROFIL: Profile photo found');
+          setProfilePhotoUrl(photoUrl);
+        } else {
+          console.log('ℹ️ PROFIL: No profile photo found');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching user profile:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchUserProfile();
+    }
+  }, [user?.email, fetchUserProfile]);
 
   const handleLogout = async () => {
     await handleMasyarakatLogout(() => logout('masyarakat'));
   };
 
+  // Don't show loading spinner since we set data immediately
+  if (!user) {
+    return (
+      <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-gray-800">
+        <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+          <HeaderCard 
+            title="Profil" 
+            subtitle="Data Pribadi"
+            backUrl="/masyarakat/home"
+            showBackButton={false}
+          />
+          <div className="flex items-center justify-center mt-20">
+            <div className="text-gray-500">Silakan login terlebih dahulu</div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
-      <div className="mx-auto w-full max-w-md px-3 sm:px-4 pb-24 sm:pb-28 pt-4">
+    <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-gray-800">
+      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
         <HeaderCard 
           title="Profil" 
           subtitle="Data Pribadi"
           backUrl="/masyarakat/home"
           showBackButton={false}
         />
-
-        {/* User Card Section */}
-        <section className="mb-6 rounded-2xl border border-black/20 bg-gradient-to-b from-rose-50 to-white p-0 shadow ring-1 ring-black/10 overflow-hidden">
-          <div className="relative">
-            <div className="absolute inset-0 -z-10 opacity-40 [background:radial-gradient(120%_100%_at_0%_0%,#ef4444,transparent_60%)]" />
-            <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-3 px-3 sm:px-4 pt-3">
-              <div className="inline-flex items-center gap-2 text-rose-700 font-bold">
-                <Image src={SiGedeLogo} alt="SiGede" width={18} height={18} />
-                <span className="text-sm sm:text-base">SiGede</span>
-              </div>
-              <div className="text-center sm:text-right text-xs sm:text-sm flex-1">
-                <div className="font-semibold line-clamp-1">{user.nama}</div>
-                <div className="flex items-center justify-center sm:justify-end gap-1 text-xs"><span className="line-clamp-1">{user.desa}</span><span>📍</span></div>
-                <div className="text-gray-700 text-xs">{user.role}</div>
-              </div>
+        
+        {/* Profile Header */}
+        <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-blue-800 p-6 shadow-xl">
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="relative h-20 w-20 overflow-hidden rounded-2xl border-4 border-white/20 bg-white/10 backdrop-blur-sm">
+              {profilePhotoUrl ? (
+                <Image
+                  src={profilePhotoUrl}
+                  alt="Profile Photo"
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-2xl text-white">
+                  {userProfile?.nama?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              )}
             </div>
-            <div className="px-3 sm:px-4 pb-4 pt-2 text-xs sm:text-sm">
-              <div className="text-gray-800 truncate">{user.nik}</div>
+            
+            <div className="flex-1 text-white">
+              <div className="text-xl font-bold">
+                {userProfile?.nama || 'Nama Pengguna'}
+              </div>
+              <div className="text-sm text-blue-100">
+                {userProfile?.email || 'email@example.com'}
+              </div>
+              {userProfile?.userName && (
+                <div className="text-xs text-blue-200 opacity-90">
+                  @{userProfile.userName}
+                </div>
+              )}
             </div>
-            <div className="h-2 w-full bg-gradient-to-r from-rose-700 via-rose-400 to-rose-300" />
           </div>
-        </section>
+          
+          {/* Background decoration */}
+          <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-white/5"></div>
+          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10"></div>
+        </div>
 
-        {/* Profile Section */}
-        <section className="flex flex-col items-center">
-          <div className="flex flex-col items-center">
-            <div className="grid h-24 w-24 sm:h-28 sm:w-28 place-items-center rounded-full bg-white/90 shadow ring-1 ring-black/10 text-5xl sm:text-6xl">👤</div>
-            <Link href="#" className="mt-2 text-xs sm:text-sm text-sky-700 hover:underline font-medium">Edit</Link>
+        {/* Profile Details */}
+        <div className="space-y-3">
+          {/* Personal Info Card */}
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <div className="text-lg">👤</div>
+              <div className="text-sm font-semibold text-gray-700">Informasi Pribadi</div>
+            </div>
+            <div className="space-y-2">
+              {userProfile?.nik && (
+                <div className="flex justify-between">
+                  <div className="text-sm text-gray-600">NIK</div>
+                  <div className="text-sm font-medium">{userProfile.nik}</div>
+                </div>
+              )}
+              {userProfile?.noTelepon && (
+                <div className="flex justify-between">
+                  <div className="text-sm text-gray-600">No. Telepon</div>
+                  <div className="text-sm font-medium">{userProfile.noTelepon}</div>
+                </div>
+              )}
+              {userProfile?.jenisKelamin && (
+                <div className="flex justify-between">
+                  <div className="text-sm text-gray-600">Jenis Kelamin</div>
+                  <div className="text-sm font-medium">{userProfile.jenisKelamin}</div>
+                </div>
+              )}
+              {userProfile?.agama && (
+                <div className="flex justify-between">
+                  <div className="text-sm text-gray-600">Agama</div>
+                  <div className="text-sm font-medium">{userProfile.agama}</div>
+                </div>
+              )}
+              {userProfile?.pekerjaan && (
+                <div className="flex justify-between">
+                  <div className="text-sm text-gray-600">Pekerjaan</div>
+                  <div className="text-sm font-medium">{userProfile.pekerjaan}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Address Info Card */}
+          {(userProfile?.alamat || userProfile?.desa || userProfile?.rt || userProfile?.rw) && (
+            <div className="rounded-2xl bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="text-lg">📍</div>
+                <div className="text-sm font-semibold text-gray-700">Alamat</div>
+              </div>
+              <div className="space-y-2">
+                {userProfile?.alamat && (
+                  <div className="text-sm text-gray-600">{userProfile.alamat}</div>
+                )}
+                <div className="flex gap-4">
+                  {userProfile?.rt && (
+                    <div className="text-sm">
+                      <span className="text-gray-600">RT:</span> <span className="font-medium">{userProfile.rt}</span>
+                    </div>
+                  )}
+                  {userProfile?.rw && (
+                    <div className="text-sm">
+                      <span className="text-gray-600">RW:</span> <span className="font-medium">{userProfile.rw}</span>
+                    </div>
+                  )}
+                </div>
+                {userProfile?.desa && (
+                  <div className="text-sm">
+                    <span className="text-gray-600">Desa:</span> <span className="font-medium">{userProfile.desa}</span>
+                  </div>
+                )}
+                {userProfile?.kecamatan && (
+                  <div className="text-sm">
+                    <span className="text-gray-600">Kecamatan:</span> <span className="font-medium">{userProfile.kecamatan}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Account Type */}
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <div className="text-lg">🏠</div>
+              <div className="text-sm font-semibold text-gray-700">Status Kependudukan</div>
+            </div>
+            <div className="text-sm font-medium capitalize text-blue-600">
+              {userProfile?.userType === 'warga_luar_dpkj' ? 'Warga Luar DPKJ' : 'Warga DPKJ'}
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-6 grid w-full gap-3 px-4 sm:px-6 auto-cols-max justify-center">
-            <Link 
-              href="/masyarakat/profil/detail" 
-              className="rounded-full border border-gray-300 bg-gray-200 px-6 sm:px-8 py-2.5 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-300 transition-colors active:scale-95"
+          <div className="space-y-3 pt-2">
+            <Link
+              href="/masyarakat/profil/edit"
+              className="flex w-full items-center justify-between rounded-xl bg-blue-600 px-4 py-3 text-white shadow-sm transition-colors hover:bg-blue-700"
             >
-              Detail
+              <div className="flex items-center gap-3">
+                <div className="text-lg">✏️</div>
+                <div className="text-sm font-medium">Edit Profil</div>
+              </div>
+              <div className="text-white">›</div>
             </Link>
-            <Link 
-              href="/masyarakat/profil/edit" 
-              className="rounded-full bg-sky-500 px-6 sm:px-8 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white shadow-[inset_0_-2px_0_#0b78c1,0_2px_0_#0b78c133] hover:bg-sky-600 text-center transition-colors active:scale-95"
-            >
-              Edit Profil
-            </Link>
-          </div>
 
-          {/* Logout Section */}
-          <div className="mt-8 px-4 sm:px-6 w-full flex justify-center">
             <button
               onClick={handleLogout}
-              className="rounded-full border border-red-300 bg-red-50 px-6 sm:px-8 py-2.5 sm:py-3 text-center text-xs sm:text-sm font-semibold text-red-700 shadow-sm hover:bg-red-100 hover:border-red-400 transition-colors active:scale-95"
+              className="flex w-full items-center justify-between rounded-xl bg-red-500 px-4 py-3 text-white shadow-sm transition-colors hover:bg-red-600"
             >
-              Logout Akun
+              <div className="flex items-center gap-3">
+                <div className="text-lg">🚪</div>
+                <div className="text-sm font-medium">Keluar</div>
+              </div>
+              <div className="text-white">›</div>
             </button>
           </div>
-        </section>
+        </div>
+
+        {/* Footer branding */}
+        <div className="mt-8 flex items-center justify-center gap-4 rounded-2xl bg-white/80 py-4 shadow-sm backdrop-blur-sm">
+          <Image src={SiGedeLogo} alt="Logo" width={32} height={32} className="h-8 w-8" />
+          <div className="text-xs font-semibold text-gray-600">
+            Sistem Informasi Desa
+          </div>
+        </div>
       </div>
 
       <BottomNavigation />

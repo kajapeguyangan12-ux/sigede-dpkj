@@ -83,3 +83,49 @@ export const getOfflineModeStatus = (): boolean => {
 export const setOfflineMode = (offline: boolean) => {
   isOfflineMode = offline;
 };
+
+/**
+ * Retry wrapper untuk Firebase operations
+ */
+export const withFirebaseRetry = async <T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> => {
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Firebase operation attempt ${attempt}/${maxRetries}`);
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+      const errorMessage = handleFirestoreError(error);
+      
+      console.warn(`❌ Firebase operation failed (attempt ${attempt}):`, errorMessage);
+      
+      // Don't retry permission errors
+      if (error.message && (
+        error.message.includes('Permission denied') || 
+        error.message.includes('Unauthorized') ||
+        error.message.includes('Authentication')
+      )) {
+        console.log('🚫 Permission error - not retrying');
+        break;
+      }
+      
+      // Don't retry on last attempt
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      // Wait before retry with exponential backoff
+      console.log(`⏳ Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 1.5;
+    }
+  }
+  
+  console.error(`❌ Firebase operation failed after ${maxRetries} attempts:`, lastError);
+  throw lastError;
+};

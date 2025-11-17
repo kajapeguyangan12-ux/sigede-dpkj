@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNavigation from '../../components/BottomNavigation';
 import HeaderCard from '../../components/HeaderCard';
@@ -32,7 +32,7 @@ const PERTANYAAN_IKM = [
 
 export default function IKMPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -40,11 +40,34 @@ export default function IKMPage() {
   const [ratings, setRatings] = useState<{ [key: string]: number }>({});
   const [komentar, setKomentar] = useState('');
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/masyarakat/login');
-    }
-  }, [user, router]);
+  const JENIS_LAYANAN = useMemo(() => [
+    "Administrasi Kependudukan",
+    "Surat Keterangan",
+    "Pelayanan Kesehatan",
+    "Pelayanan Pendidikan",
+    "Perizinan",
+    "Layanan Umum",
+    "Lainnya"
+  ], []);
+
+  const PERTANYAAN_IKM = useMemo(() => [
+    "Bagaimana persyaratan pelayanan?",
+    "Bagaimana prosedur pelayanan?",
+    "Bagaimana waktu pelayanan?",
+    "Bagaimana biaya/tarif pelayanan?",
+    "Bagaimana kualitas hasil pelayanan?",
+    "Bagaimana kompetensi petugas?",
+    "Bagaimana perilaku petugas?",
+    "Bagaimana fasilitas pelayanan?",
+    "Bagaimana penanganan pengaduan?"
+  ], []);
+
+  // Remove individual auth check since layout handles it
+  // useEffect(() => {
+  //   if (!user) {
+  //     router.push('/masyarakat/login');
+  //   }
+  // }, [user, router]);
 
   const handleRating = (pertanyaan: string, nilai: number) => {
     setRatings(prev => ({

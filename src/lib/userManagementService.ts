@@ -54,6 +54,8 @@ class UserManagementService {
   private usersCollection = collection(firestore, FIREBASE_COLLECTIONS.USERS);
   private userProfilesCollection = collection(firestore, FIREBASE_COLLECTIONS.USER_PROFILES);
   private adminLogsCollection = collection(firestore, FIREBASE_COLLECTIONS.ADMIN_LOGS);
+  private masyarakatCollection = collection(firestore, 'masyarakat');
+  private wargaLuarDPKJCollection = collection(firestore, 'Warga_LuarDPKJ');
 
   // Membuat user baru (hanya bisa dilakukan oleh admin)
   async createUser(userData: CreateUserData, createdBy: string): Promise<string> {
@@ -210,21 +212,20 @@ class UserManagementService {
   // Mendapatkan semua user berdasarkan role
   async getUsersByRole(role?: UserRole): Promise<FirestoreUser[]> {
     try {
+      const users: FirestoreUser[] = [];
+
+      // 1. Query dari collection 'users' (existing logic)
       let q;
       if (role) {
-        // Simple query untuk role tertentu
         q = query(
           this.usersCollection,
           where('role', '==', role)
         );
       } else {
-        // Query semua user (tanpa filter kompleks)
         q = query(this.usersCollection);
       }
 
       const snapshot = await getDocs(q);
-      const users: FirestoreUser[] = [];
-
       snapshot.forEach((doc) => {
         const data = doc.data();
         
@@ -240,6 +241,53 @@ class UserManagementService {
         }
       });
 
+      // 2. Query dari collection 'masyarakat' untuk role masyarakat
+      if (!role || role === 'warga_dpkj' || role === 'warga_luar_dpkj') {
+        try {
+          const masyarakatSnapshot = await getDocs(this.masyarakatCollection);
+          
+          masyarakatSnapshot.forEach((doc) => {
+            const data = doc.data();
+            
+            // Map data masyarakat ke format FirestoreUser
+            const mappedUser: FirestoreUser = {
+              uid: doc.id,
+              email: data.email || '',
+              displayName: data.nama || data.displayName || 'Nama tidak tersedia',
+              role: data.role || 'warga_luar_dpkj', // Default role
+              status: data.status || 'active', // Default status
+              createdAt: data.createdAt?.toDate?.() || data.tanggalDaftar?.toDate?.() || new Date(),
+              updatedAt: data.updatedAt?.toDate?.() || new Date(),
+              lastLoginAt: data.lastLoginAt?.toDate?.() || null,
+              // Additional fields from masyarakat collection
+              userName: data.userName || data.username,
+              idNumber: data.nik || data.idNumber,
+              phoneNumber: data.noTelp || data.phoneNumber || data.phone,
+              address: data.alamat || data.address,
+              notes: `Data dari collection masyarakat`,
+              // Extra masyarakat-specific fields
+              nik: data.nik,
+              alamat: data.alamat,
+              noTelp: data.noTelp,
+              tanggalLahir: data.tanggalLahir?.toDate?.() || null,
+              tempatLahir: data.tempatLahir,
+              jenisKelamin: data.jenisKelamin,
+              pekerjaan: data.pekerjaan,
+              agama: data.agama,
+              statusPerkawinan: data.statusPerkawinan
+            };
+
+            // Filter by role if specified
+            if (!role || mappedUser.role === role) {
+              users.push(mappedUser);
+            }
+          });
+        } catch (masyarakatError) {
+          console.warn('Error querying masyarakat collection:', masyarakatError);
+          // Continue execution even if masyarakat query fails
+        }
+      }
+
       // Sort client-side
       users.sort((a, b) => {
         // Sort by status first
@@ -254,6 +302,76 @@ class UserManagementService {
       return users;
     } catch (error) {
       console.error('Error getting users by role:', error);
+      throw error;
+    }
+  }
+
+  // Mendapatkan user berdasarkan collection tertentu
+  async getUsersByCollection(collectionName: string): Promise<FirestoreUser[]> {
+    try {
+      console.log(`🔍 SERVICE: Getting users from collection: ${collectionName}`);
+      const users: FirestoreUser[] = [];
+      const targetCollection = collection(firestore, collectionName);
+
+      const snapshot = await getDocs(targetCollection);
+      console.log(`📊 SERVICE: Found ${snapshot.size} documents in ${collectionName}`);
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log(`📄 SERVICE: Processing document ${doc.id}:`, data);
+        
+        // Map data collection ke format FirestoreUser
+        const mappedUser: FirestoreUser = {
+          uid: doc.id,
+          email: data.email || '',
+          displayName: data.namaLengkap || data.nama || data.displayName || 'Nama tidak tersedia',
+          role: data.role || data.roleUser || (
+            collectionName === 'masyarakat' ? 'warga_dpkj' : 
+            collectionName === 'Warga_LuarDPKJ' ? 'warga_luar_dpkj' :
+            collectionName === 'Super_Admin' ? 'super_admin' :
+            'unknown'
+          ),
+          status: data.status || 'active',
+          createdAt: data.createdAt?.toDate?.() || data.tanggalDaftar?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(),
+          lastLoginAt: data.lastLoginAt?.toDate?.() || null,
+          // Additional fields
+          userName: data.userName || data.username,
+          idNumber: data.nik || data.idNumber || data.id,
+          phoneNumber: data.noTelepon || data.noTelp || data.phoneNumber || data.phone,
+          address: data.alamat || data.address,
+          notes: `Data dari collection ${collectionName}`,
+          // Masyarakat-specific fields
+          nik: data.nik,
+          alamat: data.alamat,
+          noTelp: data.noTelp,
+          tanggalLahir: data.tanggalLahir?.toDate?.() || null,
+          tempatLahir: data.tempatLahir,
+          jenisKelamin: data.jenisKelamin,
+          pekerjaan: data.pekerjaan,
+          agama: data.agama,
+          statusPerkawinan: data.statusPerkawinan
+        };
+
+        console.log(`✅ SERVICE: Mapped user:`, mappedUser);
+        users.push(mappedUser);
+      });
+
+      // Sort client-side
+      users.sort((a, b) => {
+        // Sort by status first
+        if (a.status !== b.status) {
+          const statusOrder = ['active', 'pending', 'inactive', 'suspended'];
+          return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
+        }
+        // Then by display name
+        return (a.displayName || '').localeCompare(b.displayName || '');
+      });
+
+      console.log(`🎯 SERVICE: Returning ${users.length} users from ${collectionName}`);
+      return users;
+    } catch (error) {
+      console.error(`Error getting users from collection ${collectionName}:`, error);
       throw error;
     }
   }
@@ -501,6 +619,15 @@ class UserManagementService {
     username: string;
     displayName: string;
     nik: string;
+    noKK: string;
+    alamat: string;
+    tempatLahir: string;
+    tanggalLahir: string;
+    jenisKelamin: string;
+    agama: string;
+    pekerjaan: string;
+    statusKawin: string;
+    kewarganegaraan: string;
     email: string;
     phoneNumber: string;
     password: string;
@@ -509,9 +636,9 @@ class UserManagementService {
     console.log('📝 SERVICE: Registration data:', { ...userData, password: '***' });
     
     try {
-      // Cek apakah email sudah terdaftar
-      console.log('🔍 SERVICE: Checking if email already exists...');
-      const emailQuery = query(this.usersCollection, where('email', '==', userData.email));
+      // Cek apakah email sudah terdaftar di collection masyarakat
+      console.log('🔍 SERVICE: Checking if email already exists in masyarakat...');
+      const emailQuery = query(this.masyarakatCollection, where('email', '==', userData.email));
       const emailSnapshot = await getDocs(emailQuery);
       
       if (!emailSnapshot.empty) {
@@ -522,9 +649,9 @@ class UserManagementService {
         };
       }
 
-      // Cek apakah username sudah terdaftar
-      console.log('🔍 SERVICE: Checking if username already exists...');
-      const usernameQuery = query(this.usersCollection, where('userName', '==', userData.username));
+      // Cek apakah username sudah terdaftar di collection masyarakat
+      console.log('🔍 SERVICE: Checking if username already exists in masyarakat...');
+      const usernameQuery = query(this.masyarakatCollection, where('userName', '==', userData.username));
       const usernameSnapshot = await getDocs(usernameQuery);
       
       if (!usernameSnapshot.empty) {
@@ -535,9 +662,9 @@ class UserManagementService {
         };
       }
 
-      // Cek apakah NIK sudah terdaftar
-      console.log('🔍 SERVICE: Checking if NIK already exists...');
-      const nikQuery = query(this.usersCollection, where('idNumber', '==', userData.nik));
+      // Cek apakah NIK sudah terdaftar di collection masyarakat
+      console.log('🔍 SERVICE: Checking if NIK already exists in masyarakat...');
+      const nikQuery = query(this.masyarakatCollection, where('idNumber', '==', userData.nik));
       const nikSnapshot = await getDocs(nikQuery);
       
       if (!nikSnapshot.empty) {
@@ -553,8 +680,8 @@ class UserManagementService {
       const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       console.log('🆔 SERVICE: Generated user ID:', userId);
       
-      // Simpan data user ke Firestore dengan role 'warga'
-      console.log('💾 SERVICE: Preparing Firestore data...');
+      // Simpan data user ke Firestore collection 'masyarakat' dengan role 'warga'
+      console.log('💾 SERVICE: Preparing Firestore data for masyarakat collection...');
       const firestoreUserData: FirestoreUser = {
         uid: userId,
         email: userData.email,
@@ -562,20 +689,36 @@ class UserManagementService {
         userName: userData.username,
         idNumber: userData.nik,
         phoneNumber: userData.phoneNumber,
-        role: 'warga' as UserRole, // Set role sebagai 'warga'
-        status: 'active' as UserStatus, // Langsung active, tidak perlu approval admin
+        role: 'warga' as UserRole,
+        status: 'active' as UserStatus,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        createdBy: userId, // Self-registered
-        notes: 'Self-registered user from masyarakat registration page'
+        createdBy: userId,
+        notes: 'Self-registered user from masyarakat registration page',
+        // Data lengkap dari form registrasi
+        nik: userData.nik,
+        noKK: userData.noKK,
+        alamat: userData.alamat,
+        tempatLahir: userData.tempatLahir,
+        tanggalLahir: userData.tanggalLahir,
+        jenisKelamin: userData.jenisKelamin,
+        agama: userData.agama,
+        pekerjaan: userData.pekerjaan,
+        statusPerkawinan: userData.statusKawin,
+        kewarganegaraan: userData.kewarganegaraan,
+        noTelp: userData.phoneNumber
       };
       
-      console.log('💾 SERVICE: Firestore data prepared (role: warga, status: active)');
-      console.log('📡 SERVICE: Saving to Firestore...');
+      console.log('💾 SERVICE: Firestore data prepared with all fields:', {
+        ...firestoreUserData,
+        createdAt: '[timestamp]',
+        updatedAt: '[timestamp]'
+      });
+      console.log('📡 SERVICE: Saving to masyarakat collection...');
       
-      const docRef = await addDoc(this.usersCollection, firestoreUserData);
+      const docRef = await addDoc(this.masyarakatCollection, firestoreUserData);
       
-      console.log('✅ SERVICE: User registered successfully with ID:', docRef.id);
+      console.log('✅ SERVICE: User registered successfully in masyarakat collection with doc ID:', docRef.id);
       console.log('🎉 SERVICE: Registration completed! User can now login.');
 
       return {
@@ -585,6 +728,98 @@ class UserManagementService {
       };
     } catch (error: any) {
       console.error('💥 SERVICE ERROR during registration:', error);
+      console.error('💥 SERVICE ERROR details:', {
+        message: error.message,
+        code: error.code,
+        name: error.name
+      });
+      
+      return {
+        success: false,
+        message: `Terjadi kesalahan saat mendaftar: ${error.message || 'Unknown error'}`
+      };
+    }
+  }
+
+  // Registrasi khusus untuk warga luar DPKJ (hanya perlu username, phone, email, password)
+  async registerWargaLuar(userData: {
+    username: string;
+    phoneNumber: string;
+    email: string;
+    password: string;
+  }): Promise<{ success: boolean; userId?: string; message: string }> {
+    console.log('🎯 SERVICE: registerWargaLuar called');
+    console.log('📝 SERVICE: Registration data:', { ...userData, password: '***' });
+    
+    try {
+      // Cek apakah email sudah terdaftar di collection Warga_LuarDPKJ
+      console.log('🔍 SERVICE: Checking if email already exists in Warga_LuarDPKJ...');
+      const emailQuery = query(
+        collection(firestore, 'Warga_LuarDPKJ'), 
+        where('email', '==', userData.email)
+      );
+      const emailSnapshot = await getDocs(emailQuery);
+      
+      if (!emailSnapshot.empty) {
+        console.log('❌ SERVICE: Email already registered');
+        return {
+          success: false,
+          message: 'Email sudah terdaftar. Silakan gunakan email lain atau login.'
+        };
+      }
+
+      // Cek apakah username sudah terdaftar di collection Warga_LuarDPKJ
+      console.log('🔍 SERVICE: Checking if username already exists in Warga_LuarDPKJ...');
+      const usernameQuery = query(
+        collection(firestore, 'Warga_LuarDPKJ'), 
+        where('userName', '==', userData.username)
+      );
+      const usernameSnapshot = await getDocs(usernameQuery);
+      
+      if (!usernameSnapshot.empty) {
+        console.log('❌ SERVICE: Username already taken');
+        return {
+          success: false,
+          message: 'Username sudah digunakan. Silakan pilih username lain.'
+        };
+      }
+
+      // Generate unique ID untuk user
+      console.log('🔧 SERVICE: Generating user ID...');
+      const userId = `warga_luar_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('🆔 SERVICE: Generated user ID:', userId);
+      
+      // Simpan data user ke Firestore collection 'Warga_LuarDPKJ' dengan role 'warga_luar_dpkj'
+      console.log('💾 SERVICE: Preparing Firestore data for Warga_LuarDPKJ collection...');
+      const firestoreUserData: FirestoreUser = {
+        uid: userId,
+        email: userData.email,
+        displayName: userData.username, // Use username as display name for warga luar
+        userName: userData.username,
+        phoneNumber: userData.phoneNumber,
+        role: 'warga_luar_dpkj' as UserRole, // Set role sebagai 'warga_luar_dpkj'
+        status: 'active' as UserStatus, // Langsung active, tidak perlu approval admin
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdBy: userId, // Self-registered
+        notes: 'Self-registered warga luar DPKJ user'
+      };
+      
+      console.log('💾 SERVICE: Firestore data prepared (role: warga_luar_dpkj, status: active)');
+      console.log('📡 SERVICE: Saving to Warga_LuarDPKJ collection...');
+      
+      const docRef = await addDoc(collection(firestore, 'Warga_LuarDPKJ'), firestoreUserData);
+      
+      console.log('✅ SERVICE: User registered successfully in Warga_LuarDPKJ collection with doc ID:', docRef.id);
+      console.log('🎉 SERVICE: Registration completed! User can now login.');
+
+      return {
+        success: true,
+        userId: userId,
+        message: 'Pendaftaran berhasil! Silakan login untuk melanjutkan.'
+      };
+    } catch (error: any) {
+      console.error('💥 SERVICE ERROR during warga luar registration:', error);
       console.error('💥 SERVICE ERROR details:', {
         message: error.message,
         code: error.code,

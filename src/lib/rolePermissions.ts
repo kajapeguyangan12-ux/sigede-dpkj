@@ -20,6 +20,7 @@ export interface RolePermissions {
   'e-umkm': Permission;
   'kelola-pengguna': Permission;
   'data-desa': Permission;
+  'super-admin': Permission;
 }
 
 // Administrative access control
@@ -28,8 +29,28 @@ export interface AdminAccess {
   canAccessMasyarakatPanel: boolean;
 }
 
+// Data Desa specific access control
+export interface DataDesaAccess {
+  canAccessAnalisisData: boolean;
+}
+
 // Role permissions mapping
 export const rolePermissions: Record<UserRole, RolePermissions> = {
+  super_admin: {
+    'e-news': { read: true, create: true, update: true, delete: true },
+    'profil-desa': { read: true, create: true, update: true, delete: true },
+    'regulasi-desa': { read: true, create: true, update: true, delete: true },
+    'keuangan': { read: true, create: true, update: true, delete: true },
+    'layanan-publik': { read: true, create: true, update: true, delete: true },
+    'ikm': { read: true, create: true, update: true, delete: true },
+    'wisata-budaya': { read: true, create: true, update: true, delete: true },
+    'pengaduan': { read: true, create: true, update: true, delete: true },
+    'e-umkm': { read: true, create: true, update: true, delete: true },
+    'kelola-pengguna': { read: true, create: true, update: true, delete: true },
+    'data-desa': { read: true, create: true, update: true, delete: true },
+    'super-admin': { read: true, create: true, update: true, delete: true },
+  },
+  
   administrator: {
     'e-news': { read: true, create: true, update: true, delete: true },
     'profil-desa': { read: true, create: true, update: true, delete: true },
@@ -42,6 +63,7 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     'e-umkm': { read: true, create: true, update: true, delete: true },
     'kelola-pengguna': { read: true, create: true, update: true, delete: true },
     'data-desa': { read: true, create: true, update: true, delete: true },
+    'super-admin': { read: true, create: true, update: true, delete: true },
   },
   
   admin_desa: {
@@ -56,6 +78,7 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     'e-umkm': { read: true, create: true, update: true, delete: true },
     'kelola-pengguna': { read: false, create: false, update: false, delete: false },
     'data-desa': { read: false, create: false, update: false, delete: false },
+    'super-admin': { read: false, create: false, update: false, delete: false },
   },
   
   kepala_desa: {
@@ -70,6 +93,7 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     'e-umkm': { read: false, create: false, update: false, delete: false },
     'kelola-pengguna': { read: false, create: false, update: false, delete: false },
     'data-desa': { read: true, create: true, update: true, delete: true },
+    'super-admin': { read: false, create: false, update: false, delete: false },
   },
   
   kepala_dusun: {
@@ -84,6 +108,7 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     'e-umkm': { read: false, create: false, update: false, delete: false },
     'kelola-pengguna': { read: false, create: false, update: false, delete: false },
     'data-desa': { read: false, create: false, update: false, delete: false },
+    'super-admin': { read: false, create: false, update: false, delete: false },
   },
   
   warga_dpkj: {
@@ -98,20 +123,22 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     'e-umkm': { read: false, create: false, update: false, delete: false },
     'kelola-pengguna': { read: false, create: false, update: false, delete: false },
     'data-desa': { read: false, create: false, update: false, delete: false },
+    'super-admin': { read: false, create: false, update: false, delete: false },
   },
   
   warga_luar_dpkj: {
-    'e-news': { read: false, create: false, update: false, delete: false },
+    'e-news': { read: true, create: false, update: false, delete: false },
     'profil-desa': { read: false, create: false, update: false, delete: false },
     'regulasi-desa': { read: false, create: false, update: false, delete: false },
     'keuangan': { read: false, create: false, update: false, delete: false },
     'layanan-publik': { read: false, create: false, update: false, delete: false },
     'ikm': { read: false, create: false, update: false, delete: false },
-    'wisata-budaya': { read: false, create: false, update: false, delete: false },
+    'wisata-budaya': { read: true, create: false, update: false, delete: false },
     'pengaduan': { read: false, create: false, update: false, delete: false },
-    'e-umkm': { read: false, create: false, update: false, delete: false },
+    'e-umkm': { read: true, create: true, update: true, delete: true },
     'kelola-pengguna': { read: false, create: false, update: false, delete: false },
     'data-desa': { read: false, create: false, update: false, delete: false },
+    'super-admin': { read: false, create: false, update: false, delete: false },
   },
   
   unknown: {
@@ -126,11 +153,13 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     'e-umkm': { read: false, create: false, update: false, delete: false },
     'kelola-pengguna': { read: false, create: false, update: false, delete: false },
     'data-desa': { read: false, create: false, update: false, delete: false },
+    'super-admin': { read: false, create: false, update: false, delete: false },
   },
 };
 
-// Admin panel access control
+// Administrative panel access control
 export const adminAccess: Record<UserRole, AdminAccess> = {
+  super_admin: { canAccessAdminPanel: true, canAccessMasyarakatPanel: true },
   administrator: { canAccessAdminPanel: true, canAccessMasyarakatPanel: true },
   admin_desa: { canAccessAdminPanel: true, canAccessMasyarakatPanel: true },
   kepala_desa: { canAccessAdminPanel: true, canAccessMasyarakatPanel: true },
@@ -140,8 +169,25 @@ export const adminAccess: Record<UserRole, AdminAccess> = {
   unknown: { canAccessAdminPanel: false, canAccessMasyarakatPanel: false },
 };
 
+// Data Desa Analisis access control
+export const dataDesaAnalisisAccess: Record<UserRole, DataDesaAccess> = {
+  super_admin: { canAccessAnalisisData: true },
+  administrator: { canAccessAnalisisData: true },
+  admin_desa: { canAccessAnalisisData: true },
+  kepala_desa: { canAccessAnalisisData: true },
+  kepala_dusun: { canAccessAnalisisData: false },
+  warga_dpkj: { canAccessAnalisisData: false },
+  warga_luar_dpkj: { canAccessAnalisisData: false },
+  unknown: { canAccessAnalisisData: false },
+};
+
 // Masyarakat page access for each role
 export const masyarakatPageAccess: Record<UserRole, Record<string, boolean>> = {
+  super_admin: {
+    home: true, profile: true, 'profil-desa': true, 'e-news': true, 'e-umkm': true,
+    'wisata-budaya': true, 'layanan-publik': true, pengaduan: true, keuangan: true,
+    'data-desa': true, ikm: true, regulasi: true, riwayat: true, notifikasi: true,
+  },
   administrator: {
     home: true, profile: true, 'profil-desa': true, 'e-news': true, 'e-umkm': true,
     'wisata-budaya': true, 'layanan-publik': true, pengaduan: true, keuangan: true,
@@ -155,7 +201,7 @@ export const masyarakatPageAccess: Record<UserRole, Record<string, boolean>> = {
   kepala_desa: {
     home: true, profile: true, 'profil-desa': true, 'e-news': true, 'e-umkm': true,
     'wisata-budaya': true, 'layanan-publik': true, pengaduan: true, keuangan: true,
-    'data-desa': true, ikm: true, regulasi: true, riwayat: true, notifikasi: true,
+    'data-desa': true, ikm: false, regulasi: true, riwayat: true, notifikasi: true,
   },
   kepala_dusun: {
     home: true, profile: true, 'profil-desa': true, 'e-news': true, 'e-umkm': true,
@@ -168,7 +214,7 @@ export const masyarakatPageAccess: Record<UserRole, Record<string, boolean>> = {
     'data-desa': true, ikm: true, regulasi: true, riwayat: true, notifikasi: true,
   },
   warga_luar_dpkj: {
-    home: false, profile: false, 'profil-desa': true, 'e-news': true, 'e-umkm': true,
+    home: true, profile: true, 'profil-desa': true, 'e-news': true, 'e-umkm': true,
     'wisata-budaya': true, 'layanan-publik': false, pengaduan: false, keuangan: false,
     'data-desa': false, ikm: false, regulasi: false, riwayat: false, notifikasi: false,
   },
@@ -181,8 +227,12 @@ export const masyarakatPageAccess: Record<UserRole, Record<string, boolean>> = {
 
 // Role descriptions
 export const roleDescriptions: Record<UserRole, { title: string; description: string }> = {
-  administrator: {
+  super_admin: {
     title: 'Super Administrator',
+    description: 'Akses penuh ke seluruh sistem dengan wewenang tertinggi'
+  },
+  administrator: {
+    title: 'Administrator',
     description: 'Akses penuh ke seluruh sistem admin dan masyarakat'
   },
   admin_desa: {
@@ -240,6 +290,19 @@ export interface FirestoreUser {
   lastLoginAt?: any;          // Firestore Timestamp
   createdBy?: string;         // Admin yang membuat user (jika dibuat manual)
   notes?: string;             // Catatan admin
+  
+  // Additional fields for masyarakat data
+  nik?: string;               // NIK dari collection masyarakat
+  alamat?: string;            // Alamat lengkap
+  noTelp?: string;            // Nomor telepon
+  tanggalLahir?: string;      // Tanggal lahir (format: YYYY-MM-DD)
+  tempatLahir?: string;       // Tempat lahir
+  jenisKelamin?: string;      // Jenis kelamin (L/P)
+  pekerjaan?: string;         // Pekerjaan
+  agama?: string;             // Agama
+  statusPerkawinan?: string;  // Status perkawinan
+  noKK?: string;              // Nomor Kartu Keluarga
+  kewarganegaraan?: string;   // Kewarganegaraan (WNI/WNA)
 }
 
 // Helper functions
@@ -259,6 +322,10 @@ export function canAccessMasyarakatPage(role: UserRole, page: string): boolean {
   return masyarakatPageAccess[role]?.[page] || false;
 }
 
+export function canAccessDataDesaAnalisis(role: UserRole): boolean {
+  return dataDesaAnalisisAccess[role]?.canAccessAnalisisData || false;
+}
+
 export function getRoleDescription(role: UserRole): string {
   return roleDescriptions[role]?.description || 'Role tidak dikenal';
 }
@@ -270,6 +337,7 @@ export function getRoleTitle(role: UserRole): string {
 export default {
   rolePermissions,
   adminAccess,
+  dataDesaAnalisisAccess,
   masyarakatPageAccess,
   roleDescriptions,
   FIREBASE_COLLECTIONS,
@@ -277,6 +345,7 @@ export default {
   canAccessAdminPanel,
   canAccessMasyarakatPanel,
   canAccessMasyarakatPage,
+  canAccessDataDesaAnalisis,
   getRoleDescription,
   getRoleTitle,
 };

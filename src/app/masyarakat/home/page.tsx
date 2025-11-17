@@ -1,13 +1,15 @@
 "use client";
 
 import type { JSX } from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCurrentUser } from "../lib/useCurrentUser";
+import { useAuth } from "../../../contexts/AuthContext";
+// import { useCurrentUser } from "../lib/useCurrentUser"; // Not needed anymore
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from '../../components/BottomNavigation';
+import PopupIklan from '../components/PopupIklan';
 import { collection, getDocs, query, orderBy, limit, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -40,6 +42,10 @@ interface Berita {
   foto?: string;
   tanggal?: any;
   createdAt?: any;
+  createdBy?: string;
+  authorRole?: string;
+  status?: string;
+  kategori?: 'terbaru' | 'terlama';
 }
 
 interface UMKM {
@@ -48,6 +54,9 @@ interface UMKM {
   fotoUsaha?: string[];
   rating?: number;
   kategori?: string;
+  totalKunjungan?: number;
+  visits?: number;
+  createdAt?: any;
 }
 
 interface PengaturanHome {
@@ -71,13 +80,42 @@ type MenuItem = {
   href: string;
   icon: JSX.Element;
   gradient: string;
+  adminOnly?: boolean;  // Mark if this menu requires admin privileges
+  roles?: string[];     // Specific roles that can access this menu
+  disabled?: boolean;   // Mark if menu is disabled for current user
+};
+
+// Menu access configuration
+const MENU_ACCESS_CONFIG = {
+  // Menus completely hidden for masyarakat (not shown at all)
+  hiddenForMasyarakat: [
+    "IKM"  // IKM completely hidden for regular users as requested
+  ],
+  
+  // Menus restricted for regular masyarakat (warga_dpkj) 
+  restrictedForMasyarakat: [
+    "IKM"  // Also add to restricted list for consistency
+  ],
+  
+  // Menus available for external residents (warga_luar_dpkj)
+  allowedForExternal: [
+    "E-UMKM", 
+    "Wisata & Budaya",
+    "E-News",
+    "Profil Desa"
+  ],
+  
+  // Menus restricted even for kepala_dusun
+  restrictedForKepalaDusun: [
+    "Keuangan"  // Only full admins can access financial data
+  ]
 };
 
 const allMenuItems: MenuItem[] = [
   {
     title: "E-News",
     href: "/masyarakat/e-news",
-    gradient: "from-blue-500 to-blue-600",
+    gradient: "from-red-500 to-red-600",
     icon: (
       <div className="relative">
         <Newspaper className="h-5 w-5" />
@@ -186,8 +224,8 @@ const allMenuItems: MenuItem[] = [
   },
 ];
 
-export default function HomeMasyarakatMobile() {
-  const { user } = useCurrentUser();
+export default function MasyarakatHomePage(): JSX.Element {
+  const { user } = useAuth();
   const router = useRouter();
   const [beritaList, setBeritaList] = useState<Berita[]>([]);
   const [umkmList, setUmkmList] = useState<UMKM[]>([]);
@@ -197,16 +235,28 @@ export default function HomeMasyarakatMobile() {
   const [pengaturan, setPengaturan] = useState<PengaturanHome | null>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [currentSlideshowIndex, setCurrentSlideshowIndex] = useState(0);
+  const [isBeritaHovered, setIsBeritaHovered] = useState(false);
+
+  // Memoize slideshow data to prevent unnecessary re-renders
+  const slideshowData = useMemo(() => {
+    return {
+      length: pengaturan?.fotoSlideshow?.length || 0,
+      hasSlideshow: Boolean(pengaturan?.fotoSlideshow && pengaturan.fotoSlideshow.length > 0)
+    };
+  }, [pengaturan?.fotoSlideshow]);
 
   useEffect(() => {
-    console.log('🏠 Home Masyarakat: Component mounted');
-    console.log('📋 Session Storage Check:', {
-      popupShown: sessionStorage.getItem('popupShown'),
-      authRedirecting: sessionStorage.getItem('auth_redirecting')
+    console.log('🏠 Masyarakat Home: User loaded:', {
+      uid: user?.uid,
+      displayName: user?.displayName,
+      userRole: user?.role,
+      isFullAdmin: isFullAdmin
     });
+    // Layout sudah handle authentication check, jadi langsung fetch data
     fetchData();
     fetchPengaturan();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
 
   useEffect(() => {
     // Show popup only once per session if active
@@ -234,15 +284,15 @@ export default function HomeMasyarakatMobile() {
     }
   }, [pengaturan]);
 
-  // Auto slide berita setiap 3 detik
+  // Auto slide berita setiap 10 detik (pause on hover)
   useEffect(() => {
-    if (beritaList.length > 0) {
+    if (beritaList.length > 0 && !isBeritaHovered) {
       const interval = setInterval(() => {
         setCurrentBeritaIndex((prev) => (prev + 1) % beritaList.length);
-      }, 3000);
+      }, 10000); // 10 seconds
       return () => clearInterval(interval);
     }
-  }, [beritaList]);
+  }, [beritaList.length, isBeritaHovered]); // Use length instead of full array
 
   // Auto slide UMKM setiap 3 detik
   useEffect(() => {
@@ -252,56 +302,146 @@ export default function HomeMasyarakatMobile() {
       }, 3000);
       return () => clearInterval(interval);
     }
-  }, [umkmList]);
+  }, [umkmList.length]); // Use length instead of full array
 
   // Auto slide slideshow setiap 4 detik
   useEffect(() => {
-    if (pengaturan?.fotoSlideshow && pengaturan.fotoSlideshow.length > 0) {
+    if (slideshowData.hasSlideshow) {
       const interval = setInterval(() => {
-        setCurrentSlideshowIndex((prev) => (prev + 1) % pengaturan.fotoSlideshow.length);
+        setCurrentSlideshowIndex((prev) => (prev + 1) % slideshowData.length);
       }, 4000);
       return () => clearInterval(interval);
     }
-  }, [pengaturan?.fotoSlideshow]);
+  }, [slideshowData.hasSlideshow, slideshowData.length]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      // Fetch 3 berita terbaru
-      const beritaQuery = query(
-        collection(db, "e-news"),
-        orderBy("createdAt", "desc"),
-        limit(3)
-      );
-      const beritaSnapshot = await getDocs(beritaQuery);
-      const berita: Berita[] = [];
-      beritaSnapshot.forEach((doc) => {
-        berita.push({ id: doc.id, ...doc.data() } as Berita);
-      });
-      setBeritaList(berita);
-      console.log('Berita terbaru:', berita);
+      // Fetch berita terbaru dari E-News Admin (auto update)
+      try {
+        const allBerita: Berita[] = [];
 
-      // Fetch 3 UMKM dengan rating tertinggi (hanya yang aktif)
+        console.log('🔍 Fetching berita from e-news_berita collection');
+        
+        try {
+          // Try with composite index (status + createdAt)
+          const queryTerbaru = query(
+            collection(db, "e-news_berita"),
+            where("status", "==", "published"),
+            orderBy("createdAt", "desc"),
+            limit(5) // Ambil 5 berita terbaru
+          );
+          const snapshotTerbaru = await getDocs(queryTerbaru);
+          
+          // Process berita terbaru
+          snapshotTerbaru.forEach((doc) => {
+            const data = doc.data();
+            
+            allBerita.push({ 
+              id: doc.id, 
+              ...data,
+              // Map field names dari e-news_berita ke interface Berita
+              judul: data.title || data.judul || 'Berita Terbaru',
+              foto: data.imageUrl || data.foto || data.gambar || data.image,
+              createdAt: data.createdAt,
+              createdBy: data.createdBy,
+              authorRole: data.authorRole,
+              status: data.status,
+              kategori: 'terbaru'
+            } as Berita);
+          });
+          
+          console.log(`✅ Loaded ${allBerita.length} berita from e-news_berita (with index)`, allBerita);
+        } catch (indexError: any) {
+          // Fallback: Index masih building, fetch semua lalu filter di client
+          console.warn('⚠️ Index still building, using client-side filtering...', indexError.message);
+          
+          const queryAll = query(
+            collection(db, "e-news_berita"),
+            orderBy("createdAt", "desc"),
+            limit(20) // Ambil lebih banyak untuk di-filter
+          );
+          const snapshotAll = await getDocs(queryAll);
+          
+          // Filter published di client-side
+          snapshotAll.forEach((doc) => {
+            const data = doc.data();
+            
+            // Only add if status is published
+            if (data.status === "published") {
+              allBerita.push({ 
+                id: doc.id, 
+                ...data,
+                judul: data.title || data.judul || 'Berita Terbaru',
+                foto: data.imageUrl || data.foto || data.gambar || data.image,
+                createdAt: data.createdAt,
+                createdBy: data.createdBy,
+                authorRole: data.authorRole,
+                status: data.status,
+                kategori: 'terbaru'
+              } as Berita);
+            }
+          });
+          
+          // Limit to 5 after filtering
+          allBerita.splice(5);
+          
+          console.log(`✅ Loaded ${allBerita.length} berita from e-news_berita (client-side filter)`, allBerita);
+        }
+
+        if (allBerita.length === 0) {
+          console.log('ℹ️ No published news found in e-news_berita');
+          setBeritaList([]);
+        } else {
+          // Prioritize news with photos, then fallback to news without photos
+          const beritaWithPhotos = allBerita.filter(item => item.foto && item.foto.trim() !== '');
+          const beritaWithoutPhotos = allBerita.filter(item => !item.foto || item.foto.trim() === '');
+          
+          // Take top 3 with photos first, then fill with others if needed
+          const finalBerita = [
+            ...beritaWithPhotos.slice(0, 3),
+            ...beritaWithoutPhotos
+          ].slice(0, 3);
+          
+          setBeritaList(finalBerita);
+          console.log('📰 E-News Berita loaded for slideshow:', {
+            total: allBerita.length,
+            withPhotos: beritaWithPhotos.length,
+            displayed: finalBerita.length
+          });
+        }
+      } catch (beritaError) {
+        console.error('❌ Error fetching berita from e-news_berita:', beritaError);
+        setBeritaList([]);
+      }
+
+      // Fetch 3 UMKM dengan kunjungan terbanyak (hanya yang aktif)
       // Try with composite index first, fallback to client-side filtering if index not available
       try {
         const umkmQuery = query(
           collection(db, "e-umkm"),
           where("status", "==", "aktif"),
-          orderBy("rating", "desc"),
+          orderBy("totalKunjungan", "desc"),
           limit(3)
         );
         const umkmSnapshot = await getDocs(umkmQuery);
         const umkm: UMKM[] = [];
         umkmSnapshot.forEach((doc) => {
-          umkm.push({ id: doc.id, ...doc.data() } as UMKM);
+          const data = doc.data();
+          umkm.push({ 
+            id: doc.id, 
+            ...data,
+            // Handle different field names for visits
+            totalKunjungan: data.totalKunjungan || data.visits || 0
+          } as UMKM);
         });
         setUmkmList(umkm);
-        console.log('UMKM rating tertinggi:', umkm);
+        console.log('🏪 UMKM terpopuler (kunjungan terbanyak):', umkm);
       } catch (indexError: any) {
-        console.warn('⚠️ Composite index not available, using fallback query:', indexError.message);
+        console.warn('⚠️ Composite index for totalKunjungan not available, using fallback query:', indexError.message);
         
-        // Fallback: Fetch all active UMKM and sort client-side
+        // Fallback: Fetch all active UMKM and sort client-side by visits
         const umkmFallbackQuery = query(
           collection(db, "e-umkm"),
           where("status", "==", "aktif")
@@ -309,16 +449,22 @@ export default function HomeMasyarakatMobile() {
         const umkmSnapshot = await getDocs(umkmFallbackQuery);
         const umkm: UMKM[] = [];
         umkmSnapshot.forEach((doc) => {
-          umkm.push({ id: doc.id, ...doc.data() } as UMKM);
+          const data = doc.data();
+          umkm.push({ 
+            id: doc.id, 
+            ...data,
+            // Handle different field names for visits
+            totalKunjungan: data.totalKunjungan || data.visits || 0
+          } as UMKM);
         });
         
-        // Sort by rating client-side and take top 3
+        // Sort by totalKunjungan client-side and take top 3
         const sortedUmkm = umkm
-          .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+          .sort((a, b) => (b.totalKunjungan || 0) - (a.totalKunjungan || 0))
           .slice(0, 3);
         
         setUmkmList(sortedUmkm);
-        console.log('UMKM rating tertinggi (fallback):', sortedUmkm);
+        console.log('🏪 UMKM terpopuler (fallback - kunjungan terbanyak):', sortedUmkm);
       }
 
     } catch (error) {
@@ -370,97 +516,67 @@ export default function HomeMasyarakatMobile() {
     }
   };
 
-  let menuItems: MenuItem[] = allMenuItems;
-  if (user?.role === "warga_luar_dpkj") {
-    menuItems = allMenuItems.filter(
-      (item) => item.title === "E-Toko" || item.title === "Wisata & Budaya"
-    );
-  }
+  // Filter menu items based on user role (using useMemo to prevent recalculation)
+  const isFullAdmin = useMemo(() => {
+    return user?.role && [
+      "administrator", 
+      "admin_desa", 
+      "kepala_desa"
+    ].includes(user.role);
+  }, [user?.role]);
+  
+  const menuItems = useMemo(() => {
+    let filteredMenus: MenuItem[] = allMenuItems;
+    
+    // Apply role-based menu filtering (completely hide certain menus)
+    if (user?.role === "warga_luar_dpkj") {
+      // External residents (warga luar DPKJ) - only show allowed menus
+      filteredMenus = allMenuItems.filter(
+        item => MENU_ACCESS_CONFIG.allowedForExternal.includes(item.title)
+      );
+    } else if (user?.role === "warga_dpkj") {
+      // Regular local residents - hide some menus but allow more than external
+      filteredMenus = allMenuItems.filter(
+        item => !MENU_ACCESS_CONFIG.hiddenForMasyarakat.includes(item.title)
+      );
+    } else if (user?.role === "kepala_dusun") {
+      // Village head assistant - hide financial data
+      filteredMenus = allMenuItems.filter(
+        item => !MENU_ACCESS_CONFIG.restrictedForKepalaDusun.includes(item.title)
+      );
+    } else if (!isFullAdmin) {
+      // Unknown/limited roles - hide IKM by default
+      filteredMenus = allMenuItems.filter(
+        item => !MENU_ACCESS_CONFIG.hiddenForMasyarakat.includes(item.title)
+      );
+    } else {
+      // Full admin - show all menus
+      filteredMenus = allMenuItems;
+    }
+    
+    console.log('🔧 Menu configuration applied:', {
+      userRole: user?.role,
+      isFullAdmin,
+      totalMenus: filteredMenus.length,
+      totalAvailable: allMenuItems.length,
+      hiddenMenus: allMenuItems.filter(item => !filteredMenus.some(m => m.title === item.title)).map(m => m.title)
+    });
+    
+    return filteredMenus;
+  }, [user?.role, isFullAdmin]);
   return (
-    <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
-      {/* Popup Modal */}
-      {showPopup && pengaturan?.popupAktif && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          {pengaturan.popupTipe === "youtube" ? (
-            // Popup YouTube - Modern & Professional
-            <div className="relative w-full max-w-3xl h-[70vh] bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-3xl shadow-2xl overflow-hidden border border-gray-800">
-              {/* Decorative Elements */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-red-600 to-red-500"></div>
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 pointer-events-none"></div>
-              
-              {/* Close Button - Modern Style */}
-              <button
-                onClick={() => setShowPopup(false)}
-                className="absolute top-4 right-4 z-20 p-3 bg-black/60 hover:bg-red-500 backdrop-blur-sm rounded-full transition-all duration-300 transform hover:scale-110 hover:rotate-90 group"
-              >
-                <svg className="w-6 h-6 text-white group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              
-              {/* YouTube Iframe - Centered Zoom with object-fit cover effect */}
-              <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-                <iframe
-                  className="w-full h-full scale-150"
-                  style={{
-                    objectFit: 'cover',
-                    transform: 'scale(1.3)',
-                    transformOrigin: 'center center'
-                  }}
-                  src={`https://www.youtube.com/embed/${extractYouTubeId(pengaturan.popupYoutubeUrl)}?autoplay=1&mute=0&start=${pengaturan.popupYoutubeStartTime || 0}&loop=1&playlist=${extractYouTubeId(pengaturan.popupYoutubeUrl)}&rel=0&modestbranding=1&controls=1&playsinline=1`}
-                  title="YouTube video"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                ></iframe>
-              </div>
-              
-              {/* Bottom Gradient Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
-            </div>
-          ) : (
-            // Popup Gambar + Text - Original
-            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-              {/* Popup Header */}
-              <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-t-3xl flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white">{pengaturan.popupJudul}</h3>
-                <button
-                  onClick={() => setShowPopup(false)}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-all"
-                >
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Popup Content */}
-              <div className="p-6">
-                {pengaturan.popupFoto && (
-                  <img
-                    src={pengaturan.popupFoto}
-                    alt="Popup"
-                    className="w-full h-48 object-cover rounded-2xl mb-4"
-                  />
-                )}
-                <p className="text-gray-700 whitespace-pre-line">{pengaturan.popupIsi}</p>
-              </div>
-              
-              {/* Popup Footer */}
-              <div className="p-4 border-t border-gray-200">
-                <button
-                  onClick={() => setShowPopup(false)}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl transition-all"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+    <main className="min-h-[100svh] bg-gradient-to-br from-red-50 via-orange-25 to-yellow-50 text-gray-800 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-[0.02]">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,_rgba(239,68,68,0.1)_0%,_transparent_50%)]"></div>
+        <div className="absolute top-1/3 right-0 w-96 h-96 bg-[radial-gradient(circle_at_50%_50%,_rgba(251,146,60,0.1)_0%,_transparent_50%)]"></div>
+        <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-[radial-gradient(circle_at_50%_50%,_rgba(252,211,77,0.1)_0%,_transparent_50%)]"></div>
+      </div>
+      
+      {/* Popup Modal - Using PopupIklan Component */}
+      {showPopup && <PopupIklan onClose={() => setShowPopup(false)} />}
 
-      <div className="mx-auto w-full max-w-md px-3 sm:px-4 pb-24 sm:pb-28 pt-4">
+      <div className="relative mx-auto w-full max-w-lg px-4 sm:px-6 pb-24 sm:pb-28 pt-6">
         {/* Using HeaderCard Component */}
         <HeaderCard 
           title="Beranda" 
@@ -470,7 +586,7 @@ export default function HomeMasyarakatMobile() {
         {/* Welcome Section - Modern Professional Design */}
         <section className="mb-6 relative overflow-hidden rounded-3xl shadow-2xl">
           {/* Background with gradient and pattern */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-red-600 via-rose-600 to-pink-700"></div>
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
@@ -533,16 +649,33 @@ export default function HomeMasyarakatMobile() {
                       </div>
                     ) : pengaturan?.fotoSlideshow && pengaturan.fotoSlideshow.length > 0 ? (
                       <div className="relative">
-                        {/* Slideshow Image */}
-                        <div className="relative h-48 sm:h-56">
-                          <img
-                            src={pengaturan.fotoSlideshow[currentSlideshowIndex]}
-                            alt={`Slideshow ${currentSlideshowIndex + 1}`}
-                            className="w-full h-full object-cover transition-all duration-500"
-                          />
+                        {/* Slideshow Image - Sliding Container */}
+                        <div className="relative h-48 sm:h-56 overflow-hidden">
+                          {/* Slides Wrapper with Transform */}
+                          <div 
+                            className="flex h-full transition-transform duration-[1000ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
+                            style={{
+                              transform: `translateX(-${currentSlideshowIndex * 100}%)`,
+                              width: `${pengaturan.fotoSlideshow.length * 100}%`
+                            }}
+                          >
+                            {pengaturan.fotoSlideshow.map((foto, index) => (
+                              <div
+                                key={index}
+                                className="relative w-full h-full flex-shrink-0"
+                                style={{ width: `${100 / pengaturan.fotoSlideshow.length}%` }}
+                              >
+                                <img
+                                  src={foto}
+                                  alt={`Slideshow ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                          </div>
                           
                           {/* Gradient overlay bottom */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
                         </div>
 
                         {/* Info overlay at bottom */}
@@ -573,10 +706,10 @@ export default function HomeMasyarakatMobile() {
                             <button
                               key={index}
                               onClick={() => setCurrentSlideshowIndex(index)}
-                              className={`transition-all duration-300 rounded-full ${
+                              className={`transition-all duration-300 rounded-full cursor-pointer ${
                                 index === currentSlideshowIndex 
-                                  ? 'w-6 h-2 bg-white shadow-lg' 
-                                  : 'w-2 h-2 bg-white/50 hover:bg-white/75'
+                                  ? 'w-6 h-2 bg-white shadow-lg scale-110' 
+                                  : 'w-2 h-2 bg-white/60 hover:bg-white hover:scale-105'
                               }`}
                             />
                           ))}
@@ -615,27 +748,234 @@ export default function HomeMasyarakatMobile() {
         </section>
 
         {/* Services Card */}
-        <section className="mb-8">
-          <div className="rounded-3xl bg-white/95 p-3 sm:p-4 md:p-6 shadow-xl ring-1 ring-gray-200 backdrop-blur-sm">
-            <div className="grid gap-2 sm:gap-3 md:gap-4 text-center text-xs" style={{ 
-              gridTemplateColumns: `repeat(auto-fit, minmax(60px, 1fr))`
-            }}>
-              {menuItems.map((item) => (
-                <Link key={item.title} href={item.href} className="group">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`mb-2 sm:mb-3 grid h-12 w-12 sm:h-14 sm:w-14 place-items-center rounded-3xl bg-gradient-to-br ${item.gradient} text-lg sm:text-xl text-white shadow-xl ring-2 ring-white/30 transition-all duration-300 group-hover:scale-110 group-hover:shadow-2xl group-hover:ring-4 group-hover:ring-white/40 group-active:scale-95 active:scale-95`}
-                    >
-                      {item.icon}
+        <section className="mb-10">
+          <div className="rounded-3xl bg-white/98 p-8 shadow-2xl ring-1 ring-gray-100 backdrop-blur-sm border border-white/40">
+            {/* Professional Menu Grid - Organized Layout */}
+            <div className="space-y-6">
+              {/* Top Row - 5 items */}
+              <div className="grid grid-cols-5 gap-4 sm:gap-6">
+                {menuItems.slice(0, 5).map((item) => (
+                  <Link 
+                    key={item.title} 
+                    href={item.href}
+                    className="group cursor-pointer"
+                  >
+                    <div className="flex flex-col items-center group-hover:transform group-hover:scale-105 transition-all duration-300">
+                      {/* Professional Icon Container */}
+                      <div className="relative mb-3">
+                        <div
+                          className={`relative grid h-14 w-14 sm:h-16 sm:w-16 place-items-center rounded-xl bg-gradient-to-br ${item.gradient} text-lg sm:text-xl text-white shadow-lg transition-all duration-300 group-hover:shadow-xl`}
+                        >
+                          {item.icon}
+                          
+                          {/* Subtle glow effect */}
+                          <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm`}></div>
+                        </div>
+                        
+                        {/* Enhanced ring effect */}
+                        <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300 scale-110`}></div>
+                      </div>
+                      
+                      {/* Professional Text Label */}
+                      <span className="text-center font-medium leading-tight text-xs text-gray-700 group-hover:text-gray-900 transition-colors duration-300 max-w-16">
+                        {item.title}
+                      </span>
                     </div>
-                    <span className="text-center font-bold leading-tight text-gray-800 text-[10px] sm:text-xs px-1 line-clamp-2">
-                      {item.title}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+              </div>
+              
+              {/* Bottom Row - 4 items (centered) */}
+              {menuItems.length > 5 && (
+                <div className="grid grid-cols-4 gap-4 sm:gap-6 max-w-sm mx-auto">
+                  {menuItems.slice(5).map((item) => (
+                    <Link 
+                      key={item.title} 
+                      href={item.href}
+                      className="group cursor-pointer"
+                    >
+                      <div className="flex flex-col items-center group-hover:transform group-hover:scale-105 transition-all duration-300">
+                        {/* Professional Icon Container */}
+                        <div className="relative mb-3">
+                          <div
+                            className={`relative grid h-14 w-14 sm:h-16 sm:w-16 place-items-center rounded-xl bg-gradient-to-br ${item.gradient} text-lg sm:text-xl text-white shadow-lg transition-all duration-300 group-hover:shadow-xl`}
+                          >
+                            {item.icon}
+                            
+                            {/* Subtle glow effect */}
+                            <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm`}></div>
+                          </div>
+                          
+                          {/* Enhanced ring effect */}
+                          <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300 scale-110`}></div>
+                        </div>
+                        
+                        {/* Professional Text Label */}
+                        <span className="text-center font-medium leading-tight text-xs text-gray-700 group-hover:text-gray-900 transition-colors duration-300 max-w-16">
+                          {item.title}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+        </section>
+
+        {/* E-News Section - Auto Slide with Photos */}
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-red-700 to-rose-700 bg-clip-text text-transparent">
+              📰 Berita Terkini
+            </h3>
+            <div className="h-0.5 flex-1 ml-4 bg-gradient-to-r from-red-200 to-transparent rounded-full"></div>
+          </div>
+          {loading ? (
+            <div className="rounded-3xl bg-white/95 p-10 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20">
+              <div className="flex flex-col justify-center items-center gap-4">
+                <div className="animate-spin rounded-full h-14 w-14 border-b-4 border-red-600 border-t-4 border-t-transparent"></div>
+                <p className="text-red-700 font-medium">Memuat berita...</p>
+              </div>
+            </div>
+          ) : beritaList.length > 0 ? (
+            <div 
+              onMouseEnter={() => setIsBeritaHovered(true)}
+              onMouseLeave={() => setIsBeritaHovered(false)}
+              className="rounded-3xl bg-white/95 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20 overflow-hidden hover:shadow-2xl hover:ring-2 hover:ring-red-300/70 transition-all duration-500 group"
+            >
+              {/* Slider Container */}
+              <div className="relative h-48 sm:h-64 overflow-hidden">
+                {/* Slides Wrapper */}
+                <div 
+                  className="flex h-full transition-transform duration-[800ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
+                  style={{
+                    transform: `translateX(-${currentBeritaIndex * 100}%)`,
+                    width: `${beritaList.length * 100}%`
+                  }}
+                >
+                  {beritaList.map((berita, index) => (
+                    <div 
+                      key={berita.id}
+                      onClick={() => router.push(`/masyarakat/e-news/detail/berita/${berita.id}`)}
+                      className="relative w-full h-full flex-shrink-0 cursor-pointer bg-gradient-to-br from-red-50 to-red-100 slide-item hover:shadow-lg transition-shadow duration-300"
+                      style={{ width: `${100 / beritaList.length}%` }}
+                    >
+                      {berita.foto ? (
+                        <img
+                          src={berita.foto}
+                          alt={berita.judul}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 ease-out"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Newspaper className="h-16 w-16 text-red-600" />
+                        </div>
+                      )}
+                      
+                      {/* Overlay gradient */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      
+                      {/* News counter badge */}
+                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
+                        <Newspaper className="h-4 w-4 text-red-500" />
+                        <span className="text-sm font-bold text-gray-800">
+                          {index + 1} / {beritaList.length}
+                        </span>
+                      </div>
+                      
+                      {/* Admin badge */}
+                      {(berita.authorRole === 'admin' || berita.createdBy) && (
+                        <div className="absolute top-14 right-3 bg-red-600/90 backdrop-blur-sm rounded-full px-2 py-1">
+                          <span className="text-xs font-medium text-white">Admin</span>
+                        </div>
+                      )}
+                      
+                      {/* Date badge */}
+                      <div className="absolute top-3 left-3 bg-gray-800/90 backdrop-blur-sm rounded-full px-3 py-1">
+                        <span className="text-xs font-medium text-white">
+                          {berita.createdAt?.toDate?.()?.toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short'
+                          }) || berita.tanggal?.toDate?.()?.toLocaleDateString('id-ID', {
+                            day: 'numeric', 
+                            month: 'short'
+                          }) || 'Terbaru'}
+                        </span>
+                      </div>
+                      
+                      {/* Title overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-500/90 text-white">
+                            📈 E-News Terbaru
+                          </span>
+                        </div>
+                        <h4 className="text-white font-bold text-sm sm:text-base line-clamp-2 mb-1">
+                          {berita.judul || 'Berita Terkini'}
+                        </h4>
+                        <p className="text-white/80 text-xs flex items-center gap-1">
+                          <span>👆</span> Klik untuk membaca selengkapnya
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Navigation Arrows */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentBeritaIndex((prev) => prev === 0 ? beritaList.length - 1 : prev - 1);
+                  }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-sm rounded-full p-2 text-white hover:bg-black/50 hover:scale-110 transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentBeritaIndex((prev) => (prev + 1) % beritaList.length);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-sm rounded-full p-2 text-white hover:bg-black/50 hover:scale-110 transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="bg-gradient-to-r from-red-50/80 to-rose-50/80 p-5 text-center border-t border-red-100/50">
+                <div className="flex justify-center gap-3 mb-3">
+                  {beritaList.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentBeritaIndex(index);
+                      }}
+                      className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                        index === currentBeritaIndex 
+                          ? 'w-10 bg-gradient-to-r from-red-600 to-rose-600 shadow-lg' 
+                          : 'w-2.5 bg-red-300 hover:bg-red-500 hover:scale-110'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-3xl bg-white/95 p-8 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20 text-center">
+              <div className="bg-gradient-to-br from-red-100 to-rose-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <Newspaper className="h-8 w-8 text-red-600" />
+              </div>
+              <h4 className="text-lg font-bold text-gray-800 mb-2">Belum Ada Berita</h4>
+              <p className="text-red-600 text-sm">Berita terbaru akan muncul di sini</p>
+            </div>
+          )}
         </section>
 
         {/* UKM Data Section - Auto Slide with Rating */}

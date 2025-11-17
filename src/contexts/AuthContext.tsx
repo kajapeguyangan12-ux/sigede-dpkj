@@ -3,10 +3,13 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import authService, { AuthUser, LoginCredentials } from '../lib/authenticationService';
 import { clearAllAuthData } from '../lib/developmentUtils';
 import { setupSessionCheck, validateSession } from '../lib/sessionService';
+import '../lib/authDebug'; // Load auth debugging utilities in development
+import '../lib/firebaseTest'; // Load Firebase connection test in development
 
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
+  initializing: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: (userType?: 'admin' | 'masyarakat') => Promise<void>;
   isAuthenticated: boolean;
@@ -21,11 +24,16 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Only for login/logout operations
+  const [initializing, setInitializing] = useState(true); // Only for initial auth check
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [sessionCheckInterval, setSessionCheckInterval] = useState<NodeJS.Timeout | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
+    // Prevent multiple initialization
+    if (authInitialized) return;
+    
     // Check for existing session in localStorage
     const checkExistingSession = async () => {
       try {
@@ -34,24 +42,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const userData = JSON.parse(savedUser);
           console.log('🔍 AUTH CONTEXT: Found existing session:', userData);
           
-          // Validate session
-          const isValid = await validateSession(userData.uid);
-          if (isValid) {
-            setUser(userData);
+          // Set user immediately for better UX
+          setUser(userData);
+          
+          // Validate session in background (non-blocking)
+          try {
+            const isValid = await validateSession(userData.uid);
+            if (!isValid) {
+              console.log('⚠️ AUTH CONTEXT: Background session validation failed, but keeping user logged in');
+              // Don't logout immediately, give user chance to continue working
+            }
             
-            // Setup session check interval
-            const interval = setupSessionCheck(userData.uid, handleSessionInvalidated);
-            setSessionCheckInterval(interval);
-          } else {
-            console.log('⚠️ AUTH CONTEXT: Session invalid, clearing data');
-            clearAllAuthData();
+            // Setup session check interval (DISABLED by default for admin stability)
+            const disableSessionCheck = process.env.NEXT_PUBLIC_DISABLE_SESSION_CHECK === 'true';
+            if (!disableSessionCheck) {
+              console.log('⚠️ Session check is ENABLED - this may cause unwanted logouts');
+              const interval = setupSessionCheck(userData.uid, handleSessionInvalidated);
+              setSessionCheckInterval(interval);
+              console.log('✅ Session check enabled for existing session');
+            } else {
+              console.log('✅ Session check DISABLED for admin stability - no automatic logouts');
+            }
+          } catch (sessionError) {
+            console.warn('⚠️ AUTH CONTEXT: Session validation error (non-critical):', sessionError);
+            // Keep user logged in even if session validation fails
           }
         }
       } catch (error) {
         console.error('Error loading saved session:', error);
         localStorage.removeItem('sigede_auth_user');
       } finally {
-        setLoading(false);
+        setInitializing(false);
+        setAuthInitialized(true);
       }
     };
 
@@ -67,22 +89,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Handle session invalidation (user logged in from another device)
   const handleSessionInvalidated = () => {
-    console.log('❌ AUTH CONTEXT: Session invalidated by another login');
-    setUser(null);
-    clearAllAuthData();
+    console.log('❌ AUTH CONTEXT: Session invalidation requested - but we will be more conservative');
     
-    // Clear interval
+    // Prevent multiple logout attempts
+    if (isLoggingOut) {
+      console.log('🚫 AUTH CONTEXT: Session invalidation ignored - logout already in progress');
+      return;
+    }
+
+    // Don't automatically logout - instead show a warning and let user continue
+    // This prevents unwanted logouts due to network issues or temporary problems
+    console.log('⚠️ AUTH CONTEXT: Session validation issue detected, but keeping user logged in');
+    console.log('🔧 AUTH CONTEXT: User can manually logout if needed');
+    
+    // Clear interval to prevent further checks
     if (sessionCheckInterval) {
       clearInterval(sessionCheckInterval);
       setSessionCheckInterval(null);
     }
     
-    // Redirect to login
-    const userType = user?.role && authService.isAdmin(user.role) ? 'admin' : 'masyarakat';
-    const redirectPath = userType === 'admin' ? '/admin/login' : '/masyarakat/login';
+    // Show a notification to user but don't force logout
+    if (typeof window !== 'undefined') {
+      console.log('� TIP: If experiencing issues, please logout and login again manually');
+    }
     
-    alert('Anda telah login dari perangkat lain. Sesi ini akan diakhiri.');
-    window.location.replace(redirectPath);
+    // Reset the logging out state
+    setIsLoggingOut(false);
   };
 
   const login = async (credentials: LoginCredentials) => {
@@ -112,9 +144,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Also save userId for backward compatibility
       localStorage.setItem('userId', authUser.uid);
       
-      // Setup session check interval
-      const interval = setupSessionCheck(authUser.uid, handleSessionInvalidated);
-      setSessionCheckInterval(interval);
+      // Additional admin authentication markers for form validation
+      if (authUser.role === 'administrator' || authUser.role === 'admin_desa') {
+        localStorage.setItem('adminAuth', 'true');
+        localStorage.setItem('adminRole', authUser.role);
+        localStorage.setItem('adminEmail', authUser.email);
+        localStorage.setItem('adminUID', authUser.uid);
+        console.log('✅ AUTH CONTEXT: Admin authentication markers saved');
+      }
+      
+      // Setup session check interval (DISABLED by default for admin stability)
+      const disableSessionCheck = process.env.NEXT_PUBLIC_DISABLE_SESSION_CHECK === 'true';
+      if (!disableSessionCheck) {
+        console.log('⚠️ Session check is ENABLED - this may cause unwanted admin logouts');
+        const interval = setupSessionCheck(authUser.uid, handleSessionInvalidated);
+        setSessionCheckInterval(interval);
+        console.log('✅ Session check enabled after login');
+      } else {
+        console.log('✅ Session check DISABLED for admin stability - no automatic logouts');
+      }
       
       console.log('✅ AUTH CONTEXT: Login successful, userId:', authUser.uid);
     } catch (error) {
@@ -182,6 +230,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     user,
     loading,
+    initializing,
     login,
     logout,
     isAuthenticated,

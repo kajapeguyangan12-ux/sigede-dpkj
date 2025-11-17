@@ -16,7 +16,7 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
   const [formData, setFormData] = useState({
     // Identitas Surat
     jenisSurat: '',
-    kepalaDukun: '',
+    kepalaDusun: '',
     tanggalSurat: '',
     
     // Data Pribadi
@@ -65,7 +65,7 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
         noTelepon: formData.noHandphone,
         email: formData.email || '',
         keperluan: formData.deskripsi,
-        catatanTambahan: `Kepala Dukun: ${formData.kepalaDukun}, Tanggal Surat: ${formData.tanggalSurat}`,
+        catatanTambahan: `Kepala Dusun: ${formData.kepalaDusun}, Tanggal Surat: ${formData.tanggalSurat}`,
         // User ID - nanti bisa diambil dari context autentikasi
         userId: 'user-' + Date.now().toString(), // temporary user ID
       };
@@ -114,15 +114,15 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Kepala Dukun
+                  Kepala Dusun
                 </label>
                 <input
                   type="text"
-                  name="kepalaDukun"
-                  value={formData.kepalaDukun}
+                  name="kepalaDusun"
+                  value={formData.kepalaDusun}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  placeholder="Input Kepala Dukun"
+                  placeholder="Input Kepala Dusun"
                 />
               </div>
 

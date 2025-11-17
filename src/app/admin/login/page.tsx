@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleAdminLogout } from '../../../lib/logoutHelper';
-import UserLoginHelp from '../../../components/UserLoginHelp';
-import { FirestoreUser } from '../../../lib/userManagementService';
+import { createTestAdminUser } from '../../../lib/createTestAdmin';
+// import UserLoginHelp from '../../../components/UserLoginHelp';
+// import { FirestoreUser } from '../../../lib/userManagementService';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -14,37 +15,18 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
 
   // Check existing session once on mount
   React.useEffect(() => {
-    console.log('🔍 Admin Login: Component mounted, checking session');
+    console.log('🔍 Admin Login: Component mounted');
     
     // Clear any logout/redirect flags
     sessionStorage.removeItem('auth_redirecting');
     sessionStorage.removeItem('admin_logout_in_progress');
     
-    // Check if user is already authenticated
-    const storedUser = localStorage.getItem('sigede_auth_user');
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        const validAdminRoles = ['administrator', 'admin_desa', 'kepala_desa'];
-        
-        if (userData && userData.role && validAdminRoles.includes(userData.role)) {
-          console.log('🔄 Already authenticated as admin, redirecting');
-          window.location.href = '/admin/home';
-          return;
-        } else {
-          console.log('🗑️ Invalid admin session, clearing');
-          localStorage.removeItem('sigede_auth_user');
-          localStorage.removeItem('userId');
-        }
-      } catch (e) {
-        console.log('🗑️ Corrupted session data, clearing');
-        localStorage.removeItem('sigede_auth_user');
-        localStorage.removeItem('userId');
-      }
-    }
+    // Layout will handle redirect if already authenticated
+    // No need to check here
     
     // Clear any submission state on mount
     setIsSubmitting(false);
@@ -85,25 +67,29 @@ export default function AdminLogin() {
         
         console.log('👤 Admin user data loaded:', { role: userData.role, uid: userData.uid });
         
-        // Validate user role - only admin roles can login here
-        if (!userData.role || !['administrator', 'admin_desa', 'kepala_desa'].includes(userData.role)) {
+        // Validate user role - only admin roles can login here  
+        if (!userData.role || !['administrator', 'admin_desa', 'kepala_desa', 'kepala_dusun', 'super_admin'].includes(userData.role)) {
           console.log('❌ Non-admin trying to login as admin');
           setError('Akses ditolak. Halaman ini hanya untuk Admin. Silakan login di halaman Masyarakat.');
           
           // Clear the login data
           localStorage.removeItem('sigede_auth_user');
+          localStorage.removeItem('userId');
           clearTimeout(loginTimeout);
           setIsSubmitting(false);
           return;
         }
         
-        // Admin login successful, redirect to admin home
-        console.log('✅ ADMIN LOGIN: Admin login successful, redirecting to home');
+        // Admin login successful, redirect immediately
+        console.log('✅ ADMIN LOGIN: Admin login successful, redirecting to admin home');
         
-        // Force navigation with window.location for more reliable redirect
+        // Force immediate redirect to admin home
         setTimeout(() => {
+          console.log('🔄 Redirecting to /admin/home');
           window.location.href = '/admin/home';
-        }, 100);
+        }, 500); // Small delay to ensure state is updated
+        
+        setIsSubmitting(false);
       } else {
         clearTimeout(loginTimeout);
         throw new Error('Session data not found after login');
@@ -111,8 +97,35 @@ export default function AdminLogin() {
       
     } catch (error: any) {
       console.error('❌ ADMIN LOGIN: Login failed:', error);
-      setError(error.message || 'Login gagal. Periksa kembali ID dan password Anda.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Login gagal. Periksa kembali ID dan password Anda.';
+      
+      if (error.message?.includes('tidak ditemukan')) {
+        errorMessage = 'User tidak ditemukan. Pastikan ID/Username sudah benar atau buat admin test terlebih dahulu.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Koneksi timeout. Periksa koneksi internet dan coba lagi.';
+      } else if (error.message?.includes('ditolak')) {
+        errorMessage = error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateTestAdmin = async () => {
+    setIsCreatingAdmin(true);
+    try {
+      await createTestAdminUser();
+      setIdentifier('admin');
+      setError('✅ Test admin berhasil dibuat! Username: admin, password: apa saja');
+    } catch (error: any) {
+      setError(`❌ Gagal membuat test admin: ${error.message}`);
+    } finally {
+      setIsCreatingAdmin(false);
     }
   };
 
@@ -165,6 +178,16 @@ export default function AdminLogin() {
             >
               {isSubmitting ? 'MEMPROSES...' : 'LOGIN'}
             </button>
+
+            {/* Test Admin Creation Button */}
+            <button
+              type="button"
+              onClick={handleCreateTestAdmin}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 rounded-md transition-colors text-sm"
+              disabled={isCreatingAdmin || isSubmitting}
+            >
+              {isCreatingAdmin ? 'MEMBUAT ADMIN TEST...' : 'BUAT ADMIN TEST'}
+            </button>
             
             {/* Link to Masyarakat Login */}
             <div className="text-center">
@@ -176,13 +199,13 @@ export default function AdminLogin() {
               </a>
             </div>
             
-            {/* Development Helper */}
-            <UserLoginHelp 
+            {/* Development Helper - Disabled for production security */}
+            {/* <UserLoginHelp 
               onUserSelect={(user: FirestoreUser) => {
                 setIdentifier(user.uid);
                 setPassword('temp123'); // Placeholder password
               }}
-            />
+            /> */}
           </form>
         </div>
       </div>

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import layananPublikService from '@/lib/layananPublikService';
-import laporanService from '@/lib/laporanService';
-import { useCurrentUser } from '../lib/useCurrentUser';
+import { getLaporanByUser, subscribeToUserLaporan, LaporanPengaduan, StatusLaporan } from '@/lib/laporanPengaduanService';
+import { useAuth } from '@/contexts/AuthContext';
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from '../../components/BottomNavigation';
+import Image from 'next/image';
 
+// Interfaces
 interface RiwayatItem {
   id: string;
   type: 'layanan' | 'laporan';
@@ -18,31 +19,43 @@ interface RiwayatItem {
   data: any;
 }
 
-const getActivityIcon = (type: string) => {
-  switch (type) {
-    case 'layanan':
-      return '📋';
-    case 'laporan':
-      return '📢';
-    default:
-      return '📄';
+// Mock services - replace with actual imports
+const useCurrentUser = () => {
+  const { user } = useAuth();
+  return { user, loading: false };
+};
+
+const layananPublikService = {
+  getUserSubmissions: async (uid: string) => {
+    return [];
+  }
+};
+
+const laporanService = {
+  getUserReports: async (uid: string) => {
+    try {
+      const laporan = await getLaporanByUser(uid);
+      return laporan;
+    } catch (error) {
+      console.error('Error fetching laporan:', error);
+      return [];
+    }
   }
 };
 
 const getStatusText = (status: string) => {
   switch (status) {
-    case 'pending':
     case 'menunggu':
+    case 'pending':
       return 'Menunggu';
-    case 'diproses':
-      return 'Sedang Diproses';
-    case 'diterima':
     case 'disetujui':
+    case 'diterima':
+    case 'selesai':
       return 'Disetujui';
     case 'ditolak':
       return 'Ditolak';
-    case 'selesai':
-      return 'Selesai';
+    case 'diproses':
+      return 'Diproses';
     default:
       return 'Status Tidak Diketahui';
   }
@@ -66,6 +79,17 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const getActivityIcon = (type: string) => {
+  switch (type) {
+    case 'layanan':
+      return '📄';
+    case 'laporan':
+      return '📢';
+    default:
+      return '📋';
+  }
+};
+
 export default function RiwayatMasyarakatPage() {
   const router = useRouter();
   const { user, loading: userLoading } = useCurrentUser();
@@ -73,19 +97,12 @@ export default function RiwayatMasyarakatPage() {
   const [dataLoading, setDataLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'laporan-saya' | 'disimpan'>('laporan-saya');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItem, setSelectedItem] = useState<RiwayatItem | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  useEffect(() => {
-    if (!userLoading) {
-      if (user?.uid) {
-        loadData();
-      } else {
-        // User is null or not authenticated, load sample data
-        loadSampleData();
-      }
-    }
-  }, [user, userLoading]);
-
-  const loadSampleData = () => {
+  const loadSampleData = useCallback(() => {
     const sampleData: RiwayatItem[] = [
       {
         id: 'sample1',
@@ -128,7 +145,45 @@ export default function RiwayatMasyarakatPage() {
       }
     ];
     setAllData(sampleData);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!userLoading) {
+      if (user?.uid) {
+        // Setup real-time listener for laporan
+        const unsubscribe = subscribeToUserLaporan(user.uid, (laporanData) => {
+          // Process laporan data
+          const formattedLaporanData: RiwayatItem[] = laporanData.map((item: any) => ({
+            id: item.id,
+            type: 'laporan' as const,
+            title: item.judul || 'Laporan Pengaduan',
+            subtitle: `${item.kategori || 'Kategori'} - ${item.userName || user.displayName || 'Pelapor'}`,
+            status: item.status || 'menunggu',
+            date: item.createdAt,
+            data: item
+          }));
+
+          // For now, just use laporan data (layanan data can be added later)
+          const sortedData = formattedLaporanData.sort((a, b) => {
+            const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date);
+            const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date);
+            return dateB.getTime() - dateA.getTime();
+          });
+          
+          setAllData(sortedData);
+          setDataLoading(false);
+        });
+
+        // Return cleanup function
+        return () => {
+          if (unsubscribe) unsubscribe();
+        };
+      } else {
+        // User is null or not authenticated, load sample data
+        loadSampleData();
+      }
+    }
+  }, [user?.uid, userLoading, loadSampleData]);
 
   const loadData = async () => {
     if (!user?.uid) return;
@@ -153,10 +208,10 @@ export default function RiwayatMasyarakatPage() {
         ...laporanData.map((item: any) => ({
           id: item.id,
           type: 'laporan' as const,
-          title: item.judulLaporan || item.judul || 'Laporan Masyarakat',
-          subtitle: `${item.kategoriLaporan || 'Kategori'} - ${item.namaLengkap || item.pelapor || user.displayName || 'Pelapor'}`,
+          title: item.judul || 'Laporan Pengaduan',
+          subtitle: `${item.kategori || 'Kategori'} - ${item.userName || user.displayName || 'Pelapor'}`,
           status: item.status || 'menunggu',
-          date: item.createdAt || item.tanggalLaporan,
+          date: item.createdAt,
           data: item
         }))
       ].sort((a, b) => {
@@ -192,6 +247,8 @@ export default function RiwayatMasyarakatPage() {
     });
   };
 
+
+
   const filteredData = allData.filter(item => {
     // Filter berdasarkan tab
     if (activeTab === 'disimpan') {
@@ -207,6 +264,98 @@ export default function RiwayatMasyarakatPage() {
     
     return true;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filteredData.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  // Reset to page 1 when search query or tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, activeTab]);
+
+  const PaginationComponent = () => {
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div className="flex justify-center items-center gap-2 mt-6">
+        <button
+          onClick={() => goToPage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-3 py-2 rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          ‹
+        </button>
+        
+        {startPage > 1 && (
+          <>
+            <button
+              onClick={() => goToPage(1)}
+              className="px-3 py-2 rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300"
+            >
+              1
+            </button>
+            {startPage > 2 && <span className="px-2">...</span>}
+          </>
+        )}
+
+        {pages.map(page => (
+          <button
+            key={page}
+            onClick={() => goToPage(page)}
+            className={`px-3 py-2 rounded-md ${
+              currentPage === page
+                ? 'bg-red-600 text-white'
+                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+            }`}
+          >
+            {page}
+          </button>
+        ))}
+
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <span className="px-2">...</span>}
+            <button
+              onClick={() => goToPage(totalPages)}
+              className="px-3 py-2 rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300"
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-3 py-2 rounded-md bg-gray-200 text-gray-600 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          ›
+        </button>
+      </div>
+    );
+  };
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
@@ -295,13 +444,13 @@ export default function RiwayatMasyarakatPage() {
           </div>
         ) : (
           <ul className="space-y-2 sm:space-y-3">
-            {filteredData.map((item, idx) => (
+            {currentData.map((item, idx) => (
               <li 
                 key={item.id} 
                 className="rounded-2xl border bg-white/95 p-3 sm:p-4 shadow ring-1 ring-black/10 backdrop-blur transition-all hover:shadow-md cursor-pointer"
                 onClick={() => {
-                  // Navigate to detail page or open modal
-                  console.log('Selected item:', item);
+                  setSelectedItem(item);
+                  setShowDetailModal(true);
                 }}
               >
                 <div className="flex items-start gap-3">
@@ -317,7 +466,30 @@ export default function RiwayatMasyarakatPage() {
                     </div>
                     <div className="text-xs text-gray-600 mb-1">{formatDate(item.date)}</div>
                     {item.subtitle && (
-                      <div className="text-xs text-gray-500 line-clamp-2">{item.subtitle}</div>
+                      <div className="text-xs text-gray-500 line-clamp-2 mb-1">{item.subtitle}</div>
+                    )}
+                    
+                    {/* Additional Info for Laporan */}
+                    {item.type === 'laporan' && item.data && (
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        {item.data.noTelepon && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            <span>{item.data.noTelepon}</span>
+                          </div>
+                        )}
+                        {item.data.alamat && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="line-clamp-1">{item.data.alamat}</span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -326,8 +498,161 @@ export default function RiwayatMasyarakatPage() {
           </ul>
         )}
 
+        {/* Pagination */}
+        {filteredData.length > 0 && <PaginationComponent />}
+
+        {/* Results info */}
+        {filteredData.length > 0 && (
+          <div className="text-center text-sm text-gray-500 mt-4">
+            Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredData.length)} dari {filteredData.length} data
+          </div>
+        )}
+
       </div>
       <BottomNavigation />
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-all duration-300 ease-out animate-in fade-in-0"
+            onClick={() => setShowDetailModal(false)}
+          ></div>
+          
+          {/* Modal Content */}
+          <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out animate-in slide-in-from-bottom-4 fade-in-0 zoom-in-95">
+            {/* Header */}
+            <div className="relative p-6 bg-gradient-to-r from-red-500 via-red-600 to-pink-600 text-white">
+              <div className="absolute inset-0 bg-black/10"></div>
+              <div className="relative flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold mb-1">Detail {selectedItem.type === 'laporan' ? 'Laporan' : 'Layanan'}</h2>
+                  <div className={`inline-block px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white/90`}>
+                    {getStatusText(selectedItem.status)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-xl transition-all"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+              <div className="space-y-6">
+              {selectedItem.type === 'laporan' ? (
+                <>
+                  {/* Title & Category */}
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{selectedItem.data.judul}</h3>
+                    <div className="inline-block bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
+                      {selectedItem.data.kategori}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Isi Laporan</h4>
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedItem.data.isi}</p>
+                  </div>
+
+                  {/* Photo */}
+                  {selectedItem.data.fotoUrl && (
+                    <div className="relative h-48 rounded-2xl overflow-hidden bg-gray-100">
+                      <Image
+                        src={selectedItem.data.fotoUrl}
+                        alt="Foto laporan"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-semibold">Tanggal</p>
+                        <p className="text-sm font-bold text-gray-900">{formatDate(selectedItem.date)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-semibold">Pelapor</p>
+                        <p className="text-sm font-bold text-gray-900">{selectedItem.data.userName || 'Tidak diketahui'}</p>
+                      </div>
+                    </div>
+
+                    {selectedItem.data.noTelepon && (
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-semibold">Telepon</p>
+                          <p className="text-sm font-bold text-gray-900">{selectedItem.data.noTelepon}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedItem.data.alamat && (
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-semibold">Alamat</p>
+                          <p className="text-sm font-bold text-gray-900">{selectedItem.data.alamat}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedItem.data.tanggapan && (
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          Tanggapan Admin
+                        </h4>
+                        <p className="text-blue-800 text-sm">{selectedItem.data.tanggapan}</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Layanan detail */
+                <div>
+                  <p className="text-gray-600">Detail layanan akan ditampilkan di sini</p>
+                </div>
+              )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

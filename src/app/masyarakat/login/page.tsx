@@ -5,8 +5,8 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from '../../../contexts/AuthContext';
-import UserLoginHelp from '../../../components/UserLoginHelp';
-import { FirestoreUser } from '../../../lib/userManagementService';
+// import UserLoginHelp from '../../../components/UserLoginHelp';
+// import { FirestoreUser } from '../../../lib/userManagementService';
 // Custom SVG icons as components
 const UserIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,15 +60,15 @@ export default function LoginMasyarakatPage() {
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        const adminRoles = ['administrator', 'admin_desa', 'kepala_desa'];
+        const adminRoles = ['administrator', 'admin_desa', 'super_admin'];
         
-        // If valid masyarakat user (non-admin), redirect to home
+        // If valid masyarakat user (non-admin except kepala_desa & kepala_dusun), redirect to home
         if (userData && userData.role && !adminRoles.includes(userData.role)) {
           console.log('🔄 Already authenticated as masyarakat, redirecting');
           window.location.href = '/masyarakat/home';
           return;
         } else if (userData && userData.role && adminRoles.includes(userData.role)) {
-          // Admin trying to access masyarakat login
+          // Admin (except kepala_desa & kepala_dusun) trying to access masyarakat login
           console.log('🗑️ Admin session found on masyarakat login, clearing');
           localStorage.removeItem('sigede_auth_user');
           localStorage.removeItem('userId');
@@ -124,25 +124,25 @@ export default function LoginMasyarakatPage() {
         
         console.log('👤 User data loaded:', { role: userData.role, uid: userData.uid });
         
-        // Validate user role - admin roles cannot login here
-        if (userData.role && ['administrator', 'admin_desa', 'kepala_desa'].includes(userData.role)) {
+        // Validate user role - admin roles except kepala_desa & kepala_dusun cannot login here
+        if (userData.role && ['administrator', 'admin_desa', 'super_admin'].includes(userData.role)) {
           console.log('❌ Admin trying to login as masyarakat');
           setError('Akses ditolak. Admin harus login di halaman Admin.');
           
           // Clear the login data
           localStorage.removeItem('sigede_auth_user');
+          localStorage.removeItem('userId');
           clearTimeout(loginTimeout);
           setIsLoading(false);
           return;
         }
         
-        // Masyarakat login successful, redirect to masyarakat home
-        console.log('✅ MASYARAKAT LOGIN: Masyarakat login successful, redirecting to home');
+        // Masyarakat login successful, layout will handle redirect
+        console.log('✅ MASYARAKAT LOGIN: Masyarakat login successful');
+        setIsLoading(false);
         
-        // Force navigation with window.location for more reliable redirect
-        setTimeout(() => {
-          window.location.href = '/masyarakat/home';
-        }, 100);
+        // Let layout handle the redirect
+        // No manual redirect needed
       } else {
         clearTimeout(loginTimeout);
         throw new Error('Session data not found after login');
@@ -312,13 +312,13 @@ export default function LoginMasyarakatPage() {
                   </div>
                 </button>
                 
-                {/* Development Helper */}
-                <UserLoginHelp 
+                {/* Development Helper - Disabled for production security */}
+                {/* <UserLoginHelp 
                   onUserSelect={(user: FirestoreUser) => {
                     setIdentifier(user.uid);
                     setPassword('temp123'); // Placeholder password
                   }}
-                />
+                /> */}
 
                 {/* Links */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">

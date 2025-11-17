@@ -93,7 +93,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
 
       const updateData: UpdateUserData = {
         displayName: formData.displayName,
-        role: formData.role,
+        // role: formData.role, // Role tidak dapat diubah
         status: formData.status,
         userName: formData.userName || undefined,
         phoneNumber: formData.phoneNumber || undefined,
@@ -109,7 +109,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
       onClose(); // Close modal
     } catch (error) {
       console.error('❌ Error updating user:', error);
-      setError(error instanceof Error ? error.message : 'Gagal mengupdate user');
+      setError(error instanceof Error ? error.message : 'Gagal mengupdate pengguna');
     } finally {
       setLoading(false);
     }
@@ -122,6 +122,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
   console.log('👤 EDIT MODAL: Current user:', user);
 
   const availableRoles: UserRole[] = [
+    'super_admin',
     'administrator',
     'admin_desa', 
     'kepala_desa',
@@ -154,7 +155,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Edit User</h2>
+              <h2 className="text-xl font-bold text-gray-900">Ubah Data Pengguna</h2>
               <p className="text-sm text-gray-600">{user.email}</p>
             </div>
             <button
@@ -198,21 +199,30 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Role *
               </label>
-              <select
-                value={formData.role}
-                onChange={(e) => {
-                  console.log('👑 Role changed:', e.target.value);
-                  setFormData({ ...formData, role: e.target.value as UserRole });
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              >
-                {availableRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {getRoleTitle(role)}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={formData.role}
+                  onChange={(e) => {
+                    console.log('👑 Role changed:', e.target.value);
+                    setFormData({ ...formData, role: e.target.value as UserRole });
+                  }}
+                  disabled={true}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed opacity-75"
+                  required
+                >
+                  {availableRoles.map((role) => (
+                    <option key={role} value={role}>
+                      {getRoleTitle(role)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Role tidak dapat diubah untuk menjaga konsistensi data
+              </p>
             </div>
 
             {/* Status */}
@@ -300,7 +310,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={3}
-                placeholder="Catatan tambahan tentang user ini"
+                placeholder="Catatan tambahan tentang pengguna ini"
               />
             </div>
           </div>

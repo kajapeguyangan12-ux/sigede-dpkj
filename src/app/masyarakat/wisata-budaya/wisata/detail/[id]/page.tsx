@@ -7,6 +7,20 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../../../lib/firebase';
 import HeaderCard from "../../../../../components/HeaderCard";
 import BottomNavigation from '../../../../../components/BottomNavigation';
+import dynamic from 'next/dynamic';
+
+// Dynamic import untuk Leaflet Map dengan SSR disabled
+const LeafletMapViewer = dynamic(() => import('@/components/LeafletMapViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[300px] rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-red-500 mx-auto mb-3"></div>
+        <p className="text-sm text-gray-600 font-medium">Memuat peta...</p>
+      </div>
+    </div>
+  )
+});
 
 type WisataDetail = {
   id: string;
@@ -40,10 +54,16 @@ export default function WisataDetailPage() {
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
-          setWisata({
+          const wisataData = {
             id: docSnap.id,
             ...docSnap.data()
-          } as WisataDetail);
+          } as WisataDetail;
+          
+          console.log('Wisata data loaded:', wisataData);
+          console.log('Lokasi field:', wisataData.lokasi);
+          console.log('Alamat field:', wisataData.alamat);
+          
+          setWisata(wisataData);
         } else {
           console.log('Wisata tidak ditemukan');
         }
@@ -312,14 +332,14 @@ export default function WisataDetailPage() {
                   </div>
                 </div>
 
-                {/* Map Placeholder */}
-                <div className="rounded-2xl bg-gradient-to-br from-red-100 to-orange-100 p-12 text-center">
-                  <svg className="mx-auto h-20 w-20 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                  <div className="text-sm font-semibold text-gray-700 mb-1">Peta Lokasi</div>
-                  <p className="text-xs text-gray-600">Klik tombol di bawah untuk membuka di Google Maps</p>
-                </div>
+                {/* Leaflet Map */}
+                {wisata.lokasi && (
+                  <LeafletMapViewer 
+                    location={wisata.lokasi}
+                    title={wisata.judul}
+                    address={wisata.alamat}
+                  />
+                )}
 
                 {/* Google Maps Button */}
                 <button 

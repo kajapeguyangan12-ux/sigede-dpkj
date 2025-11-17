@@ -114,12 +114,8 @@ export default function FormTambahRegulasi({
               className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all bg-white text-gray-900 font-medium hover:border-gray-300"
               required
             >
-              <option value="perdes">Peraturan Desa (Perdes)</option>
-              <option value="peraturan_bersama">Peraturan Bersama</option>
-              <option value="keputusan_kepala_desa">
-                Keputusan Kepala Desa
-              </option>
-              <option value="lainnya">Lainnya</option>
+              <option value="perdes">Peraturan Desa</option>
+              <option value="peraturan_bersama">Peraturan Perbekel</option>
             </select>
           </div>
 

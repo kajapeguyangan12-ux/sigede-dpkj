@@ -6,7 +6,7 @@ import HeaderCard from "../../../components/HeaderCard";
 import Link from "next/link";
 import { collection, query, where, getDocs, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "../../../../lib/firebase";
-import AuthGuard from "../../../components/AuthGuard";
+import { useAuth } from "../../../../contexts/AuthContext";
 
 interface AspirasiData {
   id: string;
@@ -43,6 +43,7 @@ const getStatusIcon = (status: string) => {
 };
 
 export default function LaporanAspirasiPage() {
+  const { user, loading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [activeSort, setActiveSort] = useState<SortType>("Terbaru");
@@ -50,13 +51,19 @@ export default function LaporanAspirasiPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAspirasiData();
-  }, []);
+    if (!authLoading && user) {
+      fetchAspirasiData();
+    }
+  }, [authLoading, user]);
 
   const fetchAspirasiData = async () => {
+    if (authLoading || !user) {
+      return;
+    }
+    
     setLoading(true);
     try {
-      const userId = localStorage.getItem('userId');
+      const userId = user.uid;
       if (!userId) {
         console.log('No user ID found');
         setAspirasiData([]);
@@ -107,8 +114,7 @@ export default function LaporanAspirasiPage() {
   });
 
   return (
-    <AuthGuard requireAdmin={false} redirectTo="/masyarakat/login">
-      <main className="min-h-[100svh] bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-50 text-gray-900">
+    <main className="min-h-[100svh] bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-50 text-gray-900">
         <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
         {/* Header Card */}
         <HeaderCard 
@@ -272,7 +278,6 @@ export default function LaporanAspirasiPage() {
 
         <BottomNavigation />
       </main>
-    </AuthGuard>
   );
 }
 

@@ -19,7 +19,7 @@ export default function StrukturSimplifiedAdminPage() {
   const { logout } = useAuth();
   const [selectedType, setSelectedType] = useState<'desa' | 'bpd'>('desa');
   const [strukturData, setStrukturData] = useState<StrukturPemerintahanSimplified | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Only for data operations
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -245,9 +245,7 @@ export default function StrukturSimplifiedAdminPage() {
               </button>
             </div>
 
-            {loading ? (
-              <div className="text-center py-4 text-gray-500">Memuat...</div>
-            ) : officers.length > 0 ? (
+            {officers.length > 0 ? (
               <div className="space-y-2">
                 {officers.map((officer, index) => (
                   <div key={index} className="flex items-center justify-between rounded-lg bg-gray-50 p-3">

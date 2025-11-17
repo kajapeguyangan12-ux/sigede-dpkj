@@ -3,6 +3,7 @@ import { auth, db } from "../../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export type UserRole =
+  | "super_admin"      // Akses penuh sistem dengan wewenang tertinggi
   | "administrator"     // Semua akses panel admin
   | "admin_desa"       // Semua fitur admin kecuali data desa & kelola pengguna
   | "kepala_desa"      // Hanya data desa & layanan publik admin + akses masyarakat
@@ -16,6 +17,7 @@ export interface CurrentUser {
   email: string;
   displayName: string;
   role: UserRole;
+  nik?: string; // NIK untuk filtering daerah
 }
 
 export function useCurrentUser(): { user: CurrentUser | null; loading: boolean } {
@@ -37,6 +39,7 @@ export function useCurrentUser(): { user: CurrentUser | null; loading: boolean }
           email: firebaseUser.email || "",
           displayName: firebaseUser.displayName || "",
           role: (data.role as UserRole) || "unknown",
+          nik: data.nik || data.idNumber || undefined,
         });
       } catch {
         setUser({

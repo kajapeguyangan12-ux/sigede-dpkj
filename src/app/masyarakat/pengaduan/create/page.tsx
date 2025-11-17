@@ -1,12 +1,12 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import laporanService from '@/lib/laporanService';
+import { createLaporan } from '@/lib/laporanPengaduanService';
+import { getDataDesa } from '@/lib/dataDesaService';
 import { useAuth } from '@/contexts/AuthContext';
-import AuthGuard from '@/app/components/AuthGuard';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
 
 const kategoriOptions = [
@@ -30,29 +30,65 @@ export default function BuatLaporanPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
-    judulLaporan: '',
-    kategoriLaporan: '',
-    isiLaporan: '',
+    judul: '',
+    kategori: '',
+    isi: '',
     namaLengkap: '',
     nik: '',
     alamat: '',
+    daerah: '', // Daerah/banjar
     noTelepon: '',
     email: '',
-    fotoUrl: ''
   });
 
-  // Auto-fill form with user data if available
+  // Redirect if not authenticated
   useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        namaLengkap: user.displayName || '',
-        email: user.email || '',
-        nik: user.idNumber || '',
-        alamat: user.address || '',
-        noTelepon: user.phoneNumber || ''
-      }));
+    if (!isAuthenticated) {
+      router.push('/masyarakat/login');
     }
+  }, [isAuthenticated, router]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Initialize form data with user info
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (user) {
+        const userNik = (user as any).nik || '';
+        let userDaerah = '';
+        
+        // Fetch daerah dari data-desa jika ada NIK
+        if (userNik) {
+          try {
+            const allData = await getDataDesa();
+            const userData = allData.find(d => d.nik === userNik);
+            if (userData?.daerah) {
+              userDaerah = userData.daerah;
+            }
+          } catch (error) {
+            console.error('Error fetching daerah:', error);
+          }
+        }
+        
+        setFormData(prev => ({
+          ...prev,
+          namaLengkap: user.displayName || user.email || '',
+          nik: userNik,
+          alamat: (user as any).address || '',
+          daerah: userDaerah,
+          noTelepon: user.phoneNumber || '',
+          email: user.email || '',
+        }));
+      }
+    };
+    
+    fetchUserData();
   }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -168,49 +204,56 @@ export default function BuatLaporanPage() {
     
     if (!user?.uid) {
       alert('Anda harus login untuk membuat laporan');
+      router.push('/masyarakat/login');
       return;
     }
 
     // Validasi form
-    if (!formData.judulLaporan || !formData.kategoriLaporan || !formData.isiLaporan || 
-        !formData.namaLengkap || !formData.nik || !formData.alamat || !formData.noTelepon) {
+    if (!formData.judul.trim() || !formData.kategori || !formData.isi.trim()) {
       alert('Mohon lengkapi semua field yang wajib diisi');
+      return;
+    }
+
+    // Validasi minimal karakter
+    if (formData.isi.length < 20) {
+      alert('Isi laporan minimal 20 karakter');
       return;
     }
 
     try {
       setLoading(true);
       
-      // Upload image if exists
-      let fotoLaporan: string[] = [];
-      if (imageFile) {
-        const fotoUrl = await uploadImage();
-        if (fotoUrl) {
-          fotoLaporan = [fotoUrl];
-        }
-      }
-      
-      await laporanService.addLaporan({
-        ...formData,
-        fotoLaporan,
-        userId: user.uid,
-        tanggalLaporan: new Date() as any
-      });
+      // Create laporan dengan foto (akan otomatis convert ke WebP)
+      await createLaporan(
+        {
+          userId: user.uid,
+          userName: user.displayName || user.email || 'Pengguna',
+          judul: formData.judul.trim(),
+          kategori: formData.kategori,
+          isi: formData.isi.trim(),
+          namaLengkap: formData.namaLengkap.trim(),
+          nik: formData.nik.trim(),
+          alamat: formData.alamat.trim(),
+          daerah: formData.daerah.trim(), // Sertakan daerah
+          noTelepon: formData.noTelepon.trim(),
+          email: formData.email.trim(),
+        },
+        imageFile || undefined
+      );
 
-      alert('Laporan berhasil dikirim!');
+      alert('✅ Laporan berhasil dikirim!\n\nLaporan Anda akan diproses oleh admin dalam 1-3 hari kerja.');
       router.push('/masyarakat/riwayat');
       
     } catch (error) {
       console.error('Error submitting laporan:', error);
-      alert('Gagal mengirim laporan. Silakan coba lagi.');
+      alert('❌ Gagal mengirim laporan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AuthGuard requireAdmin={false} redirectTo="/masyarakat/login">
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-6">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-6">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-red-500 to-pink-600 shadow-lg">
           <div className="max-w-2xl mx-auto px-4 py-4">
@@ -271,9 +314,9 @@ export default function BuatLaporanPage() {
                       </label>
                       <input
                         type="text"
-                        name="judulLaporan"
-                        value={formData.judulLaporan}
-                        onChange={handleInputChange}
+                        name="judul"
+                        value={formData.judul}
+                        onChange={handleChange}
                         className="w-full px-4 py-3 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm text-gray-900 placeholder:text-gray-400"
                         placeholder="Contoh: Jalan Rusak di Gang Mawar"
                         required
@@ -286,9 +329,9 @@ export default function BuatLaporanPage() {
                         Kategori <span className="text-red-500">*</span>
                       </label>
                       <select
-                        name="kategoriLaporan"
-                        value={formData.kategoriLaporan}
-                        onChange={handleInputChange}
+                        name="kategori"
+                        value={formData.kategori}
+                        onChange={handleChange}
                         className="w-full px-4 py-3 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm font-medium text-gray-900"
                         required
                       >
@@ -305,9 +348,9 @@ export default function BuatLaporanPage() {
                         Isi Laporan <span className="text-red-500">*</span>
                       </label>
                       <textarea
-                        name="isiLaporan"
-                        value={formData.isiLaporan}
-                        onChange={handleInputChange}
+                        name="isi"
+                        value={formData.isi}
+                        onChange={handleChange}
                         rows={5}
                         className="w-full px-4 py-3 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm resize-none text-gray-900 placeholder:text-gray-400"
                         placeholder="Jelaskan detail laporan Anda dengan jelas..."
@@ -604,6 +647,5 @@ export default function BuatLaporanPage() {
           </form>
         </div>
       </div>
-    </AuthGuard>
   );
 }

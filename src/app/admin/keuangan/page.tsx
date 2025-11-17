@@ -41,7 +41,7 @@ export default function KeuanganPage() {
   // Ubah data awal menjadi kosong untuk menunjukkan state empty
   const [financialItems, setFinancialItems] = useState<FinancialItem[]>([]);
   const [apbData, setApbData] = useState<DetailedAPBData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Only for data operations
   const [selectedYearData, setSelectedYearData] = useState<DetailedAPBData[]>([]);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailModalYear, setDetailModalYear] = useState<number>(0);
@@ -345,10 +345,101 @@ export default function KeuanganPage() {
   return (
     <AdminLayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        <AdminHeaderCard title="Keuangan">
-          <AdminHeaderSearchBar />
-          <AdminHeaderAccount onLogout={handleLogout} />
-        </AdminHeaderCard>
+        {/* Enhanced Header */}
+        <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 relative z-40 overflow-hidden max-w-7xl mx-auto mt-6">
+          {/* Floating Background Elements */}
+          <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-green-400/10 to-emerald-400/10 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-teal-400/5 to-cyan-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
+
+          {/* Enhanced AdminHeaderCard with better styling */}
+          <div className="w-full bg-gradient-to-r from-white via-green-50/30 to-emerald-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
+            {/* Enhanced Title Section */}
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl shadow-green-500/25 transform hover:scale-105 transition-all duration-300">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-green-800 to-emerald-800 bg-clip-text text-transparent mb-2">
+                  Manajemen Keuangan
+                </h1>
+                <p className="text-slate-600 font-medium text-lg">
+                  Kelola data keuangan desa
+                </p>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2 text-sm text-green-600 font-semibold">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    Data Keuangan
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-emerald-600 font-semibold">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    Laporan Aktif
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Enhanced Controls Section */}
+            <div className="flex items-center gap-6 relative z-10">
+              {/* Enhanced Search Bar */}
+              <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-green-400 hover:shadow-lg transition-all duration-300 group">
+                <input
+                  type="text"
+                  placeholder="Cari data keuangan..."
+                  className="flex-1 bg-transparent text-gray-700 text-base font-medium focus:outline-none placeholder-gray-500"
+                />
+                <svg
+                  className="ml-3 text-gray-400 group-hover:text-green-500 transition-colors duration-300"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              
+              {/* Enhanced Account Section */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-green-50 hover:to-green-100 transition-all duration-300 cursor-pointer shadow-md">
+                  <svg
+                    width="24"
+                    height="24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    className="text-gray-600"
+                  >
+                    <path d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 01-7.5-7.5h2A5.5 5.5 0 0110 10z"/>
+                  </svg>
+                </div>
+                
+                <button
+                  onClick={handleLogout}
+                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    className="text-red-600 group-hover:text-red-700"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="mb-8">

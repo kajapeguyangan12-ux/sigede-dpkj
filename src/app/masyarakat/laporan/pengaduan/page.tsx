@@ -6,7 +6,7 @@ import HeaderCard from "../../../components/HeaderCard";
 import { getLaporanByUser } from "../../../../lib/laporanService";
 import type { LaporanMasyarakat } from "../../../../lib/laporanService";
 import Link from "next/link";
-import AuthGuard from "../../../components/AuthGuard";
+import { useAuth } from "../../../../contexts/AuthContext";
 
 type FilterType = "All" | "Infrastruktur" | "Keamanan" | "Lingkungan" | "Pelayanan" | "Lainnya";
 type SortType = "Terbaru" | "Terlama" | "Status";
@@ -34,6 +34,7 @@ const getStatusIcon = (status: string) => {
 };
 
 export default function LaporanPengaduanPage() {
+  const { user, loading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [activeSort, setActiveSort] = useState<SortType>("Terbaru");
@@ -41,13 +42,19 @@ export default function LaporanPengaduanPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLaporanData();
-  }, []);
+    if (!authLoading && user) {
+      fetchLaporanData();
+    }
+  }, [authLoading, user]);
 
   const fetchLaporanData = async () => {
+    if (authLoading || !user) {
+      return;
+    }
+    
     setLoading(true);
     try {
-      const userId = localStorage.getItem('userId');
+      const userId = user.uid;
       if (!userId) {
         console.log('No user ID found');
         setLaporanData([]);
@@ -85,8 +92,7 @@ export default function LaporanPengaduanPage() {
   });
 
   return (
-    <AuthGuard requireAdmin={false} redirectTo="/masyarakat/login">
-      <main className="min-h-[100svh] bg-gradient-to-br from-red-50 via-pink-50 to-red-50 text-gray-900">
+    <main className="min-h-[100svh] bg-gradient-to-br from-red-50 via-pink-50 to-red-50 text-gray-900">
         <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
         {/* Header Card */}
         <HeaderCard 
@@ -247,7 +253,6 @@ export default function LaporanPengaduanPage() {
 
         <BottomNavigation />
       </main>
-    </AuthGuard>
   );
 }
 
