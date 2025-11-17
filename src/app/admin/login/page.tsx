@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import { handleAdminLogout } from '../../../lib/logoutHelper';
-import { createTestAdminUser } from '../../../lib/createTestAdmin';
 // import UserLoginHelp from '../../../components/UserLoginHelp';
 // import { FirestoreUser } from '../../../lib/userManagementService';
 
@@ -15,7 +14,6 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
 
   // Check existing session once on mount
   React.useEffect(() => {
@@ -102,7 +100,7 @@ export default function AdminLogin() {
       let errorMessage = 'Login gagal. Periksa kembali ID dan password Anda.';
       
       if (error.message?.includes('tidak ditemukan')) {
-        errorMessage = 'User tidak ditemukan. Pastikan ID/Username sudah benar atau buat admin test terlebih dahulu.';
+        errorMessage = 'User tidak ditemukan. Pastikan ID/Username sudah benar.';
       } else if (error.message?.includes('timeout')) {
         errorMessage = 'Koneksi timeout. Periksa koneksi internet dan coba lagi.';
       } else if (error.message?.includes('ditolak')) {
@@ -116,18 +114,7 @@ export default function AdminLogin() {
     }
   };
 
-  const handleCreateTestAdmin = async () => {
-    setIsCreatingAdmin(true);
-    try {
-      await createTestAdminUser();
-      setIdentifier('admin');
-      setError('✅ Test admin berhasil dibuat! Username: admin, password: apa saja');
-    } catch (error: any) {
-      setError(`❌ Gagal membuat test admin: ${error.message}`);
-    } finally {
-      setIsCreatingAdmin(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-red-100 to-white">
@@ -177,16 +164,6 @@ export default function AdminLogin() {
               disabled={isSubmitting || loading}
             >
               {isSubmitting ? 'MEMPROSES...' : 'LOGIN'}
-            </button>
-
-            {/* Test Admin Creation Button */}
-            <button
-              type="button"
-              onClick={handleCreateTestAdmin}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 rounded-md transition-colors text-sm"
-              disabled={isCreatingAdmin || isSubmitting}
-            >
-              {isCreatingAdmin ? 'MEMBUAT ADMIN TEST...' : 'BUAT ADMIN TEST'}
             </button>
             
             {/* Link to Masyarakat Login */}

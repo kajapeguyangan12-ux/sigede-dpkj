@@ -38,7 +38,6 @@ export default function WargaLokalRegisterPage() {
     namaLengkap: '',
     username: '',
     nik: '',
-    noKK: '',
     alamat: '',
     tempatLahir: '',
     tanggalLahir: '',
@@ -117,81 +116,10 @@ export default function WargaLokalRegisterPage() {
       const matchedData = dataWarga.find(item => item.nik === formData.nik);
       
       if (matchedData) {
-        console.log('✅ NIK CHECK: NIK found in data-desa:', matchedData);
-        console.log('📅 NIK CHECK: Tanggal lahir dari database:', matchedData.tanggalLahir);
-        
+        console.log('✅ NIK CHECK: NIK valid and found in data-desa');
         setNikVerified(true);
         setVerifiedData(matchedData);
-        setNikMessage(`✅ NIK ditemukan! Data akan diisi otomatis.`);
-        
-        // Convert tanggalLahir to YYYY-MM-DD format for input type="date"
-        let formattedTanggalLahir = matchedData.tanggalLahir || '';
-        
-        if (formattedTanggalLahir) {
-          // Handle various date formats from database
-          try {
-            // Remove any extra spaces
-            formattedTanggalLahir = formattedTanggalLahir.trim();
-            
-            // Check if it's an Excel serial number (pure digits, typically 5-6 digits)
-            if (/^\d{4,6}$/.test(formattedTanggalLahir)) {
-              console.log('📅 Detected Excel serial number:', formattedTanggalLahir);
-              
-              // Convert Excel date serial to JavaScript Date
-              // Excel epoch starts at 1900-01-01 (but Excel incorrectly treats 1900 as a leap year)
-              const excelEpoch = new Date(1899, 11, 30); // December 30, 1899
-              const daysOffset = parseInt(formattedTanggalLahir);
-              const jsDate = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000);
-              
-              // Format to YYYY-MM-DD
-              const year = jsDate.getFullYear();
-              const month = String(jsDate.getMonth() + 1).padStart(2, '0');
-              const day = String(jsDate.getDate()).padStart(2, '0');
-              formattedTanggalLahir = `${year}-${month}-${day}`;
-              
-              console.log('📅 Excel date converted to:', formattedTanggalLahir);
-            }
-            // If already in YYYY-MM-DD format, use it
-            else if (/^\d{4}-\d{2}-\d{2}$/.test(formattedTanggalLahir)) {
-              console.log('📅 Date already in correct format:', formattedTanggalLahir);
-            }
-            // If in DD-MM-YYYY or DD/MM/YYYY format, convert to YYYY-MM-DD
-            else if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(formattedTanggalLahir)) {
-              const parts = formattedTanggalLahir.split(/[-\/]/);
-              formattedTanggalLahir = `${parts[2]}-${parts[1]}-${parts[0]}`; // Convert to YYYY-MM-DD
-              console.log('📅 Date converted to:', formattedTanggalLahir);
-            }
-            // If in YYYY/MM/DD format, convert to YYYY-MM-DD
-            else if (/^\d{4}\/\d{2}\/\d{2}$/.test(formattedTanggalLahir)) {
-              formattedTanggalLahir = formattedTanggalLahir.replace(/\//g, '-');
-              console.log('📅 Date converted to:', formattedTanggalLahir);
-            }
-            else {
-              console.warn('⚠️ Unknown date format:', formattedTanggalLahir);
-            }
-          } catch (err) {
-            console.error('❌ Error converting date format:', err);
-          }
-        }
-        
-        console.log('📅 Final formatted date:', formattedTanggalLahir);
-        
-        // Auto-fill form with verified data
-        setFormData(prev => ({
-          ...prev,
-          namaLengkap: matchedData.namaLengkap || prev.namaLengkap,
-          tanggalLahir: formattedTanggalLahir || prev.tanggalLahir,
-          tempatLahir: matchedData.tempatLahir || prev.tempatLahir,
-          jenisKelamin: matchedData.jenisKelamin || prev.jenisKelamin,
-          alamat: matchedData.alamat || prev.alamat,
-          agama: matchedData.agama || prev.agama,
-          pekerjaan: matchedData.pekerjaan || prev.pekerjaan,
-          statusKawin: matchedData.statusNikah || prev.statusKawin,
-          noKK: matchedData.noKK || prev.noKK
-        }));
-        
-        console.log('📝 NIK CHECK: Form auto-filled with data');
-        console.log('📝 NIK CHECK: Tanggal lahir set to:', formattedTanggalLahir);
+        setNikMessage(`✅ NIK valid! Anda dapat melanjutkan registrasi.`);
       } else {
         console.log('❌ NIK CHECK: NIK not found in data-desa');
         setNikVerified(false);
@@ -253,21 +181,6 @@ export default function WargaLokalRegisterPage() {
     }
     console.log('✅ VALIDATION: NIK valid');
 
-    // Verify data matches with verified data from data-desa
-    if (verifiedData) {
-      if (formData.namaLengkap !== verifiedData.namaLengkap) {
-        console.log('❌ VALIDATION: Nama lengkap tidak sesuai dengan data desa');
-        setError('Nama lengkap harus sesuai dengan data yang terdaftar di desa');
-        return false;
-      }
-      if (formData.tanggalLahir !== verifiedData.tanggalLahir) {
-        console.log('❌ VALIDATION: Tanggal lahir tidak sesuai dengan data desa');
-        setError('Tanggal lahir harus sesuai dengan data yang terdaftar di desa');
-        return false;
-      }
-      console.log('✅ VALIDATION: Data sesuai dengan data desa');
-    }
-
     // Password validation
     if (formData.password.length < 6) {
       console.log('❌ VALIDATION: Password too short:', formData.password.length);
@@ -308,7 +221,6 @@ export default function WargaLokalRegisterPage() {
         username: formData.username,
         displayName: formData.namaLengkap,
         nik: formData.nik,
-        noKK: formData.noKK,
         alamat: formData.alamat,
         tempatLahir: formData.tempatLahir,
         tanggalLahir: formData.tanggalLahir,
@@ -420,63 +332,26 @@ export default function WargaLokalRegisterPage() {
             <div className="px-8 py-10">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
-                {/* Nama Lengkap - Auto-filled from NIK verification */}
+                {/* NIK with Verification - PALING ATAS */}
                 <div className="lg:col-span-2">
                   <label className="block text-sm font-bold text-gray-800 mb-3">
-                    Nama Lengkap <span className="text-red-500">*</span>
-                    {nikVerified && <span className="ml-2 text-xs text-green-600 font-normal">(Dari data desa)</span>}
-                  </label>
-                  <input
-                    type="text"
-                    name="namaLengkap"
-                    value={formData.namaLengkap}
-                    onChange={handleInputChange}
-                    readOnly={nikVerified}
-                    className={`w-full px-6 py-4 border rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900 placeholder-gray-500 ${
-                      nikVerified ? 'bg-green-50 border-green-300 cursor-not-allowed' : 'bg-gray-50 border-gray-200'
-                    }`}
-                    placeholder="Nama lengkap akan diisi otomatis setelah verifikasi NIK"
-                    required
-                  />
-                </div>
-
-                {/* Username */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-3">
-                    Username <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    className="w-full px-6 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900 placeholder-gray-500"
-                    placeholder="Username unik untuk login"
-                    required
-                  />
-                </div>
-
-                {/* NIK with Verification */}
-                <div className="lg:col-span-2">
-                  <label className="block text-sm font-bold text-gray-800 mb-3">
-                    NIK <span className="text-red-500">*</span>
+                    NIK (Nomor Induk Kependudukan) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="nik"
                     value={formData.nik}
                     onChange={handleInputChange}
-                    disabled={nikVerified}
                     className={`w-full px-6 py-4 bg-gray-50 border rounded-2xl focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 text-gray-900 placeholder-gray-500 ${
                       nikVerified
-                        ? 'border-green-400 bg-green-50 cursor-not-allowed' 
+                        ? 'border-green-400 bg-green-50' 
                         : formData.nik && formData.nik.length === 16 
                         ? 'border-blue-400 focus:border-blue-400' 
                         : formData.nik && formData.nik.length > 0
                         ? 'border-orange-400 focus:border-orange-400'
                         : 'border-gray-200 focus:border-blue-400'
                     }`}
-                    placeholder="Nomor Induk Kependudukan (16 digit)"
+                    placeholder="Masukkan NIK 16 digit"
                     maxLength={16}
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -488,7 +363,7 @@ export default function WargaLokalRegisterPage() {
                       formData.nik.length === 16 ? 'text-blue-600' : 
                       formData.nik.length > 0 ? 'text-orange-600' : 'text-gray-400'
                     }`}>
-                      {nikVerified ? '✓ NIK Terverifikasi' : `${formData.nik.length}/16 digit`}
+                      {nikVerified ? '✓ NIK Valid & Terverifikasi' : `${formData.nik.length}/16 digit`}
                     </span>
                     {formData.nik.length === 16 && !nikVerified && (
                       <span className="text-blue-600 flex items-center gap-1">
@@ -561,6 +436,38 @@ export default function WargaLokalRegisterPage() {
                   )}
                 </div>
 
+                {/* Nama Lengkap */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 mb-3">
+                    Nama Lengkap <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="namaLengkap"
+                    value={formData.namaLengkap}
+                    onChange={handleInputChange}
+                    className="w-full px-6 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900 placeholder-gray-500"
+                    placeholder="Nama lengkap sesuai KTP"
+                    required
+                  />
+                </div>
+
+                {/* Username */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 mb-3">
+                    Username <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className="w-full px-6 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900 placeholder-gray-500"
+                    placeholder="Username untuk login"
+                    required
+                  />
+                </div>
+
                 {/* Alamat */}
                 <div className="lg:col-span-2">
                   <label className="block text-sm font-bold text-gray-800 mb-3">
@@ -597,17 +504,13 @@ export default function WargaLokalRegisterPage() {
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     Tanggal Lahir <span className="text-red-500">*</span>
-                    {nikVerified && <span className="ml-2 text-xs text-green-600 font-normal">(Dari data desa)</span>}
                   </label>
                   <input
                     type="date"
                     name="tanggalLahir"
                     value={formData.tanggalLahir}
                     onChange={handleInputChange}
-                    readOnly={nikVerified}
-                    className={`w-full px-6 py-4 border rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900 ${
-                      nikVerified ? 'bg-green-50 border-green-300 cursor-not-allowed' : 'bg-gray-50 border-gray-200'
-                    }`}
+                    className="w-full px-6 py-4 border bg-gray-50 border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900"
                     required
                   />
                 </div>

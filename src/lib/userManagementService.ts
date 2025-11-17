@@ -619,7 +619,6 @@ class UserManagementService {
     username: string;
     displayName: string;
     nik: string;
-    noKK: string;
     alamat: string;
     tempatLahir: string;
     tanggalLahir: string;
@@ -697,7 +696,6 @@ class UserManagementService {
         notes: 'Self-registered user from masyarakat registration page',
         // Data lengkap dari form registrasi
         nik: userData.nik,
-        noKK: userData.noKK,
         alamat: userData.alamat,
         tempatLahir: userData.tempatLahir,
         tanggalLahir: userData.tanggalLahir,
