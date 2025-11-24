@@ -53,7 +53,6 @@ async function convertToWebP(file: File): Promise<Blob> {
 interface PengaturanHome {
   judulSelamatDatang: string;
   ucapanSelamatDatang: string;
-  fotoUcapanSelamatDatang: string; // New field
   fotoKepalaDesa: string;
   namaKepalaDesa: string;
   fotoSlideshow: string[];
@@ -75,7 +74,6 @@ export default function PengaturanPage() {
   const [pengaturan, setPengaturan] = useState<PengaturanHome>({
     judulSelamatDatang: "Ucapan Selamat Datang",
     ucapanSelamatDatang: "",
-    fotoUcapanSelamatDatang: "",
     fotoKepalaDesa: "",
     namaKepalaDesa: "",
     fotoSlideshow: [],
@@ -91,10 +89,8 @@ export default function PengaturanPage() {
   const [slideshowFiles, setSlideshowFiles] = useState<File[]>([]);
   
   const [previewKepalaDesa, setPreviewKepalaDesa] = useState<string>("");
-  const [previewUcapan, setPreviewUcapan] = useState<string>(""); // New preview state
   const [previewPopup, setPreviewPopup] = useState<string>("");
   const fileKepalaDesa = useRef<HTMLInputElement>(null);
-  const fileUcapan = useRef<HTMLInputElement>(null); // New ref
   const filePopup = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -118,7 +114,6 @@ export default function PengaturanPage() {
     const defaultPengaturan = {
       judulSelamatDatang: "Ucapan Selamat Datang",
       ucapanSelamatDatang: "",
-      fotoUcapanSelamatDatang: "",
       fotoKepalaDesa: "",
       namaKepalaDesa: "",
       fotoSlideshow: [],
@@ -153,7 +148,6 @@ export default function PengaturanPage() {
         setPengaturan({
           judulSelamatDatang: data.judulSelamatDatang || "Ucapan Selamat Datang",
           ucapanSelamatDatang: data.ucapanSelamatDatang || "",
-          fotoUcapanSelamatDatang: data.fotoUcapanSelamatDatang || "",
           fotoKepalaDesa: data.fotoKepalaDesa || "",
           namaKepalaDesa: data.namaKepalaDesa || "",
           fotoSlideshow: data.fotoSlideshow || [],
@@ -166,7 +160,6 @@ export default function PengaturanPage() {
           popupYoutubeStartTime: data.popupYoutubeStartTime || 0,
         });
         setPreviewKepalaDesa(data.fotoKepalaDesa || "");
-        setPreviewUcapan(data.fotoUcapanSelamatDatang || "");
         setPreviewPopup(data.popupFoto || "");
         setSlideshowPreviews(data.fotoSlideshow || []);
       } else {
@@ -204,17 +197,6 @@ export default function PengaturanPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewKepalaDesa(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleFileUcapan = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUcapan(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -290,7 +272,6 @@ export default function PengaturanPage() {
       setSaving(true);
       
       let fotoKepalaDesaUrl = pengaturan.fotoKepalaDesa;
-      let fotoUcapanUrl = pengaturan.fotoUcapanSelamatDatang;
       let popupFotoUrl = pengaturan.popupFoto;
       let slideshowUrls = [...pengaturan.fotoSlideshow];
 
@@ -300,15 +281,6 @@ export default function PengaturanPage() {
         fotoKepalaDesaUrl = await uploadImage(
           fileKepalaDesa.current.files[0],
           "kepala-desa.webp"
-        );
-      }
-
-      // Upload foto ucapan selamat datang jika ada file baru
-      if (fileUcapan.current?.files?.[0]) {
-        console.log('📸 Uploading foto ucapan selamat datang...');
-        fotoUcapanUrl = await uploadImage(
-          fileUcapan.current.files[0],
-          "ucapan-selamat-datang.webp"
         );
       }
 
@@ -334,7 +306,6 @@ export default function PengaturanPage() {
       await setDoc(docRef, {
         judulSelamatDatang: pengaturan.judulSelamatDatang,
         ucapanSelamatDatang: pengaturan.ucapanSelamatDatang,
-        fotoUcapanSelamatDatang: fotoUcapanUrl,
         fotoKepalaDesa: fotoKepalaDesaUrl,
         namaKepalaDesa: pengaturan.namaKepalaDesa,
         fotoSlideshow: slideshowUrls,
@@ -456,130 +427,78 @@ export default function PengaturanPage() {
         </div>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Judul Section */}
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-              </svg>
-              Judul Section Sambutan
-            </h2>
-            <input
-              type="text"
-              value={pengaturan.judulSelamatDatang || ""}
-              onChange={(e) =>
-                setPengaturan({ ...pengaturan, judulSelamatDatang: e.target.value })
-              }
-              placeholder="Contoh: Ucapan Selamat Datang"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
-            />
-          </div>
-
-          {/* Foto Ucapan Selamat Datang */}
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Gambar Ucapan Selamat Datang
-            </h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Upload gambar yang akan ditampilkan di header halaman masyarakat (menggantikan teks ucapan)
-            </p>
-            
-            {previewUcapan && (
-              <div className="mb-4">
-                <img
-                  src={previewUcapan}
-                  alt="Preview Ucapan Selamat Datang"
-                  className="w-full max-w-2xl h-64 object-cover rounded-xl shadow-lg mx-auto"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPreviewUcapan("");
-                    setPengaturan({ ...pengaturan, fotoUcapanSelamatDatang: "" });
-                    if (fileUcapan.current) {
-                      fileUcapan.current.value = "";
-                    }
-                  }}
-                  className="mt-2 w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all"
-                >
-                  Hapus Gambar
-                </button>
-              </div>
-            )}
-            
-            <input
-              ref={fileUcapan}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUcapan}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileUcapan.current?.click()}
-              className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-xl transition-all"
-            >
-              {previewUcapan ? "Ganti Gambar Ucapan" : "Pilih Gambar Ucapan"}
-            </button>
-          </div>
-
-          {/* Foto Kepala Desa & Nama */}
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              Foto & Nama Kepala Desa
-            </h2>
-            
-            {previewKepalaDesa && (
-              <div className="mb-4">
-                <img
-                  src={previewKepalaDesa}
-                  alt="Preview Kepala Desa"
-                  className="w-full max-w-md h-48 object-cover rounded-xl shadow-lg mx-auto"
-                />
-              </div>
-            )}
-            
-            <input
-              ref={fileKepalaDesa}
-              type="file"
-              accept="image/*"
-              onChange={handleFileKepalaDesa}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileKepalaDesa.current?.click()}
-              className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-xl transition-all mb-4"
-            >
-              Pilih Foto Kepala Desa
-            </button>
-
-            <div className="mt-4">
-              <label className="block text-sm font-bold text-gray-900 mb-2">
-                Nama Kepala Desa
-              </label>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Judul Section */}
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                Judul Section Sambutan
+              </h2>
               <input
                 type="text"
-                value={pengaturan.namaKepalaDesa || ""}
+                value={pengaturan.judulSelamatDatang || ""}
                 onChange={(e) =>
-                  setPengaturan({ ...pengaturan, namaKepalaDesa: e.target.value })
+                  setPengaturan({ ...pengaturan, judulSelamatDatang: e.target.value })
                 }
-                placeholder="Contoh: I Made Suartana, S.H."
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                placeholder="Contoh: Ucapan Selamat Datang"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900"
               />
             </div>
-          </div>
 
-          {/* Foto Slideshow */}
-          <div className="bg-white rounded-2xl shadow-xl p-6">
+            {/* Foto Kepala Desa & Nama */}
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Foto & Nama Kepala Desa
+              </h2>
+              
+              {previewKepalaDesa && (
+                <div className="mb-4">
+                  <img
+                    src={previewKepalaDesa}
+                    alt="Preview Kepala Desa"
+                    className="w-full max-w-md h-48 object-cover rounded-xl shadow-lg mx-auto"
+                  />
+                </div>
+              )}
+              
+              <input
+                ref={fileKepalaDesa}
+                type="file"
+                accept="image/*"
+                onChange={handleFileKepalaDesa}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileKepalaDesa.current?.click()}
+                className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-xl transition-all mb-4"
+              >
+                Pilih Foto Kepala Desa
+              </button>
+
+              <div className="mt-4">
+                <label className="block text-sm font-bold text-gray-900 mb-2">
+                  Nama Kepala Desa
+                </label>
+                <input
+                  type="text"
+                  value={pengaturan.namaKepalaDesa || ""}
+                  onChange={(e) =>
+                    setPengaturan({ ...pengaturan, namaKepalaDesa: e.target.value })
+                  }
+                  placeholder="Contoh: I Made Suartana, S.H."
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                />
+              </div>
+            </div>
+
+            {/* Foto Slideshow */}
+            <div className="bg-white rounded-2xl shadow-xl p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -870,7 +789,7 @@ export default function PengaturanPage() {
               )}
             </button>
           </div>
-        </form>
+          </form>
         </div>
       </div>
     </AdminLayout>

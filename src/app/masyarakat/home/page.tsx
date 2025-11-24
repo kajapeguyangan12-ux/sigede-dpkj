@@ -583,33 +583,33 @@ export default function MasyarakatHomePage(): JSX.Element {
           subtitle="Sistem Informasi Desa"
         />
 
-        {/* Welcome Section - Modern Professional Design */}
-        <section className="mb-6 relative overflow-hidden rounded-3xl shadow-2xl">
+        {/* Welcome Section - Modern Professional Design - Compact Horizontal Layout */}
+        <section className="mb-6 relative overflow-hidden rounded-2xl shadow-xl">
           {/* Background with gradient and pattern */}
           <div className="absolute inset-0 bg-gradient-to-br from-red-600 via-rose-600 to-pink-700"></div>
           <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
+            <div className="absolute top-0 right-0 w-48 h-48 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
           </div>
           
-          <div className="relative p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              {/* Profile Picture Section - Enhanced Modern Design */}
-              <div className="flex-shrink-0">
+          <div className="relative p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              {/* Profile Picture Section - Left Side, Compact, with vertical centering */}
+              <div className="flex-shrink-0 sm:self-center">
                 <div className="relative group">
                   {/* Animated gradient outer glow - Red theme matching card */}
-                  <div className="absolute -inset-5 bg-gradient-to-r from-red-400/40 via-rose-300/30 to-pink-400/40 rounded-full blur-2xl group-hover:blur-3xl transition-all duration-700 animate-pulse"></div>
+                  <div className="absolute -inset-3 bg-gradient-to-r from-red-400/40 via-rose-300/30 to-pink-400/40 rounded-full blur-xl group-hover:blur-2xl transition-all duration-700 animate-pulse"></div>
                   
                   {/* Rotating decorative ring - Red gradient */}
-                  <div className="absolute -inset-4 rounded-full">
+                  <div className="absolute -inset-2.5 rounded-full">
                     <div className="w-full h-full rounded-full bg-gradient-to-tr from-red-300/50 via-transparent to-rose-300/50 animate-[spin_10s_linear_infinite]"></div>
                   </div>
                   
                   {/* Secondary ring for depth - Red theme */}
-                  <div className="absolute -inset-3 bg-gradient-to-br from-red-200/40 via-rose-200/20 to-pink-200/40 rounded-full backdrop-blur-sm"></div>
+                  <div className="absolute -inset-2 bg-gradient-to-br from-red-200/40 via-rose-200/20 to-pink-200/40 rounded-full backdrop-blur-sm"></div>
                   
-                  {/* Main picture container - Larger and more prominent */}
-                  <div className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-full overflow-hidden ring-4 ring-white/90 shadow-[0_0_40px_rgba(239,68,68,0.4)] transform group-hover:scale-110 transition-all duration-500 ease-out">
+                  {/* Main picture container - Smaller and compact with auto-fit */}
+                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden ring-3 ring-white/90 shadow-[0_0_25px_rgba(239,68,68,0.4)] transform group-hover:scale-110 transition-all duration-500 ease-out">
                     {pengaturan?.fotoKepalaDesa ? (
                       <div className="relative w-full h-full">
                         <img
@@ -622,7 +622,7 @@ export default function MasyarakatHomePage(): JSX.Element {
                       </div>
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-red-300/50 to-rose-300/30 flex items-center justify-center backdrop-blur-sm">
-                        <Landmark className="h-20 w-20 text-white drop-shadow-2xl" />
+                        <Landmark className="h-10 w-10 sm:h-12 sm:w-12 text-white drop-shadow-2xl" />
                       </div>
                     )}
                     
@@ -630,9 +630,9 @@ export default function MasyarakatHomePage(): JSX.Element {
                     <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   </div>
                   
-                  {/* Enhanced verified badge with premium styling */}
-                  <div className="absolute bottom-2 right-2 bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-600 w-11 h-11 rounded-full ring-4 ring-white/90 shadow-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                    <svg className="w-6 h-6 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
+                  {/* Enhanced verified badge with premium styling - Smaller */}
+                  <div className="absolute bottom-0 right-0 bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-600 w-7 h-7 rounded-full ring-2 ring-white/90 shadow-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
+                    <svg className="w-4 h-4 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                     {/* Continuous pulse effect */}
@@ -642,32 +642,32 @@ export default function MasyarakatHomePage(): JSX.Element {
                 </div>
               </div>
 
-              {/* Content Section */}
-              <div className="flex-1 text-center sm:text-left">
-                {/* Title with icon */}
-                <div className="flex items-center justify-center sm:justify-start gap-2 mb-3">
-                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Content Section - Right Side, Flexible */}
+              <div className="flex-1 w-full">
+                {/* Title with icon - Top Row */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                     </svg>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white">
+                  <h3 className="text-base sm:text-lg font-bold text-white">
                     {pengaturan?.judulSelamatDatang || "Ucapan Selamat Datang"}
                   </h3>
                 </div>
 
-                {/* Slideshow box */}
+                {/* Slideshow box - Below Title */}
                 <div className="relative">
-                  <div className="bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden shadow-xl">
+                  <div className="bg-white/95 backdrop-blur-md rounded-xl overflow-hidden shadow-lg">
                     {loading ? (
-                      <div className="flex items-center justify-center gap-2 text-gray-400 h-48">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
-                        <span className="text-sm">Memuat...</span>
+                      <div className="flex items-center justify-center gap-2 text-gray-400 h-28 sm:h-32">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                        <span className="text-xs">Memuat...</span>
                       </div>
                     ) : pengaturan?.fotoSlideshow && pengaturan.fotoSlideshow.length > 0 ? (
                       <div className="relative">
-                        {/* Slideshow Image - Sliding Container */}
-                        <div className="relative h-48 sm:h-56 overflow-hidden">
+                        {/* Slideshow Image - Sliding Container - Smaller height */}
+                        <div className="relative h-28 sm:h-32 overflow-hidden">
                           {/* Slides Wrapper with Transform */}
                           <div 
                             className="flex h-full transition-transform duration-[1000ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
@@ -695,11 +695,11 @@ export default function MasyarakatHomePage(): JSX.Element {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
                         </div>
 
-                        {/* Info overlay at bottom */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                        {/* Info overlay at bottom - Compact */}
+                        <div className="absolute bottom-0 left-0 right-0 p-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center ring-2 ring-white/50">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center ring-2 ring-white/50">
                                 <span className="text-white text-xs font-bold">
                                   {pengaturan.namaKepalaDesa?.charAt(0) || 'K'}
                                 </span>
@@ -708,25 +708,25 @@ export default function MasyarakatHomePage(): JSX.Element {
                                 <p className="text-xs font-semibold text-white drop-shadow-lg">
                                   {pengaturan.namaKepalaDesa || 'Kepala Desa'}
                                 </p>
-                                <p className="text-xs text-white/90 drop-shadow-lg">Dauh Puri Kaja</p>
+                                <p className="text-[10px] text-white/90 drop-shadow-lg">Dauh Puri Kaja</p>
                               </div>
                             </div>
-                            <div className="text-xs text-white/90 drop-shadow-lg bg-black/30 px-2 py-1 rounded-full">
+                            <div className="text-[10px] text-white/90 drop-shadow-lg bg-black/30 px-1.5 py-0.5 rounded-full">
                               {currentSlideshowIndex + 1}/{pengaturan.fotoSlideshow.length}
                             </div>
                           </div>
                         </div>
 
-                        {/* Navigation dots */}
-                        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex gap-1.5">
+                        {/* Navigation dots - Compact */}
+                        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex gap-1">
                           {pengaturan.fotoSlideshow.map((_, index) => (
                             <button
                               key={index}
                               onClick={() => setCurrentSlideshowIndex(index)}
                               className={`transition-all duration-300 rounded-full cursor-pointer ${
                                 index === currentSlideshowIndex 
-                                  ? 'w-6 h-2 bg-white shadow-lg scale-110' 
-                                  : 'w-2 h-2 bg-white/60 hover:bg-white hover:scale-105'
+                                  ? 'w-4 h-1.5 bg-white shadow-lg scale-110' 
+                                  : 'w-1.5 h-1.5 bg-white/60 hover:bg-white hover:scale-105'
                               }`}
                             />
                           ))}
@@ -746,8 +746,8 @@ export default function MasyarakatHomePage(): JSX.Element {
                     )}
                   </div>
                   
-                  {/* Decorative quote mark */}
-                  <div className="absolute -top-3 -left-2 text-white/20 text-6xl font-serif leading-none">"</div>
+                  {/* Decorative quote mark - Smaller */}
+                  <div className="absolute -top-2 -left-1 text-white/20 text-4xl font-serif leading-none">"</div>
                 </div>
 
                 {/* Indicator dots */}
