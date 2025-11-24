@@ -86,10 +86,17 @@ export default function Page() {
 
             {/* Description Section */}
             {wilayahData?.deskripsi && (
-              <div className="mb-6 rounded-2xl bg-white/90 backdrop-blur-sm p-4 shadow-lg ring-1 ring-gray-200">
-                <div className="text-sm text-gray-700 leading-relaxed">
-                  <p className="font-semibold text-gray-800 mb-2">Deskripsi Wilayah:</p>
-                  <p>{wilayahData.deskripsi}</p>
+              <div className="mb-6 rounded-2xl bg-white/90 backdrop-blur-sm p-5 shadow-lg ring-1 ring-gray-200">
+                <div className="space-y-3">
+                  <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Deskripsi Wilayah
+                  </h3>
+                  <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                    {wilayahData.deskripsi}
+                  </div>
                 </div>
               </div>
             )}

@@ -54,9 +54,13 @@ export default function VisiMisiDesaPage() {
           <>
             {/* Visi Section */}
             <section className="mb-6">
-              <div className="rounded-3xl bg-white/90 backdrop-blur-sm p-6 shadow-xl ring-1 ring-red-200">
-                <div className="mb-4 text-center text-sm font-semibold text-red-700">
-                  Visi Desa
+              <div className="rounded-3xl bg-white/90 backdrop-blur-sm p-5 shadow-xl ring-1 ring-red-200">
+                <div className="mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <h3 className="text-base font-bold text-gray-800">Visi Desa</h3>
                 </div>
 
                 <div className="rounded-2xl bg-gray-50 p-6 shadow-inner">
@@ -69,7 +73,7 @@ export default function VisiMisiDesaPage() {
                       />
                     </div>
                   )}
-                  <p className="text-base text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
+                  <p className="text-base text-gray-800 leading-relaxed whitespace-pre-line font-medium">
                     {visiMisiData.visi}
                   </p>
                 </div>
@@ -78,9 +82,12 @@ export default function VisiMisiDesaPage() {
 
             {/* Misi Section */}
             <section className="mb-6">
-              <div className="rounded-3xl bg-white/90 backdrop-blur-sm p-6 shadow-xl ring-1 ring-red-200">
-                <div className="mb-4 text-center text-sm font-semibold text-red-700">
-                  Misi Desa
+              <div className="rounded-3xl bg-white/90 backdrop-blur-sm p-5 shadow-xl ring-1 ring-red-200">
+                <div className="mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                  <h3 className="text-base font-bold text-gray-800">Misi Desa</h3>
                 </div>
 
                 <div className="rounded-2xl bg-gray-50 p-6 shadow-inner">
@@ -93,7 +100,7 @@ export default function VisiMisiDesaPage() {
                       />
                     </div>
                   )}
-                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                     {visiMisiData.misi}
                   </p>
                 </div>

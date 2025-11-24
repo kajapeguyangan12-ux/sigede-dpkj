@@ -66,25 +66,29 @@ export default function SejarahDesaPage() {
 
             {/* Detail Sejarah Section */}
             <section className="mb-6">
-              <div className="rounded-3xl bg-white/90 backdrop-blur-sm p-4 shadow-xl ring-1 ring-red-200">
-                <div className="mb-4 text-center text-sm font-semibold text-red-700">
-                  Detail Sejarah Desa
+              <div className="rounded-3xl bg-white/90 backdrop-blur-sm p-5 shadow-xl ring-1 ring-red-200">
+                <div className="mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <h3 className="text-base font-bold text-gray-800">Detail Sejarah Desa</h3>
                 </div>
 
                 <div className="rounded-2xl bg-gray-50 p-6 shadow-inner">
-                  <div className="space-y-4 text-sm text-gray-700 leading-relaxed">
+                  <div className="space-y-4 text-sm text-gray-700">
                     {/* Deskripsi Utama */}
                     {sejarahData.deskripsi && (
-                      <p className="text-base font-semibold text-gray-800 mb-4">
-                        {sejarahData.deskripsi}
-                      </p>
+                      <div>
+                        <p className="font-semibold text-gray-800 mb-2">Deskripsi:</p>
+                        <p className="leading-relaxed whitespace-pre-line">{sejarahData.deskripsi}</p>
+                      </div>
                     )}
 
                     {/* Asal Usul */}
                     {sejarahData.asalUsul && (
                       <div>
                         <p className="font-semibold text-gray-800 mb-2">Asal-usul:</p>
-                        <p>{sejarahData.asalUsul}</p>
+                        <p className="leading-relaxed whitespace-pre-line">{sejarahData.asalUsul}</p>
                       </div>
                     )}
 
@@ -92,7 +96,7 @@ export default function SejarahDesaPage() {
                     {sejarahData.tahunBerdiri && (
                       <div>
                         <p className="font-semibold text-gray-800 mb-2">Tahun Berdiri:</p>
-                        <p>{sejarahData.tahunBerdiri}</p>
+                        <p className="leading-relaxed whitespace-pre-line">{sejarahData.tahunBerdiri}</p>
                       </div>
                     )}
 
@@ -100,7 +104,7 @@ export default function SejarahDesaPage() {
                     {sejarahData.hariJadi && (
                       <div>
                         <p className="font-semibold text-gray-800 mb-2">Hari Jadi:</p>
-                        <p>{sejarahData.hariJadi}</p>
+                        <p className="leading-relaxed whitespace-pre-line">{sejarahData.hariJadi}</p>
                       </div>
                     )}
 
@@ -108,7 +112,7 @@ export default function SejarahDesaPage() {
                     {sejarahData.tokohPendiri && (
                       <div>
                         <p className="font-semibold text-gray-800 mb-2">Tokoh Pendiri:</p>
-                        <p>{sejarahData.tokohPendiri}</p>
+                        <p className="leading-relaxed whitespace-pre-line">{sejarahData.tokohPendiri}</p>
                       </div>
                     )}
 
@@ -116,7 +120,7 @@ export default function SejarahDesaPage() {
                     {sejarahData.perkembangan && (
                       <div>
                         <p className="font-semibold text-gray-800 mb-2">Perkembangan:</p>
-                        <p>{sejarahData.perkembangan}</p>
+                        <p className="leading-relaxed whitespace-pre-line">{sejarahData.perkembangan}</p>
                       </div>
                     )}
                   </div>

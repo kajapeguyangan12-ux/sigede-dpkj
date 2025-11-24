@@ -134,7 +134,7 @@ export default function AdminLembagaPage() {
       email: '',
       noTelepon: '',
       foto: '',
-      urutanTampil: 1
+      urutanTampil: dataAnggota.length + 1
     })
   }
 
@@ -304,8 +304,8 @@ export default function AdminLembagaPage() {
 
         {/* Modal Form */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 w-full max-w-md p-6">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 w-full max-w-md p-6 my-8 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-gray-800">
                   {editingAnggota ? 'Edit Anggota' : 'Tambah Anggota'}
@@ -327,7 +327,7 @@ export default function AdminLembagaPage() {
                     type="text"
                     value={formData.nama}
                     onChange={(e) => setFormData(prev => ({ ...prev, nama: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     required
                   />
                 </div>
@@ -340,7 +340,7 @@ export default function AdminLembagaPage() {
                     type="text"
                     value={formData.jabatan}
                     onChange={(e) => setFormData(prev => ({ ...prev, jabatan: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     required
                   />
                 </div>
@@ -353,7 +353,7 @@ export default function AdminLembagaPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     required
                   />
                 </div>
@@ -366,7 +366,7 @@ export default function AdminLembagaPage() {
                     type="tel"
                     value={formData.noTelepon}
                     onChange={(e) => setFormData(prev => ({ ...prev, noTelepon: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     required
                   />
                 </div>
@@ -411,9 +411,9 @@ export default function AdminLembagaPage() {
                   <input
                     type="number"
                     min="1"
-                    value={formData.urutanTampil}
-                    onChange={(e) => setFormData(prev => ({ ...prev, urutanTampil: parseInt(e.target.value) }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={formData.urutanTampil || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, urutanTampil: parseInt(e.target.value) || 1 }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     required
                   />
                 </div>
