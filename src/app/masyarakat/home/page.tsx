@@ -594,33 +594,50 @@ export default function MasyarakatHomePage(): JSX.Element {
           
           <div className="relative p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row items-center gap-6">
-              {/* Profile Picture Section */}
+              {/* Profile Picture Section - Enhanced Modern Design */}
               <div className="flex-shrink-0">
-                <div className="relative">
-                  {/* Decorative rings */}
-                  <div className="absolute inset-0 bg-white/20 rounded-full animate-pulse"></div>
-                  <div className="absolute -inset-2 bg-white/10 rounded-full"></div>
+                <div className="relative group">
+                  {/* Animated gradient outer glow - Red theme matching card */}
+                  <div className="absolute -inset-5 bg-gradient-to-r from-red-400/40 via-rose-300/30 to-pink-400/40 rounded-full blur-2xl group-hover:blur-3xl transition-all duration-700 animate-pulse"></div>
                   
-                  {/* Main picture container */}
-                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden ring-4 ring-white/50 shadow-2xl">
-                    {pengaturan?.fotoKepalaDesa ? (
-                      <img
-                        src={pengaturan.fotoKepalaDesa}
-                        alt="Kepala Desa"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center backdrop-blur-sm">
-                        <Landmark className="h-14 w-14 text-white" />
-                      </div>
-                    )}
+                  {/* Rotating decorative ring - Red gradient */}
+                  <div className="absolute -inset-4 rounded-full">
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-red-300/50 via-transparent to-rose-300/50 animate-[spin_10s_linear_infinite]"></div>
                   </div>
                   
-                  {/* Status badge */}
-                  <div className="absolute -bottom-1 -right-1 bg-green-500 w-7 h-7 rounded-full ring-4 ring-white/30 flex items-center justify-center shadow-lg">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  {/* Secondary ring for depth - Red theme */}
+                  <div className="absolute -inset-3 bg-gradient-to-br from-red-200/40 via-rose-200/20 to-pink-200/40 rounded-full backdrop-blur-sm"></div>
+                  
+                  {/* Main picture container - Larger and more prominent */}
+                  <div className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-full overflow-hidden ring-4 ring-white/90 shadow-[0_0_40px_rgba(239,68,68,0.4)] transform group-hover:scale-110 transition-all duration-500 ease-out">
+                    {pengaturan?.fotoKepalaDesa ? (
+                      <div className="relative w-full h-full">
+                        <img
+                          src={pengaturan.fotoKepalaDesa}
+                          alt="Kepala Desa"
+                          className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
+                        />
+                        {/* Professional overlay gradient with red tint */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-red-900/5 via-transparent to-white/5"></div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-red-300/50 to-rose-300/30 flex items-center justify-center backdrop-blur-sm">
+                        <Landmark className="h-20 w-20 text-white drop-shadow-2xl" />
+                      </div>
+                    )}
+                    
+                    {/* Inner shine effect */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  </div>
+                  
+                  {/* Enhanced verified badge with premium styling */}
+                  <div className="absolute bottom-2 right-2 bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-600 w-11 h-11 rounded-full ring-4 ring-white/90 shadow-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
+                    <svg className="w-6 h-6 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
+                    {/* Continuous pulse effect */}
+                    <span className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-40"></span>
+                    <span className="absolute inset-0 rounded-full bg-green-400 animate-pulse opacity-30"></span>
                   </div>
                 </div>
               </div>

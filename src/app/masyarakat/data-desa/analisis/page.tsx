@@ -8,6 +8,8 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { canAccessDataDesaAnalisis } from "@/lib/rolePermissions";
 import { UserRole } from "../../lib/useCurrentUser";
+import { getDataDesa, DataDesaItem } from "@/lib/dataDesaService";
+import { useCountUp } from "@/hooks/useCountUp";
 
 // Add keyframes for SaaS-style animations
 const styles = `
@@ -148,30 +150,15 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleSheet);
 }
 
-interface MasyarakatData {
-  id: string;
-  nama?: string;
-  displayName?: string;
-  tanggalLahir?: string;
-  jenisKelamin?: string;
-  agama?: string;
-  pekerjaan?: string;
-  pendidikan?: string;
-  dusun?: string;
-  statusPerkawinan?: string;
-  kewarganegaraan?: string;
-  sukuBangsa?: string;
-}
-
 interface FilterState {
-  dusun: string;
+  daerah: string;
   jenisKelamin: string;
   agama: string;
   sukuBangsa: string;
-  pendidikan: string;
+  pendidikanTerakhir: string;
   pekerjaan: string;
   kewarganegaraan: string;
-  statusPerkawinan: string;
+  statusNikah: string;
 }
 
 interface AgeGroup {
@@ -212,40 +199,41 @@ export default function AnalisisDataPage() {
     checkAccess();
   }, [router]);
   
-  const [allData, setAllData] = useState<MasyarakatData[]>([]);
-  const [filteredData, setFilteredData] = useState<MasyarakatData[]>([]);
+  const [allData, setAllData] = useState<DataDesaItem[]>([]);
+  const [filteredData, setFilteredData] = useState<DataDesaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [targetAge, setTargetAge] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [showPredictionResult, setShowPredictionResult] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>({
-    dusun: "",
+    daerah: "",
     jenisKelamin: "",
     agama: "",
     sukuBangsa: "",
-    pendidikan: "",
+    pendidikanTerakhir: "",
     pekerjaan: "",
     kewarganegaraan: "",
-    statusPerkawinan: "",
+    statusNikah: "",
   });
 
-  // Filter options
-  const filterOptions = {
-    dusun: ["Dauh Puri Kaja", "Denpasar Utara"],
-    jenisKelamin: ["Laki-laki", "Perempuan"],
-    agama: ["Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu"],
-    sukuBangsa: ["Bali", "Jawa", "Sunda", "Batak", "Minang", "Bugis", "Lainnya"],
-    pendidikan: ["Tidak Sekolah", "SD", "SMP", "SMA", "D3", "S1", "S2", "S3"],
-    pekerjaan: ["Petani", "Pedagang", "PNS", "Swasta", "Wiraswasta", "Pelajar", "Mahasiswa", "Tidak Bekerja"],
-    kewarganegaraan: ["WNI", "WNA"],
-    statusPerkawinan: ["Belum Kawin", "Kawin", "Cerai Hidup", "Cerai Mati"],
-  };
+  // Dynamic filter options - akan diisi dari data
+  const [filterOptions, setFilterOptions] = useState({
+    daerah: [] as string[],
+    jenisKelamin: [] as string[],
+    agama: [] as string[],
+    sukuBangsa: [] as string[],
+    pendidikanTerakhir: [] as string[],
+    pekerjaan: [] as string[],
+    kewarganegaraan: [] as string[],
+    statusNikah: [] as string[],
+  });
 
   useEffect(() => {
-    fetchAllMasyarakat();
+    fetchAllDataDesa();
   }, []);
 
   useEffect(() => {
@@ -257,6 +245,23 @@ export default function AnalisisDataPage() {
       calculateAgeGroups();
     }
   }, [filteredData]);
+
+  // Generate dynamic filter options from data
+  useEffect(() => {
+    if (allData.length > 0) {
+      const options = {
+        daerah: [...new Set(allData.map(item => item.daerah).filter(Boolean))].sort() as string[],
+        jenisKelamin: [...new Set(allData.map(item => item.jenisKelamin).filter(Boolean))].sort() as string[],
+        agama: [...new Set(allData.map(item => item.agama).filter(Boolean))].sort() as string[],
+        sukuBangsa: [...new Set(allData.map(item => item.sukuBangsa).filter(Boolean))].sort() as string[],
+        pendidikanTerakhir: [...new Set(allData.map(item => item.pendidikanTerakhir).filter(Boolean))].sort() as string[],
+        pekerjaan: [...new Set(allData.map(item => item.pekerjaan).filter(Boolean))].sort() as string[],
+        kewarganegaraan: [...new Set(allData.map(item => item.kewarganegaraan).filter(Boolean))].sort() as string[],
+        statusNikah: [...new Set(allData.map(item => item.statusNikah).filter(Boolean))].sort() as string[],
+      };
+      setFilterOptions(options);
+    }
+  }, [allData]);
 
   const handleToggleFilter = () => {
     if (showFilterPanel) {
@@ -272,22 +277,16 @@ export default function AnalisisDataPage() {
     }
   };
 
-  const fetchAllMasyarakat = async () => {
+  const fetchAllDataDesa = async () => {
     try {
       setLoading(true);
-      const masyarakatRef = collection(db, "masyarakat");
-      const snapshot = await getDocs(masyarakatRef);
+      const data = await getDataDesa();
       
-      const data: MasyarakatData[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<MasyarakatData, 'id'>
-      }));
-
-      console.log('Data loaded:', data.length, 'records');
+      console.log('Data loaded from data-desa:', data.length, 'records');
       setAllData(data);
       setFilteredData(data);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error loading data-desa:", error);
     } finally {
       setLoading(false);
     }
@@ -349,7 +348,7 @@ export default function AnalisisDataPage() {
     Object.entries(filters).forEach(([key, value]) => {
       if (value) {
         result = result.filter(item => {
-          const itemValue = item[key as keyof MasyarakatData];
+          const itemValue = item[key as keyof DataDesaItem];
           return itemValue?.toString().toLowerCase() === value.toLowerCase();
         });
       }
@@ -360,14 +359,14 @@ export default function AnalisisDataPage() {
 
   const resetFilters = () => {
     setFilters({
-      dusun: "",
+      daerah: "",
       jenisKelamin: "",
       agama: "",
       sukuBangsa: "",
-      pendidikan: "",
+      pendidikanTerakhir: "",
       pekerjaan: "",
       kewarganegaraan: "",
-      statusPerkawinan: "",
+      statusNikah: "",
     });
   };
 
@@ -385,6 +384,27 @@ export default function AnalisisDataPage() {
       return age === targetAgeNum;
     }).length;
   };
+
+  const handleConfirmPrediction = () => {
+    if (targetAge && selectedDate) {
+      setShowPredictionResult(true);
+    }
+  };
+
+  const handleResetPrediction = () => {
+    setTargetAge("");
+    setSelectedDate("");
+    setShowPredictionResult(false);
+  };
+
+  // Count up animation for prediction result
+  const predictionCount = predictAgeCount();
+  const { count: animatedCount } = useCountUp({
+    end: predictionCount,
+    duration: 1500,
+    enableScrollSpy: false,
+    preserveValue: false,
+  });
 
   if (loading) {
     return (
@@ -536,20 +556,20 @@ export default function AnalisisDataPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-5">
-                {/* Dusun */}
+                {/* Daerah */}
                 <div className="group animate-fadeIn" style={{ animationDelay: '0.05s' }}>
                   <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                    DUSUN
+                    DAERAH
                   </label>
                   <select
-                    value={filters.dusun}
-                    onChange={(e) => setFilters({ ...filters, dusun: e.target.value })}
+                    value={filters.daerah}
+                    onChange={(e) => setFilters({ ...filters, daerah: e.target.value })}
                     className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-300 shadow-sm appearance-none cursor-pointer"
-                    style={{ color: filters.dusun ? '#1f2937' : '#9ca3af' }}
+                    style={{ color: filters.daerah ? '#1f2937' : '#9ca3af' }}
                   >
-                    <option value="" className="text-gray-400">Pilih Dusun</option>
-                    {filterOptions.dusun.map(option => (
+                    <option value="" className="text-gray-400">Pilih Daerah</option>
+                    {filterOptions.daerah.map((option: string) => (
                       <option key={option} value={option} className="text-gray-700">{option}</option>
                     ))}
                   </select>
@@ -568,7 +588,7 @@ export default function AnalisisDataPage() {
                   style={{ color: filters.jenisKelamin ? '#1f2937' : '#9ca3af' }}
                 >
                   <option value="" className="text-gray-400">Pilih Jenis Kelamin</option>
-                  {filterOptions.jenisKelamin.map(option => (
+                  {filterOptions.jenisKelamin.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
                 </select>
@@ -587,7 +607,7 @@ export default function AnalisisDataPage() {
                   style={{ color: filters.agama ? '#1f2937' : '#9ca3af' }}
                 >
                   <option value="" className="text-gray-400">Pilih Agama</option>
-                  {filterOptions.agama.map(option => (
+                  {filterOptions.agama.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
                 </select>
@@ -606,7 +626,7 @@ export default function AnalisisDataPage() {
                   style={{ color: filters.sukuBangsa ? '#1f2937' : '#9ca3af' }}
                 >
                   <option value="" className="text-gray-400">Pilih Suku Bangsa</option>
-                  {filterOptions.sukuBangsa.map(option => (
+                  {filterOptions.sukuBangsa.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
                 </select>
@@ -619,13 +639,13 @@ export default function AnalisisDataPage() {
                   PENDIDIKAN
                 </label>
                 <select
-                  value={filters.pendidikan}
-                  onChange={(e) => setFilters({ ...filters, pendidikan: e.target.value })}
+                  value={filters.pendidikanTerakhir}
+                  onChange={(e) => setFilters({ ...filters, pendidikanTerakhir: e.target.value })}
                   className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all hover:border-green-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.pendidikan ? '#1f2937' : '#9ca3af' }}
+                  style={{ color: filters.pendidikanTerakhir ? '#1f2937' : '#9ca3af' }}
                 >
                   <option value="" className="text-gray-400">Pilih Pendidikan</option>
-                  {filterOptions.pendidikan.map(option => (
+                  {filterOptions.pendidikanTerakhir.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
                 </select>
@@ -644,7 +664,7 @@ export default function AnalisisDataPage() {
                   style={{ color: filters.pekerjaan ? '#1f2937' : '#9ca3af' }}
                 >
                   <option value="" className="text-gray-400">Pilih Pekerjaan</option>
-                  {filterOptions.pekerjaan.map(option => (
+                  {filterOptions.pekerjaan.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
                 </select>
@@ -663,7 +683,7 @@ export default function AnalisisDataPage() {
                   style={{ color: filters.kewarganegaraan ? '#1f2937' : '#9ca3af' }}
                 >
                   <option value="" className="text-gray-400">Pilih Kewarganegaraan</option>
-                  {filterOptions.kewarganegaraan.map(option => (
+                  {filterOptions.kewarganegaraan.map((option: string) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
@@ -676,13 +696,13 @@ export default function AnalisisDataPage() {
                   STATUS PERNIKAHAN
                 </label>
                 <select
-                  value={filters.statusPerkawinan}
-                  onChange={(e) => setFilters({ ...filters, statusPerkawinan: e.target.value })}
+                  value={filters.statusNikah}
+                  onChange={(e) => setFilters({ ...filters, statusNikah: e.target.value })}
                   className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all hover:border-orange-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.statusPerkawinan ? '#1f2937' : '#9ca3af' }}
+                  style={{ color: filters.statusNikah ? '#1f2937' : '#9ca3af' }}
                 >
                   <option value="" className="text-gray-400">Pilih Status Pernikahan</option>
-                  {filterOptions.statusPerkawinan.map(option => (
+                  {filterOptions.statusNikah.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
                 </select>
@@ -743,8 +763,33 @@ export default function AnalisisDataPage() {
               </div>
             </div>
 
-            {targetAge && (
-              <div className="mt-5 p-6 bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 rounded-2xl shadow-2xl border border-white/20">
+            {/* Buttons - Show when any field is filled */}
+            {(targetAge || selectedDate) && (
+              <div className="flex gap-3 animate-fadeIn">
+                <button
+                  onClick={handleConfirmPrediction}
+                  disabled={!targetAge || !selectedDate}
+                  className="flex-1 group relative overflow-hidden bg-gradient-to-r from-purple-500 via-purple-600 to-pink-600 hover:from-purple-600 hover:via-purple-700 hover:to-pink-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Konfirmasi
+                </button>
+                <button
+                  onClick={handleResetPrediction}
+                  className="px-6 py-3.5 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Reset
+                </button>
+              </div>
+            )}
+
+            {showPredictionResult && targetAge && selectedDate && (
+              <div className="mt-5 p-6 bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 rounded-2xl shadow-2xl border border-white/20 animate-scaleIn">
                 <div className="text-center text-white">
                   <div className="flex items-center justify-center gap-2 mb-3">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -754,14 +799,15 @@ export default function AnalisisDataPage() {
                     <div className="text-xs font-bold uppercase tracking-wide opacity-90">Hasil Pencarian</div>
                   </div>
                   <div className="text-sm mb-2 font-medium">Jumlah Penduduk Usia {targetAge} Tahun</div>
-                  <div className="text-5xl font-extrabold my-3 drop-shadow-lg">{predictAgeCount()}</div>
+                  <div className="text-sm mb-3 font-medium opacity-90">Per Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                  <div className="text-5xl font-extrabold my-3 drop-shadow-lg">{animatedCount}</div>
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
                     </svg>
                     <div className="text-sm font-semibold">
                       {filteredData.length > 0 
-                        ? ((predictAgeCount() / filteredData.length) * 100).toFixed(1) + "% dari total"
+                        ? ((predictionCount / filteredData.length) * 100).toFixed(1) + "% dari total"
                         : '0%'}
                     </div>
                   </div>

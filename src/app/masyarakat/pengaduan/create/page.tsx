@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
+import HeaderCard from '../../../components/HeaderCard';
 
 const kategoriOptions = [
   'Infrastruktur',
@@ -23,7 +24,7 @@ const kategoriOptions = [
 
 export default function BuatLaporanPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, initializing } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -41,12 +42,12 @@ export default function BuatLaporanPage() {
     email: '',
   });
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated - wait for initializing to complete
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!initializing && !isAuthenticated) {
       router.push('/masyarakat/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, initializing, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -252,27 +253,30 @@ export default function BuatLaporanPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-6">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-red-500 to-pink-600 shadow-lg">
-          <div className="max-w-2xl mx-auto px-4 py-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.back()}
-                className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-95"
-              >
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="flex-1">
-                <h1 className="text-xl font-bold text-white">Buat Laporan Pengaduan</h1>
-                <p className="text-xs text-white/90 mt-0.5">Sampaikan keluhan Anda kepada kami</p>
-              </div>
-            </div>
+  // Show loading while checking authentication
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-red-200 mx-auto"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-t-red-600 border-r-transparent border-b-transparent border-l-transparent mx-auto absolute top-0 left-1/2 -translate-x-1/2"></div>
           </div>
+          <p className="text-gray-600 mt-4 font-medium">Memuat...</p>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-6 pt-4">
+        {/* Header - Using HeaderCard Component */}
+        <HeaderCard 
+          title="Buat Laporan Pengaduan"
+          subtitle="Sampaikan keluhan Anda kepada kami"
+          showBackButton={true}
+          backUrl="/masyarakat/pengaduan"
+        />
 
         {/* Content */}
         <div className="max-w-2xl mx-auto px-4 py-6">

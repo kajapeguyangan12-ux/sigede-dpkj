@@ -23,7 +23,7 @@ const ArrowLeftIcon = ({ className }: { className?: string }) => (
 
 export default function HeaderCard({ title = "Beranda", backUrl = "/masyarakat/home", subtitle, showBackButton = false, onBack }: Props) {
   return (
-    <div className="mb-6 overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200/50 backdrop-blur-xl">
+    <div className="mb-6 mt-4 overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200/50 backdrop-blur-xl">
       <div className="relative">
         {/* Enhanced Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-red-600 to-red-700 opacity-95"></div>
@@ -35,7 +35,7 @@ export default function HeaderCard({ title = "Beranda", backUrl = "/masyarakat/h
                            radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 0%, transparent 50%)`
         }}></div>
 
-        <div className="relative z-10 flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="relative z-10 flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 py-4 sm:py-5">
           {/* Left Section - BGD Logo or Back Button */}
           {showBackButton ? (
             onBack ? (
