@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +21,7 @@ interface Product {
   status: string;
 }
 
-export default function ProdukPage() {
+function ProdukContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -247,5 +247,17 @@ export default function ProdukPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProdukPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600"></div>
+      </div>
+    }>
+      <ProdukContent />
+    </Suspense>
   );
 }

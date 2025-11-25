@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, increment } from 'firebase/firestore';
@@ -49,7 +49,7 @@ const KATEGORI_PRODUK = [
   'Lainnya'
 ];
 
-export default function DetailTokoPage() {
+function DetailTokoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const umkmId = searchParams.get('id');
@@ -552,5 +552,17 @@ export default function DetailTokoPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DetailTokoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600"></div>
+      </div>
+    }>
+      <DetailTokoContent />
+    </Suspense>
   );
 }
