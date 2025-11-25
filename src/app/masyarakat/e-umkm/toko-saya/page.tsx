@@ -232,6 +232,20 @@ export default function TokoSayaPage() {
                           >
                             Lihat Detail
                           </button>
+                          {umkm.status === 'aktif' && (
+                            <>
+                              <Link href={`/masyarakat/e-umkm/toko-saya/produk?umkmId=${umkm.id}`} className="flex-1">
+                                <button className="w-full px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all">
+                                  Kelola Produk
+                                </button>
+                              </Link>
+                              <Link href={`/masyarakat/e-umkm/toko-saya/tambah-produk?umkmId=${umkm.id}`} className="flex-1">
+                                <button className="w-full px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all">
+                                  + Produk
+                                </button>
+                              </Link>
+                            </>
+                          )}
                           {umkm.status === 'pending' && (
                             <span className="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-100 text-yellow-700 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl text-center border-2 border-yellow-300">
                               Menunggu Verifikasi

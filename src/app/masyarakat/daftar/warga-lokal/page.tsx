@@ -256,7 +256,7 @@ export default function WargaLokalRegisterPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50">
+    <main className="min-h-screen bg-gradient-to-br from-red-50 via-white to-pink-50">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -270,12 +270,12 @@ export default function WargaLokalRegisterPage() {
                 className="rounded-2xl shadow-xl border-4 border-white"
                 priority
               />
-              <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+              <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
                 <span className="text-white text-xs font-bold">🏠</span>
               </div>
             </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-600 via-red-700 to-red-800 bg-clip-text text-transparent mb-4">
             Daftar Warga Lokal DPKJ
           </h1>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
@@ -324,9 +324,9 @@ export default function WargaLokalRegisterPage() {
         {/* Registration Form */}
         <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSubmit} className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-100/50 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-8 py-6">
               <h2 className="text-2xl font-bold text-white">Formulir Registrasi Warga Lokal</h2>
-              <p className="text-blue-100 mt-2">Silakan lengkapi semua field berikut dengan benar</p>
+              <p className="text-red-100 mt-2">Silakan lengkapi semua field berikut dengan benar</p>
             </div>
 
             <div className="px-8 py-10">
@@ -360,13 +360,13 @@ export default function WargaLokalRegisterPage() {
                   <div className="mt-2 flex items-center justify-between text-xs">
                     <span className={`${
                       nikVerified ? 'text-green-600 font-semibold' :
-                      formData.nik.length === 16 ? 'text-blue-600' : 
+                      formData.nik.length === 16 ? 'text-red-600' : 
                       formData.nik.length > 0 ? 'text-orange-600' : 'text-gray-400'
                     }`}>
                       {nikVerified ? '✓ NIK Valid & Terverifikasi' : `${formData.nik.length}/16 digit`}
                     </span>
                     {formData.nik.length === 16 && !nikVerified && (
-                      <span className="text-blue-600 flex items-center gap-1">
+                      <span className="text-red-600 flex items-center gap-1">
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
@@ -384,7 +384,7 @@ export default function WargaLokalRegisterPage() {
                       nikVerified
                         ? 'bg-green-500 text-white cursor-not-allowed'
                         : formData.nik.length === 16
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
+                        ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >
@@ -682,7 +682,7 @@ export default function WargaLokalRegisterPage() {
                   disabled={loading || !nikVerified}
                   className={`w-full max-w-md px-8 py-4 font-bold text-lg rounded-2xl shadow-xl transition-all duration-300 transform flex items-center justify-center gap-3 ${
                     nikVerified && !loading
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white hover:shadow-2xl hover:-translate-y-1 cursor-pointer'
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white hover:shadow-2xl hover:-translate-y-1 cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
                   }`}
                 >
@@ -725,7 +725,7 @@ export default function WargaLokalRegisterPage() {
                 <div className="text-center space-y-4">
                   <Link 
                     href="/masyarakat/daftar" 
-                    className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 font-medium transition-all duration-300 group"
+                    className="inline-flex items-center gap-2 text-gray-600 hover:text-red-600 font-medium transition-all duration-300 group"
                   >
                     <ArrowLeftIcon className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
                     <span>Kembali ke Pilihan Pendaftaran</span>
@@ -733,7 +733,7 @@ export default function WargaLokalRegisterPage() {
                   
                   <div className="text-sm text-gray-500">
                     Sudah punya akun? 
-                    <Link href="/masyarakat/login" className="text-blue-600 hover:text-blue-700 font-medium ml-1">
+                    <Link href="/masyarakat/login" className="text-red-600 hover:text-red-700 font-medium ml-1">
                       Login di sini
                     </Link>
                   </div>

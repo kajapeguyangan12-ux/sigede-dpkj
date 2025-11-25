@@ -128,7 +128,7 @@ export default function EUMKMPage() {
     }, 2000);
   };
 
-  // Handle product click - track visits and show details
+  // Handle product click - track visits and navigate to detail page
   const handleProductClick = async (product: Product) => {
     try {
       // Update visit count in Firestore
@@ -140,13 +140,13 @@ export default function EUMKMPage() {
       
       console.log(`🏪 UMKM "${product.namaUsaha}" dikunjungi. Total kunjungan bertambah.`);
       
-      // For now, show product details in alert (you can replace with modal or navigate to detail page)
-      alert(`Detail UMKM: ${product.namaUsaha}\n\nPemilik: ${product.namaPemilik}\nKategori: ${product.kategori}\nAlamat: ${product.alamat}\nTelepon: ${product.noTelepon}\n\nDeskripsi: ${product.deskripsi}`);
+      // Navigate to detail page
+      router.push(`/masyarakat/e-umkm/detail?id=${product.id}`);
       
     } catch (error) {
       console.error('Error updating visit count:', error);
-      // Still show details even if visit tracking fails
-      alert(`Detail UMKM: ${product.namaUsaha}\n\nPemilik: ${product.namaPemilik}\nKategori: ${product.kategori}\nAlamat: ${product.alamat}\nTelepon: ${product.noTelepon}\n\nDeskripsi: ${product.deskripsi}`);
+      // Still navigate even if visit tracking fails
+      router.push(`/masyarakat/e-umkm/detail?id=${product.id}`);
     }
   };
 

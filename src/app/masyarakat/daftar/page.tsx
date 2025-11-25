@@ -83,7 +83,7 @@ export default function RegisterSelectionPage() {
           {/* Warga Lokal DPKJ */}
           <button
             onClick={handleWargaLokalClick}
-            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-105 hover:-translate-y-2"
+            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-500 to-red-700 p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-105 hover:-translate-y-2"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10 text-center text-white">
@@ -92,7 +92,7 @@ export default function RegisterSelectionPage() {
                   <HomeIcon className="w-10 h-10" />
                 </div>
                 <h3 className="text-2xl font-bold mb-2">Warga Lokal DPKJ</h3>
-                <p className="text-blue-100 text-sm leading-relaxed">
+                <p className="text-red-100 text-sm leading-relaxed">
                   Untuk warga yang berdomisili di wilayah Desa Dauh Puri Kaja
                 </p>
               </div>
