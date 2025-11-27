@@ -565,7 +565,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               type="text"
               value={formData.nama}
               onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
               placeholder="Masukkan nama lengkap"
               required
             />
@@ -580,7 +580,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               type="text"
               value={formData.jabatan}
               onChange={(e) => setFormData({ ...formData, jabatan: e.target.value })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
               placeholder="Contoh: Kepala Desa, Sekretaris Desa"
               required
             />
@@ -595,7 +595,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
               placeholder="example@email.com"
             />
           </div>
@@ -609,7 +609,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               type="tel"
               value={formData.noTelp}
               onChange={(e) => setFormData({ ...formData, noTelp: e.target.value })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
               placeholder="08xxxxxxxxxx"
             />
           </div>
@@ -624,7 +624,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               min="1"
               value={formData.urutan}
               onChange={(e) => setFormData({ ...formData, urutan: parseInt(e.target.value) || 1 })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
             />
           </div>
 

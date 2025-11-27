@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type IconProps = {
   className?: string;
@@ -75,39 +76,76 @@ function UserIcon({ className }: IconProps) {
 }
 
 export default function BottomNavigation() {
+  const pathname = usePathname();
+  
+  const isActive = (path: string) => {
+    if (path === "/masyarakat/home" || path === "/masyarakat") {
+      return pathname === "/masyarakat/home" || pathname === "/masyarakat";
+    }
+    return pathname?.startsWith(path);
+  };
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md border-t bg-white/90 px-3 sm:px-4 md:px-6 py-1 sm:py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] backdrop-blur">
-      <ul className="grid grid-cols-4 text-center gap-1 text-[10px] sm:text-xs text-gray-700">
+    <nav className="fixed inset-x-0 bottom-0 w-full border-t bg-white/90 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-2 sm:py-3 md:py-4 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] backdrop-blur z-50">
+      <ul className="grid grid-cols-4 text-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 text-[10px] sm:text-xs md:text-sm text-gray-700">
         <li>
           <Link href="/masyarakat/home" className="grid place-items-center gap-0.5 sm:gap-1 py-1">
-            <span className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full bg-blue-500 text-white shadow-lg">
-              <HomeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            </span>
-            <span className="font-medium line-clamp-1">Beranda</span>
+            <div className="relative">
+              {isActive("/masyarakat/home") && (
+                <span className="absolute inset-0 -m-3 sm:-m-4 rounded-full bg-red-200/60 animate-pulse"></span>
+              )}
+              <span className={`relative grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full text-white shadow-lg transition-all ${
+                isActive("/masyarakat/home") ? "bg-red-500 scale-110" : "bg-blue-500"
+              }`}>
+                <HomeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+            </div>
+            <span className={`font-medium line-clamp-1 transition-colors ${isActive("/masyarakat/home") ? "text-red-500" : ""}`}>Beranda</span>
           </Link>
         </li>
         <li>
           <Link href="/masyarakat/riwayat" className="grid place-items-center gap-0.5 sm:gap-1 py-1">
-            <span className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full bg-purple-500 text-white shadow-lg">
-              <HistoryIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            </span>
-            <span className="font-medium line-clamp-1">Riwayat</span>
+            <div className="relative">
+              {isActive("/masyarakat/riwayat") && (
+                <span className="absolute inset-0 -m-3 sm:-m-4 rounded-full bg-red-200/60 animate-pulse"></span>
+              )}
+              <span className={`relative grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full text-white shadow-lg transition-all ${
+                isActive("/masyarakat/riwayat") ? "bg-red-500 scale-110" : "bg-purple-500"
+              }`}>
+                <HistoryIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+            </div>
+            <span className={`font-medium line-clamp-1 transition-colors ${isActive("/masyarakat/riwayat") ? "text-red-500" : ""}`}>Riwayat</span>
           </Link>
         </li>
         <li>
           <Link href="/masyarakat/notifikasi" className="grid place-items-center gap-0.5 sm:gap-1 py-1">
-            <span className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full bg-orange-500 text-white shadow-lg">
-              <BellIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            </span>
-            <span className="font-medium line-clamp-1">Notifikasi</span>
+            <div className="relative">
+              {isActive("/masyarakat/notifikasi") && (
+                <span className="absolute inset-0 -m-3 sm:-m-4 rounded-full bg-red-200/60 animate-pulse"></span>
+              )}
+              <span className={`relative grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full text-white shadow-lg transition-all ${
+                isActive("/masyarakat/notifikasi") ? "bg-red-500 scale-110" : "bg-orange-500"
+              }`}>
+                <BellIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+            </div>
+            <span className={`font-medium line-clamp-1 transition-colors ${isActive("/masyarakat/notifikasi") ? "text-red-500" : ""}`}>Notifikasi</span>
           </Link>
         </li>
         <li>
           <Link href="/masyarakat/profil" className="grid place-items-center gap-0.5 sm:gap-1 py-1">
-            <span className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full bg-green-500 text-white shadow-lg">
-              <UserIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            </span>
-            <span className="font-medium line-clamp-1">Profil</span>
+            <div className="relative">
+              {isActive("/masyarakat/profil") && (
+                <span className="absolute inset-0 -m-3 sm:-m-4 rounded-full bg-red-200/60 animate-pulse"></span>
+              )}
+              <span className={`relative grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full text-white shadow-lg transition-all ${
+                isActive("/masyarakat/profil") ? "bg-red-500 scale-110" : "bg-green-500"
+              }`}>
+                <UserIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+            </div>
+            <span className={`font-medium line-clamp-1 transition-colors ${isActive("/masyarakat/profil") ? "text-red-500" : ""}`}>Profil</span>
           </Link>
         </li>
       </ul>

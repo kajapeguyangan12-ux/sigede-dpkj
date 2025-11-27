@@ -114,7 +114,7 @@ export default function AdminENewsPage() {
       <style>{styles}</style>
       
       {/* Modern Background with Enhanced Geometric Patterns */}
-      <div className="min-h-screen relative overflow-hidden">
+      <div className="min-h-screen relative">
         {/* Primary Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/80 to-indigo-100/60"></div>
         
@@ -135,7 +135,7 @@ export default function AdminENewsPage() {
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           
           {/* Enhanced Header */}
-          <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 animate-fadeInUp relative z-40 overflow-hidden">
+          <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 animate-fadeInUp relative z-40">
             {/* Header Decoration */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 rounded-t-3xl"></div>
             
@@ -280,7 +280,7 @@ export default function AdminENewsPage() {
           
           {/* Enhanced Content Container */}
           <div className="animate-fadeInUp" style={{ animationDelay: '0.4s' }}>
-            <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 overflow-hidden relative">
+            <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 relative">
               {/* Content Decoration */}
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500"></div>
               

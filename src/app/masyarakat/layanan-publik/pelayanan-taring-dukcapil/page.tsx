@@ -8,60 +8,87 @@ import Link from "next/link";
 import Image from "next/image";
 
 const DesaLogo = "/logo/LOGO_DPKJ.png";
-const BgdLogo = "/logo/Logo_BGD.png";
+const BgdLogo = "/logo/Logo_BGD1.png";
 
 type DukcapilService = {
   title: string;
   icon: JSX.Element;
   description: string;
+  image: string;
+  link: string;
 };
 
 const dukcapilServices: DukcapilService[] = [
   {
     title: "Paket Akta Lahir",
-    icon: <BirthIcon className="h-12 w-12 text-red-600" />,
+    icon: <BirthIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "Pembuatan akta kelahiran",
+    image: "/layanan/akta-lahir.jpg",
+    link: "/masyarakat/layanan-publik/paket-akta-lahir"
   },
   {
     title: "Paket Akta Perkawinan",
-    icon: <MarriageIcon className="h-12 w-12 text-red-600" />,
+    icon: <MarriageIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "Pembuatan akta perkawinan",
+    image: "/layanan/akta-perkawinan.jpg",
+    link: "/masyarakat/layanan-publik/paket-akta-perkawinan"
   },
   {
     title: "Paket Akta Perceraian",
-    icon: <DivorceIcon className="h-12 w-12 text-red-600" />,
+    icon: <DivorceIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "Pembuatan akta perceraian",
+    image: "/layanan/akta-perceraian.jpg",
+    link: "/masyarakat/layanan-publik/paket-akta-perceraian"
   },
   {
     title: "Paket Akta Kematian",
-    icon: <DeathIcon className="h-12 w-12 text-red-600" />,
+    icon: <DeathIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "Pembuatan akta kematian",
+    image: "/layanan/akta-kematian.jpg",
+    link: "/masyarakat/layanan-publik/paket-akta-kematian"
   },
   {
     title: "Kartu Keluarga",
-    icon: <FamilyCardIcon className="h-12 w-12 text-red-600" />,
+    icon: <FamilyCardIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "Pembuatan kartu keluarga",
+    image: "/layanan/kartu-keluarga.jpg",
+    link: "/masyarakat/layanan-publik/kartu-keluarga"
   },
   {
     title: "Surat Pindah Domisili",
-    icon: <MovingIcon className="h-12 w-12 text-red-600" />,
+    icon: <MovingIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "Surat pindah domisili",
+    image: "/layanan/surat-pindah.jpg",
+    link: "/masyarakat/layanan-publik/surat-pindah-domisili"
   },
   {
     title: "Akta/Surat Lainnya",
-    icon: <DocumentIcon className="h-12 w-12 text-red-600" />,
+    icon: <DocumentIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "Akta atau surat lainnya",
+    image: "/layanan/surat-lainnya.jpg",
+    link: "/masyarakat/layanan-publik/akta-surat-lainnya"
   },
   {
     title: "KTP Elektronik Denpasar",
-    icon: <KtpIcon className="h-12 w-12 text-red-600" />,
+    icon: <KtpIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "KTP Elektronik Denpasar",
+    image: "/layanan/ktp-elektronik.jpg",
+    link: "/masyarakat/layanan-publik/ktp-elektronik-denpasar"
+  },
+  {
+    title: "KTP Elektronik Luar Denpasar",
+    icon: <KtpIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
+    description: "KTP Elektronik Luar Denpasar",
+    image: "/layanan/ktp-luar-denpasar.jpg",
+    link: "/masyarakat/layanan-publik/ktp-elektronik-luar-denpasar"
   },
   {
     title: "Kartu Identitas Anak",
-    icon: <ChildIdIcon className="h-12 w-12 text-red-600" />,
+    icon: <ChildIdIcon className="h-16 w-16 sm:h-20 sm:w-20" />,
     description: "Kartu identitas anak",
-  },
+    image: "/layanan/kartu-identitas-anak.jpg",
+    link: "/masyarakat/layanan-publik/kartu-identitas-anak"
+  }
 ];
 
 export default function PelayananTaringDukcapilPage() {
@@ -72,70 +99,70 @@ export default function PelayananTaringDukcapilPage() {
   );
 
   return (
-    <main className="min-h-[100svh] bg-red-50 text-gray-900">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+    <main className="min-h-[100svh] bg-gradient-to-br from-red-50 via-pink-50 to-red-50">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-32 pt-4">
         {/* Header */}
         <HeaderCard title="Pelayanan Taring Dukcapil" backUrl="/masyarakat/layanan-publik" showBackButton={true} />
 
         {/* Search */}
-        <div className="mb-6">
+        <div className="mb-5 sm:mb-6">
           <div className="relative">
             <input
               type="text"
-              className="w-full rounded-full border border-red-100 bg-white/95 px-4 py-3 pl-10 text-sm shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-              placeholder="Search"
+              className="w-full rounded-2xl border-2 border-red-200 bg-white px-4 py-2.5 sm:py-3 pl-10 sm:pl-11 text-sm sm:text-base shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+              placeholder="Cari layanan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <SearchIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-red-500" />
+            <SearchIcon className="absolute left-3 sm:left-4 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-red-500" />
           </div>
         </div>
 
         {/* Services Grid */}
-        <section className="space-y-4">
+        <section>
           {filteredServices.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
               {filteredServices.map((service) => (
                 <Link
                   key={service.title}
-                  href={
-                    service.title === "Paket Akta Lahir"
-                      ? "/masyarakat/layanan-publik/paket-akta-lahir"
-                      : service.title === "Paket Akta Perkawinan"
-                      ? "/masyarakat/layanan-publik/paket-akta-perkawinan"
-                      : service.title === "Paket Akta Perceraian"
-                      ? "/masyarakat/layanan-publik/paket-akta-perceraian"
-                      : service.title === "Paket Akta Kematian"
-                      ? "/masyarakat/layanan-publik/paket-akta-kematian"
-                      : service.title === "Kartu Keluarga"
-                      ? "/masyarakat/layanan-publik/kartu-keluarga"
-                      : service.title === "Surat Pindah Domisili"
-                      ? "/masyarakat/layanan-publik/surat-pindah-domisili"
-                      : service.title === "Akta/Surat Lainnya"
-                      ? "/masyarakat/layanan-publik/akta-surat-lainnya"
-                      : service.title === "KTP Elektronik Denpasar"
-                      ? "/masyarakat/layanan-publik/ktp-elektronik-denpasar"
-                      : service.title === "Kartu Identitas Anak"
-                      ? "/masyarakat/layanan-publik/kartu-identitas-anak"
-                      : "#"
-                  }
-                  className="flex h-full flex-col items-center justify-between gap-3 rounded-3xl border border-red-100 bg-white/95 px-4 py-6 text-center shadow-lg ring-1 ring-red-200 transition hover:-translate-y-[1px] hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                  href={service.link}
+                  className="group flex flex-col items-center rounded-2xl sm:rounded-3xl border-2 border-red-100 bg-white p-4 sm:p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-red-300 overflow-hidden relative"
                 >
-                  <div className="grid h-16 w-16 place-items-center rounded-2xl bg-red-50">
-                    {service.icon}
+                  {/* Gradient Background on Hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-50/0 via-pink-50/0 to-red-50/0 group-hover:from-red-50/80 group-hover:via-pink-50/80 group-hover:to-red-50/80 transition-all duration-300" />
+                  
+                  {/* Icon Container with Professional Design */}
+                  <div className="relative w-full aspect-square mb-3 sm:mb-4 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-red-100 via-pink-100 to-red-200 shadow-md group-hover:shadow-xl transition-all duration-300 flex items-center justify-center group-hover:scale-105">
+                    {/* Inner gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent" />
+                    {/* Icon with animation */}
+                    <div className="relative text-red-600 group-hover:text-red-700 transition-colors duration-300 group-hover:scale-110 transform">
+                      {service.icon}
+                    </div>
+                    {/* Decorative corner accent */}
+                    <div className="absolute top-0 right-0 w-8 h-8 bg-gradient-to-bl from-white/40 to-transparent rounded-bl-3xl" />
+                    <div className="absolute bottom-0 left-0 w-8 h-8 bg-gradient-to-tr from-red-600/10 to-transparent rounded-tr-3xl" />
                   </div>
-                  <div>
-                    <span className="text-sm font-semibold leading-snug text-gray-800">
+                  
+                  {/* Title */}
+                  <div className="relative w-full text-center">
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-2 leading-tight group-hover:text-red-600 transition-colors duration-300">
                       {service.title}
-                    </span>
+                    </h3>
                   </div>
+                  
+                  {/* Hover indicator */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-pink-500 to-red-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-b-2xl" />
                 </Link>
               ))}
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed border-red-200 bg-white/80 px-6 py-10 text-center text-sm text-gray-600">
-              <p className="font-semibold text-red-600">Tidak ditemukan</p>
-              <p className="mt-1">
+            <div className="rounded-2xl sm:rounded-3xl border-2 border-dashed border-red-200 bg-white px-6 py-10 sm:py-12 text-center">
+              <svg className="w-16 h-16 sm:w-20 sm:h-20 mx-auto text-red-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="font-bold text-base sm:text-lg text-red-600 mb-2">Tidak ditemukan</p>
+              <p className="text-sm sm:text-base text-gray-600">
                 Silakan ubah kata kunci pencarian.
               </p>
             </div>
@@ -439,6 +466,41 @@ function ChildIdIcon({ className }: IconProps) {
       <rect x="8" y="32" width="32" height="8" rx="2" />
       <circle cx="16" cy="36" r="1" />
       <circle cx="32" cy="36" r="1" />
+    </svg>
+  );
+}
+
+function SurveyIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 11l3 3L22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  );
+}
+
+function ComplaintIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M12 7v4" />
+      <circle cx="12" cy="15" r="0.5" fill="currentColor" />
     </svg>
   );
 }

@@ -9,7 +9,7 @@ export default function MasyarakatLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, initializing } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -17,32 +17,49 @@ export default function MasyarakatLayout({
 
   useEffect(() => {
     // Prevent multiple redirects and checks
-    if (isRedirecting || hasCheckedAuth) {
+    if (isRedirecting) {
+      console.log('🚫 Already redirecting, skipping check');
       return;
     }
 
-    // Wait for auth to load completely
-    if (loading) {
+    if (hasCheckedAuth) {
+      console.log('✓ Already checked auth for this pathname');
+      return;
+    }
+
+    // Wait for auth to load completely - CRITICAL: use initializing not loading
+    if (initializing) {
+      console.log('⏳ Waiting for auth initialization...');
+      return;
+    }
+
+    // Ensure user object is fully loaded if authenticated
+    if (isAuthenticated && !user) {
+      console.log('⚠️ Authenticated but user object not loaded yet');
       return;
     }
 
     // Define public paths that don't require authentication
-    const publicPaths = ['/masyarakat/login', '/masyarakat/daftar', '/masyarakat'];
+    const publicPaths = ['/masyarakat/login', '/masyarakat/daftar'];
     const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '/'));
     
     console.log('🔐 Masyarakat Layout Check:', { 
       pathname, 
       isPublicPath, 
-      isAuthenticated, 
-      userRole: user?.role 
+      isAuthenticated,
+      initializing,
+      userRole: user?.role,
+      userId: user?.uid,
+      hasCheckedAuth,
+      isRedirecting
     });
 
     // Mark that we've checked auth to prevent repeated checks
     setHasCheckedAuth(true);
 
     // If on login/register page and already authenticated, redirect to home
-    if ((pathname === '/masyarakat/login' || pathname === '/masyarakat/daftar') && isAuthenticated) {
-      if (user && ['administrator', 'admin_desa', 'kepala_desa'].includes(user.role)) {
+    if ((pathname === '/masyarakat/login' || pathname === '/masyarakat/daftar') && isAuthenticated && user) {
+      if (['administrator', 'admin_desa'].includes(user.role)) {
         console.log('✅ Redirecting admin to admin/home');
         setIsRedirecting(true);
         setTimeout(() => {
@@ -68,8 +85,9 @@ export default function MasyarakatLayout({
       return;
     }
 
-    // If authenticated but is admin trying to access masyarakat pages
-    if (!isPublicPath && isAuthenticated && user && ['administrator', 'admin_desa', 'kepala_desa'].includes(user.role)) {
+    // Only administrator and admin_desa should be redirected to admin panel
+    // kepala_desa and kepala_dusun can access masyarakat pages
+    if (!isPublicPath && isAuthenticated && user && ['administrator', 'admin_desa'].includes(user.role)) {
       console.log('❌ Admin trying to access masyarakat page');
       setIsRedirecting(true);
       setTimeout(() => {
@@ -77,16 +95,21 @@ export default function MasyarakatLayout({
       }, 100);
       return;
     }
-  }, [isAuthenticated, user, loading, pathname, router, isRedirecting, hasCheckedAuth]);
+  }, [isAuthenticated, user, initializing, pathname, router, isRedirecting, hasCheckedAuth]);
 
-  // Reset check flag when pathname changes
+  // Reset check flag when pathname changes - with delay to prevent loops
   useEffect(() => {
-    setHasCheckedAuth(false);
-    setIsRedirecting(false);
-  }, [pathname]);
+    // Only reset if not currently redirecting
+    if (!isRedirecting) {
+      const timer = setTimeout(() => {
+        setHasCheckedAuth(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname, isRedirecting]);
 
-  // Show loading state while checking auth
-  if (loading) {
+  // Show loading state while checking auth - use initializing
+  if (initializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

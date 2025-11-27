@@ -85,7 +85,7 @@ export default function VoucherSayaPage() {
   };
   return (
     <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-white to-orange-50">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         {/* Header Card - Modern Design */}
         <div className="mb-6 rounded-3xl bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 shadow-2xl overflow-hidden">
           <div className="relative px-6 py-4">

@@ -9,11 +9,14 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated, initializing, isAdmin } = useAuth();
+  const { user, isAuthenticated, initializing } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+
+  // Check if user can access admin panel (includes kepala_desa and kepala_dusun)
+  const canAccessAdmin = user ? ['administrator', 'admin_desa', 'kepala_desa', 'kepala_dusun'].includes(user.role) : false;
 
   useEffect(() => {
     // Prevent multiple redirects and checks
@@ -33,16 +36,16 @@ export default function AdminLayout({
       pathname, 
       isLoginPage, 
       isAuthenticated, 
-      isAdmin,
+      canAccessAdmin,
       userRole: user?.role 
     });
 
     // Mark that we've checked auth to prevent repeated checks
     setHasCheckedAuth(true);
 
-    // If on login page and already authenticated as admin, redirect to home
-    if (isLoginPage && isAuthenticated && isAdmin) {
-      console.log('✅ Already authenticated as admin, redirecting to admin/home');
+    // If on login page and already authenticated with admin access, redirect to home
+    if (isLoginPage && isAuthenticated && canAccessAdmin) {
+      console.log('✅ Already authenticated with admin access, redirecting to admin/home');
       setIsRedirecting(true);
       setTimeout(() => {
         router.replace('/admin/home');
@@ -50,8 +53,8 @@ export default function AdminLayout({
       return;
     }
 
-    // If on login page and authenticated but not admin, redirect to masyarakat
-    if (isLoginPage && isAuthenticated && !isAdmin) {
+    // If on login page and authenticated but no admin access, redirect to masyarakat
+    if (isLoginPage && isAuthenticated && !canAccessAdmin) {
       console.log('✅ Authenticated as masyarakat, redirecting to masyarakat/home');
       setIsRedirecting(true);
       setTimeout(() => {
@@ -70,16 +73,16 @@ export default function AdminLayout({
       return;
     }
 
-    // If authenticated but not admin trying to access admin pages
-    if (!isLoginPage && isAuthenticated && !isAdmin) {
-      console.log('❌ Non-admin trying to access admin page');
+    // If authenticated but cannot access admin panel
+    if (!isLoginPage && isAuthenticated && !canAccessAdmin) {
+      console.log('❌ User cannot access admin panel, redirecting to masyarakat');
       setIsRedirecting(true);
       setTimeout(() => {
         router.replace('/masyarakat/home');
       }, 100);
       return;
     }
-  }, [isAuthenticated, user, initializing, pathname, router, isRedirecting, isAdmin, hasCheckedAuth]);
+  }, [isAuthenticated, user, initializing, pathname, router, isRedirecting, canAccessAdmin, hasCheckedAuth]);
 
   // Reset check flag when pathname changes
   useEffect(() => {

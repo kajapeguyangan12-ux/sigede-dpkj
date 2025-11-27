@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 
 interface UMKM {
   id: string;
@@ -56,6 +58,11 @@ export default function TokoSayaPage() {
   const [loading, setLoading] = useState(true);
   const [selectedUMKM, setSelectedUMKM] = useState<UMKM | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<UMKM>>({});
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -113,11 +120,75 @@ export default function TokoSayaPage() {
     setShowDetailModal(true);
   };
 
+  const handleEdit = (umkm: UMKM) => {
+    setSelectedUMKM(umkm);
+    setEditForm({
+      ...umkm,
+      // Pastikan kategori sudah terset dengan benar
+      kategori: umkm.kategori || ''
+    });
+    setPreviewImages(umkm.fotoUsaha || []);
+    setShowEditModal(true);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    // Hanya ambil 1 foto pertama (replace, bukan add)
+    const file = files[0];
+    setNewImages([file]);
+    const preview = URL.createObjectURL(file);
+    setPreviewImages([preview]);
+  };
+
+  const removeImage = () => {
+    setPreviewImages([]);
+    setNewImages([]);
+  };
+
+  const handleUpdateUMKM = async () => {
+    if (!selectedUMKM) return;
+
+    try {
+      setEditLoading(true);
+
+      let uploadedImageUrls = editForm.fotoUsaha || [];
+
+      // Upload new image if any (replace, not add)
+      if (newImages.length > 0) {
+        const file = newImages[0];
+        const imageRef = ref(storage, `umkm/${selectedUMKM.id}/${Date.now()}_${file.name}`);
+        await uploadBytes(imageRef, file);
+        const newUrl = await getDownloadURL(imageRef);
+        uploadedImageUrls = [newUrl]; // Replace dengan foto baru
+      }
+
+      // Update Firestore
+      const umkmRef = doc(db, 'e-umkm', selectedUMKM.id);
+      await updateDoc(umkmRef, {
+        ...editForm,
+        fotoUsaha: uploadedImageUrls,
+      });
+
+      alert('Data UMKM berhasil diperbarui!');
+      setShowEditModal(false);
+      setNewImages([]);
+      setPreviewImages([]);
+      fetchMyUMKM(); // Refresh list
+    } catch (error) {
+      console.error('Error updating UMKM:', error);
+      alert('Gagal memperbarui data UMKM');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-24">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-32">
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-3 sm:px-4 py-4 sm:py-6 shadow-xl">
-          <div className="max-w-4xl mx-auto">
+        <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-4 sm:py-5 md:py-6 shadow-xl">
+          <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-2 sm:gap-4">
               <Link href="/masyarakat/e-umkm">
                 <button className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg sm:rounded-xl transition-all">
@@ -127,7 +198,7 @@ export default function TokoSayaPage() {
                 </button>
               </Link>
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold truncate">Toko Saya</h1>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate">Toko Saya</h1>
                 <p className="text-red-100 text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">UMKM yang Anda daftarkan</p>
               </div>
               <Link href="/masyarakat/e-umkm/create">
@@ -140,7 +211,7 @@ export default function TokoSayaPage() {
         </div>
 
         {/* Content */}
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 md:py-8">
           {/* Info Card */}
           {umkmList.length === 0 && !loading && (
             <div className="bg-blue-50 border-2 border-blue-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex gap-2 sm:gap-3 mb-4 sm:mb-6">
@@ -168,7 +239,7 @@ export default function TokoSayaPage() {
             </div>
           ) : (
             /* UMKM List */
-            <div className="space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-5">
               {umkmList.map((umkm) => (
                 <div
                   key={umkm.id}
@@ -225,35 +296,41 @@ export default function TokoSayaPage() {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => handleViewDetail(umkm)}
-                            className="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all"
+                            className="flex-1 min-w-[100px] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all"
                           >
-                            Lihat Detail
+                            Detail
+                          </button>
+                          <button
+                            onClick={() => handleEdit(umkm)}
+                            className="flex-1 min-w-[100px] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all"
+                          >
+                            Edit
                           </button>
                           {umkm.status === 'aktif' && (
                             <>
-                              <Link href={`/masyarakat/e-umkm/toko-saya/produk?umkmId=${umkm.id}`} className="flex-1">
-                                <button className="w-full px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all">
-                                  Kelola Produk
+                              <Link href={`/masyarakat/e-umkm/toko-saya/produk?umkmId=${umkm.id}`} className="flex-1 min-w-[100px]">
+                                <button className="w-full px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all">
+                                  Produk
                                 </button>
                               </Link>
-                              <Link href={`/masyarakat/e-umkm/toko-saya/tambah-produk?umkmId=${umkm.id}`} className="flex-1">
-                                <button className="w-full px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all">
+                              <Link href={`/masyarakat/e-umkm/toko-saya/tambah-produk?umkmId=${umkm.id}`} className="flex-1 min-w-[100px]">
+                                <button className="w-full px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all">
                                   + Produk
                                 </button>
                               </Link>
                             </>
                           )}
                           {umkm.status === 'pending' && (
-                            <span className="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-100 text-yellow-700 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl text-center border-2 border-yellow-300">
+                            <span className="flex-1 min-w-[140px] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-yellow-100 text-yellow-700 text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl text-center border-2 border-yellow-300">
                               Menunggu Verifikasi
                             </span>
                           )}
                           {umkm.status === 'tidak_aktif' && (
-                            <Link href="/masyarakat/e-umkm/create" className="flex-1">
-                              <button className="w-full px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all">
+                            <Link href="/masyarakat/e-umkm/create" className="flex-1 min-w-[100px]">
+                              <button className="w-full px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all">
                                 Daftar Ulang
                               </button>
                             </Link>
@@ -403,6 +480,193 @@ export default function TokoSayaPage() {
                   className="w-full px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-2xl shadow-lg transition-all"
                 >
                   Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {showEditModal && selectedUMKM && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-yellow-500 to-orange-600 text-white p-4 sm:p-5 md:p-6 rounded-t-3xl z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-1">Edit UMKM</h2>
+                    <p className="text-yellow-100 text-xs sm:text-sm">Perbarui informasi toko Anda</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setNewImages([]);
+                      setPreviewImages([]);
+                    }}
+                    className="p-2 hover:bg-white/20 rounded-full transition-all"
+                  >
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 sm:p-5 md:p-6 lg:p-8 space-y-4 sm:space-y-5 md:space-y-6">
+                {/* Photo Upload Section */}
+                <div>
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Foto Usaha
+                  </h4>
+                  
+                  {previewImages.length > 0 ? (
+                    <div className="relative mb-3 sm:mb-4">
+                      <img
+                        src={previewImages[0]}
+                        alt="Preview"
+                        className="w-full h-48 sm:h-56 md:h-64 object-cover rounded-xl shadow-lg"
+                      />
+                      <button
+                        onClick={removeImage}
+                        className="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all shadow-lg"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="block w-full p-6 sm:p-8 border-2 border-dashed border-gray-300 rounded-xl sm:rounded-2xl text-center cursor-pointer hover:border-yellow-500 hover:bg-yellow-50 transition-all">
+                      <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="block text-sm sm:text-base text-gray-700 font-semibold mb-1">Klik untuk upload foto</span>
+                      <span className="block text-xs sm:text-sm text-gray-500">PNG, JPG atau JPEG (Max 5MB)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Basic Info Form */}
+                <div>
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Informasi Dasar
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Nama Usaha</label>
+                      <input
+                        type="text"
+                        value={editForm.namaUsaha || ''}
+                        onChange={(e) => setEditForm({...editForm, namaUsaha: e.target.value})}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Nama Pemilik</label>
+                      <input
+                        type="text"
+                        value={editForm.namaPemilik || ''}
+                        onChange={(e) => setEditForm({...editForm, namaPemilik: e.target.value})}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Kategori</label>
+                      <select
+                        value={editForm.kategori || ''}
+                        onChange={(e) => setEditForm({...editForm, kategori: e.target.value})}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base text-gray-900"
+                      >
+                        <option value="">Pilih Kategori</option>
+                        <option value="Makanan & Minuman">Makanan & Minuman</option>
+                        <option value="Fashion">Fashion</option>
+                        <option value="Kerajinan">Kerajinan</option>
+                        <option value="Jasa">Jasa</option>
+                        <option value="Lainnya">Lainnya</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">No. Telepon</label>
+                      <input
+                        type="tel"
+                        value={editForm.noTelepon || ''}
+                        onChange={(e) => setEditForm({...editForm, noTelepon: e.target.value})}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Email (Opsional)</label>
+                      <input
+                        type="email"
+                        value={editForm.email || ''}
+                        onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Jam Operasional</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: 08:00 - 17:00"
+                        value={editForm.jamOperasional || ''}
+                        onChange={(e) => setEditForm({...editForm, jamOperasional: e.target.value})}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base text-gray-900 placeholder:text-gray-400"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Alamat</label>
+                      <textarea
+                        value={editForm.alamat || ''}
+                        onChange={(e) => setEditForm({...editForm, alamat: e.target.value})}
+                        rows={3}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none text-sm sm:text-base text-gray-900"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Deskripsi</label>
+                      <textarea
+                        value={editForm.deskripsi || ''}
+                        onChange={(e) => setEditForm({...editForm, deskripsi: e.target.value})}
+                        rows={4}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none text-sm sm:text-base text-gray-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="sticky bottom-0 bg-gray-50 p-4 sm:p-5 md:p-6 rounded-b-3xl flex gap-2 sm:gap-3">
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setNewImages([]);
+                    setPreviewImages([]);
+                  }}
+                  className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl sm:rounded-2xl transition-all text-sm sm:text-base"
+                  disabled={editLoading}
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleUpdateUMKM}
+                  disabled={editLoading}
+                  className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-xl sm:rounded-2xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                >
+                  {editLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
               </div>
             </div>

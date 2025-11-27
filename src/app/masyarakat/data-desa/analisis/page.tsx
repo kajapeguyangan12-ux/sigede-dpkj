@@ -163,6 +163,7 @@ interface FilterState {
 
 interface AgeGroup {
   range: string;
+  label: string;
   count: number;
   percentage: number;
 }
@@ -313,15 +314,15 @@ export default function AnalisisDataPage() {
 
   const calculateAgeGroups = () => {
     const groups = [
-      { range: "0-5", min: 0, max: 5, count: 0 },
-      { range: "6-12", min: 6, max: 12, count: 0 },
-      { range: "13-17", min: 13, max: 17, count: 0 },
-      { range: "18-25", min: 18, max: 25, count: 0 },
-      { range: "26-35", min: 26, max: 35, count: 0 },
-      { range: "36-45", min: 36, max: 45, count: 0 },
-      { range: "46-55", min: 46, max: 55, count: 0 },
-      { range: "56-65", min: 56, max: 65, count: 0 },
-      { range: ">65", min: 66, max: 999, count: 0 },
+      { range: "0-5 tahun", label: "0-5 tahun", min: 0, max: 5, count: 0 },
+      { range: "6-12 tahun", label: "6-12 tahun", min: 6, max: 12, count: 0 },
+      { range: "13-17 tahun", label: "13-17 tahun", min: 13, max: 17, count: 0 },
+      { range: "18-25 tahun", label: "18-25 tahun", min: 18, max: 25, count: 0 },
+      { range: "26-35 tahun", label: "26-35 tahun", min: 26, max: 35, count: 0 },
+      { range: "36-45 tahun", label: "36-45 tahun", min: 36, max: 45, count: 0 },
+      { range: "46-55 tahun", label: "46-55 tahun", min: 46, max: 55, count: 0 },
+      { range: "56-65 tahun", label: "56-65 tahun", min: 56, max: 65, count: 0 },
+      { range: ">65 tahun", label: ">65 tahun", min: 66, max: 999, count: 0 },
     ];
 
     filteredData.forEach(person => {
@@ -335,9 +336,16 @@ export default function AnalisisDataPage() {
     const total = filteredData.length;
     const ageGroupsWithPercentage = groups.map(g => ({
       range: g.range,
+      label: g.label,
       count: g.count,
       percentage: total > 0 ? (g.count / total) * 100 : 0,
     }));
+
+    console.log('📊 Age Groups Calculated:', {
+      total,
+      groups: ageGroupsWithPercentage,
+      rawData: groups
+    });
 
     setAgeGroups(ageGroupsWithPercentage);
   };
@@ -409,7 +417,7 @@ export default function AnalisisDataPage() {
   if (loading) {
     return (
       <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-        <div className="mx-auto w-full max-w-md px-4 pb-20 pt-4">
+        <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
           <HeaderCard title="Analisis Data" backUrl="/masyarakat/data-desa" showBackButton={true} />
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -434,43 +442,43 @@ export default function AnalisisDataPage() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-200/30 to-pink-200/30 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
       </div>
 
-      <div className="relative mx-auto w-full max-w-md px-4 pb-20 pt-4">
+      <div className="relative mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         <HeaderCard title="Analisis Data" backUrl="/masyarakat/data-desa" showBackButton={true} />
 
         {/* Summary Card - SaaS Style */}
-        <div className="mb-6 relative group animate-scaleIn">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
-          <div className="relative glass-effect rounded-3xl p-8 shadow-2xl border border-white/40">
+        <div className="mb-4 sm:mb-6 relative group animate-scaleIn">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-2xl sm:rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
+          <div className="relative glass-effect rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl border border-white/40">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 shadow-2xl mb-5 animate-float">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 shadow-2xl mb-4 sm:mb-5 animate-float">
+                <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
               <div className="mb-2">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-full border border-blue-200/50">
-                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse"></span>
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Total Penduduk</span>
+                <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-full border border-blue-200/50">
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse"></span>
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-wider">Total Penduduk</span>
                 </div>
               </div>
               <div className="relative">
-                <div className="text-6xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2 leading-none">
+                <div className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2 leading-none">
                   {filteredData.length.toLocaleString()}
                 </div>
               </div>
-              <div className="text-base text-gray-600 font-semibold">Jiwa</div>
+              <div className="text-sm sm:text-base text-gray-600 font-semibold">Jiwa</div>
               
               {activeFiltersCount > 0 && (
-                <div className="mt-6 pt-5 border-t border-gray-200/50 animate-fadeIn">
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <div className="mt-4 sm:mt-6 pt-4 sm:pt-5 border-t border-gray-200/50 animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm shadow-lg flex items-center gap-2">
+                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd"/>
                       </svg>
                       {activeFiltersCount} Filter
                     </div>
-                    <div className="text-gray-400 font-medium">dari</div>
-                    <div className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm">
+                    <div className="text-gray-400 font-medium text-xs sm:text-sm">dari</div>
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-100 text-gray-700 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm">
                       {allData.length.toLocaleString()} Total
                     </div>
                   </div>
@@ -481,26 +489,26 @@ export default function AnalisisDataPage() {
         </div>
 
         {/* Filter Panel Toggle - SaaS Style */}
-        <div className="mb-6 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
+        <div className="mb-4 sm:mb-6 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
           <button
             onClick={handleToggleFilter}
             className="w-full group relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
-            <div className="relative flex items-center justify-between px-6 py-5 glass-effect rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-white/50 group-hover:border-blue-300/50">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-xl sm:rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
+            <div className="relative flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 glass-effect rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-white/50 group-hover:border-blue-300/50">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                   </svg>
                 </div>
                 <div className="text-left">
-                  <span className="font-bold text-gray-800 block text-lg">Filter & Analisis</span>
-                  <span className="text-xs text-gray-500 font-medium">Saring data berdasarkan kategori</span>
+                  <span className="font-bold text-gray-800 block text-sm sm:text-base md:text-lg">Filter & Analisis</span>
+                  <span className="text-[10px] sm:text-xs text-gray-500 font-medium hidden sm:block">Saring data berdasarkan kategori</span>
                 </div>
                 {activeFiltersCount > 0 && (
-                  <div className="ml-3 animate-scaleIn">
-                    <div className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm rounded-full font-bold shadow-lg flex items-center gap-1.5">
+                  <div className="ml-2 sm:ml-3 animate-scaleIn">
+                    <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs sm:text-sm rounded-full font-bold shadow-lg flex items-center gap-1 sm:gap-1.5">
                       <span>{activeFiltersCount}</span>
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
@@ -525,27 +533,28 @@ export default function AnalisisDataPage() {
 
         {/* Filter Panel - SaaS Style with smooth animation */}
         {showFilterPanel && (
-          <div className={`mb-6 bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/30 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-blue-100/50 overflow-hidden ${isClosing ? 'animate-slideUp' : 'animate-slideDown'}`}>
+          <div className={`mb-4 sm:mb-6 bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/30 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-blue-100/50 overflow-hidden ${isClosing ? 'animate-slideUp' : 'animate-slideDown'}`}>
             {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-3xl -z-10"></div>
+            <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-3xl -z-10"></div>
             
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-7 animate-fadeIn">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 shadow-xl">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center justify-between mb-4 sm:mb-7 animate-fadeIn">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 shadow-xl">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-black text-gray-800 text-lg">Filter Data</h3>
-                    <p className="text-xs text-gray-500 font-medium">Terapkan filter sesuai kebutuhan</p>
+                    <h3 className="font-black text-gray-800 text-sm sm:text-base md:text-lg">Filter Data</h3>
+                    <p className="text-[10px] sm:text-xs text-gray-500 font-medium hidden sm:block">Terapkan filter sesuai kebutuhan</p>
                   </div>
                 </div>
                 {activeFiltersCount > 0 && (
                   <button
                     onClick={resetFilters}
-                    className="group/btn px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-105 animate-scaleIn flex items-center gap-2"
+                    className="group/btn px-5 py-3 md:py-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:scale-95 text-white text-sm font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-105 animate-scaleIn flex items-center gap-2 touch-manipulation"
+                    style={{ minHeight: '44px' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -584,8 +593,8 @@ export default function AnalisisDataPage() {
                 <select
                   value={filters.jenisKelamin}
                   onChange={(e) => setFilters({ ...filters, jenisKelamin: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all hover:border-indigo-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.jenisKelamin ? '#1f2937' : '#9ca3af' }}
+                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all hover:border-green-300 shadow-sm cursor-pointer touch-manipulation"
+                  style={{ color: filters.jenisKelamin ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
                 >
                   <option value="" className="text-gray-400">Pilih Jenis Kelamin</option>
                   {filterOptions.jenisKelamin.map((option: string) => (
@@ -603,8 +612,8 @@ export default function AnalisisDataPage() {
                 <select
                   value={filters.agama}
                   onChange={(e) => setFilters({ ...filters, agama: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.agama ? '#1f2937' : '#9ca3af' }}
+                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm cursor-pointer touch-manipulation"
+                  style={{ color: filters.agama ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
                 >
                   <option value="" className="text-gray-400">Pilih Agama</option>
                   {filterOptions.agama.map((option: string) => (
@@ -622,8 +631,8 @@ export default function AnalisisDataPage() {
                 <select
                   value={filters.sukuBangsa}
                   onChange={(e) => setFilters({ ...filters, sukuBangsa: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-pink-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.sukuBangsa ? '#1f2937' : '#9ca3af' }}
+                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-pink-300 shadow-sm cursor-pointer touch-manipulation"
+                  style={{ color: filters.sukuBangsa ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
                 >
                   <option value="" className="text-gray-400">Pilih Suku Bangsa</option>
                   {filterOptions.sukuBangsa.map((option: string) => (
@@ -641,8 +650,8 @@ export default function AnalisisDataPage() {
                 <select
                   value={filters.pendidikanTerakhir}
                   onChange={(e) => setFilters({ ...filters, pendidikanTerakhir: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all hover:border-green-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.pendidikanTerakhir ? '#1f2937' : '#9ca3af' }}
+                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all hover:border-green-300 shadow-sm cursor-pointer touch-manipulation"
+                  style={{ color: filters.pendidikanTerakhir ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
                 >
                   <option value="" className="text-gray-400">Pilih Pendidikan</option>
                   {filterOptions.pendidikanTerakhir.map((option: string) => (
@@ -660,8 +669,8 @@ export default function AnalisisDataPage() {
                 <select
                   value={filters.pekerjaan}
                   onChange={(e) => setFilters({ ...filters, pekerjaan: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all hover:border-yellow-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.pekerjaan ? '#1f2937' : '#9ca3af' }}
+                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all hover:border-yellow-300 shadow-sm cursor-pointer touch-manipulation"
+                  style={{ color: filters.pekerjaan ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
                 >
                   <option value="" className="text-gray-400">Pilih Pekerjaan</option>
                   {filterOptions.pekerjaan.map((option: string) => (
@@ -679,8 +688,8 @@ export default function AnalisisDataPage() {
                 <select
                   value={filters.kewarganegaraan}
                   onChange={(e) => setFilters({ ...filters, kewarganegaraan: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.kewarganegaraan ? '#1f2937' : '#9ca3af' }}
+                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm cursor-pointer touch-manipulation"
+                  style={{ color: filters.kewarganegaraan ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
                 >
                   <option value="" className="text-gray-400">Pilih Kewarganegaraan</option>
                   {filterOptions.kewarganegaraan.map((option: string) => (
@@ -698,8 +707,8 @@ export default function AnalisisDataPage() {
                 <select
                   value={filters.statusNikah}
                   onChange={(e) => setFilters({ ...filters, statusNikah: e.target.value })}
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all hover:border-orange-300 shadow-sm appearance-none cursor-pointer"
-                  style={{ color: filters.statusNikah ? '#1f2937' : '#9ca3af' }}
+                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all hover:border-orange-300 shadow-sm cursor-pointer touch-manipulation"
+                  style={{ color: filters.statusNikah ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
                 >
                   <option value="" className="text-gray-400">Pilih Status Pernikahan</option>
                   {filterOptions.statusNikah.map((option: string) => (
@@ -740,8 +749,8 @@ export default function AnalisisDataPage() {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-white to-purple-50 border-2 border-purple-200 rounded-xl text-base font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm"
-                  style={{ colorScheme: 'light' }}
+                  className="w-full px-4 py-4 md:py-3 bg-gradient-to-r from-white to-purple-50 border-2 border-purple-200 rounded-xl text-sm md:text-base font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm touch-manipulation"
+                  style={{ colorScheme: 'light', minHeight: '48px' }}
                 />
               </div>
               <div>
@@ -758,7 +767,10 @@ export default function AnalisisDataPage() {
                   placeholder="Masukkan usia"
                   min="0"
                   max="120"
-                  className="w-full px-4 py-3 bg-gradient-to-r from-white to-pink-50 border-2 border-pink-200 rounded-xl text-base font-semibold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-pink-300 shadow-sm"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="w-full px-4 py-4 md:py-3 bg-gradient-to-r from-white to-pink-50 border-2 border-pink-200 rounded-xl text-sm md:text-base font-semibold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-pink-300 shadow-sm touch-manipulation"
+                  style={{ minHeight: '48px' }}
                 />
               </div>
             </div>
@@ -769,7 +781,8 @@ export default function AnalisisDataPage() {
                 <button
                   onClick={handleConfirmPrediction}
                   disabled={!targetAge || !selectedDate}
-                  className="flex-1 group relative overflow-hidden bg-gradient-to-r from-purple-500 via-purple-600 to-pink-600 hover:from-purple-600 hover:via-purple-700 hover:to-pink-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  className="flex-1 group relative overflow-hidden bg-gradient-to-r from-purple-500 via-purple-600 to-pink-600 hover:from-purple-600 hover:via-purple-700 hover:to-pink-700 active:scale-95 text-white font-bold py-4 md:py-3.5 px-6 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 touch-manipulation"
+                  style={{ minHeight: '48px' }}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -778,7 +791,8 @@ export default function AnalisisDataPage() {
                 </button>
                 <button
                   onClick={handleResetPrediction}
-                  className="px-6 py-3.5 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2"
+                  className="px-6 py-4 md:py-3.5 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 active:scale-95 text-gray-700 font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 touch-manipulation"
+                  style={{ minHeight: '48px' }}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -818,57 +832,54 @@ export default function AnalisisDataPage() {
         </div>
 
         {/* Distribusi Kelompok Usia - Enhanced */}
-        <div className="mb-6 bg-gradient-to-br from-white via-indigo-50/30 to-blue-50/40 rounded-3xl p-6 shadow-2xl border border-indigo-100/50">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="mb-4 sm:mb-6 bg-gradient-to-br from-white via-indigo-50/30 to-blue-50/40 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-indigo-100/50">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 text-lg">Distribusi Kelompok Usia</h3>
-              <p className="text-xs text-gray-500">Visualisasi sebaran usia penduduk</p>
+              <h3 className="font-bold text-gray-800 text-sm sm:text-base md:text-lg">Distribusi Kelompok Usia</h3>
+              <p className="text-[10px] sm:text-xs text-gray-500 hidden sm:block">Visualisasi sebaran usia penduduk</p>
             </div>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {ageGroups.map((group, index) => {
-              // Gradient colors untuk setiap kelompok usia
+              // Gradient colors untuk setiap kelompok usia sesuai dengan gambar
               const gradients = [
-                'from-red-400 to-red-600',
-                'from-orange-400 to-orange-600',
-                'from-amber-400 to-amber-600',
-                'from-yellow-400 to-yellow-600',
-                'from-lime-400 to-lime-600',
-                'from-green-400 to-green-600',
-                'from-emerald-400 to-emerald-600',
-                'from-teal-400 to-teal-600',
-                'from-cyan-400 to-cyan-600',
-                'from-sky-400 to-sky-600',
-                'from-blue-400 to-blue-600',
-                'from-indigo-400 to-indigo-600',
-                'from-violet-400 to-violet-600',
-                'from-purple-400 to-purple-600',
-                'from-fuchsia-400 to-fuchsia-600'
+                'from-red-400 to-red-600',      // 0-5 tahun - Merah
+                'from-orange-400 to-orange-600', // 6-12 tahun - Oranye
+                'from-amber-400 to-amber-600',   // 13-17 tahun - Kuning
+                'from-yellow-400 to-yellow-600', // 18-25 tahun - Kuning cerah
+                'from-lime-400 to-lime-600',     // 26-35 tahun - Hijau muda
+                'from-green-400 to-green-600',   // 36-45 tahun - Hijau
+                'from-emerald-400 to-emerald-600', // 46-55 tahun - Emerald
+                'from-teal-400 to-teal-600',     // 56-65 tahun - Teal
+                'from-cyan-400 to-cyan-600'      // >65 tahun - Cyan
               ];
               
               return (
                 <div key={index} className="group hover:scale-[1.02] transition-transform duration-300">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-700">{group.range} tahun</span>
-                      <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs font-semibold text-gray-600">
+                  <div className="flex justify-between items-center mb-1.5 sm:mb-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="text-xs sm:text-sm font-bold text-gray-700">{group.label}</span>
+                      <span className="px-1.5 sm:px-2 py-0.5 bg-gray-100 rounded-full text-[10px] sm:text-xs font-semibold text-gray-600">
                         {group.count} orang
                       </span>
                     </div>
-                    <span className="text-sm font-extrabold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                    <span className="text-xs sm:text-sm font-extrabold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
                       {group.percentage.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                  <div className="w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-full h-3 sm:h-4 overflow-hidden shadow-inner">
                     <div
-                      className={`bg-gradient-to-r ${gradients[index % gradients.length]} h-full rounded-full transition-all duration-700 shadow-lg`}
-                      style={{ width: group.percentage + "%" }}
+                      className={`bg-gradient-to-r ${gradients[index]} h-full rounded-full transition-all duration-700 shadow-lg`}
+                      style={{ 
+                        width: `${group.percentage}%`,
+                        minWidth: group.count > 0 ? '2%' : '0%' // Minimal width jika ada data
+                      }}
                     />
                   </div>
                 </div>

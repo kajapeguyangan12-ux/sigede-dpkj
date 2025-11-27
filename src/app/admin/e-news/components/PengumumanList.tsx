@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { db, storage } from "../../../../lib/firebase";
 import { collection, getDocs, deleteDoc, doc, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import Portal from "../../../../components/Portal";
 
 interface PengumumanItem {
   id: string;
@@ -88,11 +89,12 @@ function PengumumanFormModal({ open, onClose, onSubmit, editingItem }: { open: b
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 w-full max-w-2xl p-10 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-700 bg-clip-text text-transparent">
+    <Portal>
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-10 max-h-[90vh] overflow-y-auto animate-scaleIn">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-700 bg-clip-text text-transparent">
             {editingItem ? 'Edit Pengumuman' : 'Formulir Buat Pengumuman'}
           </h2>
           <button 
@@ -125,7 +127,7 @@ function PengumumanFormModal({ open, onClose, onSubmit, editingItem }: { open: b
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="Masukkan judul pengumuman..."
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm text-gray-900 placeholder:text-gray-500"
               required
             />
           </div>
@@ -137,7 +139,7 @@ function PengumumanFormModal({ open, onClose, onSubmit, editingItem }: { open: b
               type="date"
               value={eventDate}
               onChange={e => setEventDate(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm text-gray-900"
               required
             />
           </div>
@@ -149,7 +151,7 @@ function PengumumanFormModal({ open, onClose, onSubmit, editingItem }: { open: b
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Masukkan deskripsi pengumuman..."
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm min-h-[120px] resize-none"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm min-h-[120px] resize-none text-gray-900 placeholder:text-gray-500"
               required
             />
           </div>
@@ -241,11 +243,12 @@ function PengumumanFormModal({ open, onClose, onSubmit, editingItem }: { open: b
 
           {/* Image Preview Modal */}
           {showImageModal && preview && (
-            <div 
-              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-              onClick={() => setShowImageModal(false)}
-            >
-              <div className="relative max-w-4xl max-h-[90vh] w-full">
+            <Portal>
+              <div 
+                className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg animate-fadeIn"
+                onClick={() => setShowImageModal(false)}
+              >
+                <div className="relative max-w-4xl max-h-[90vh] w-full animate-scaleIn">
                 <button
                   onClick={() => setShowImageModal(false)}
                   className="absolute -top-12 right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-colors"
@@ -261,7 +264,8 @@ function PengumumanFormModal({ open, onClose, onSubmit, editingItem }: { open: b
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
-            </div>
+              </div>
+            </Portal>
           )}
 
           {/* Buttons */}
@@ -282,7 +286,8 @@ function PengumumanFormModal({ open, onClose, onSubmit, editingItem }: { open: b
           </div>
         </form>
       </div>
-    </div>
+      </div>
+    </Portal>
   );
 }
 
@@ -406,31 +411,30 @@ export default function PengumumanList() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-700 bg-clip-text text-transparent">
-            Pengumuman Desa
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">Kelola semua pengumuman dan informasi penting desa</p>
+    <>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-700 bg-clip-text text-transparent">
+              Pengumuman Desa
+            </h2>
+            <p className="text-gray-500 text-sm mt-1">Kelola semua pengumuman dan informasi penting desa</p>
+          </div>
+          <button
+            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold"
+            onClick={() => {
+              setEditingItem(null);
+              setShowModal(true);
+            }}
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>Buat Pengumuman</span>
+          </button>
         </div>
-        <button
-          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold"
-          onClick={() => {
-            setEditingItem(null);
-            setShowModal(true);
-          }}
-        >
-          <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          <span>Buat Pengumuman</span>
-        </button>
-      </div>
-
-      <PengumumanFormModal open={showModal} onClose={() => { setShowModal(false); setEditingItem(null); }} onSubmit={handleCreatePengumuman} editingItem={editingItem} />
       
-      {loading ? (
+        {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <div className="relative">
             <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
@@ -561,6 +565,15 @@ export default function PengumumanList() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Modal di luar container */}
+      <PengumumanFormModal 
+        open={showModal} 
+        onClose={() => { setShowModal(false); setEditingItem(null); }} 
+        onSubmit={handleCreatePengumuman} 
+        editingItem={editingItem} 
+      />
+    </>
   );
 }

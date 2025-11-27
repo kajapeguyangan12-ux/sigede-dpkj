@@ -7,7 +7,7 @@ import HeaderCard from "../../../../../components/HeaderCard";
 
 export default function UbahKataSandiPage() {
   const [formData, setFormData] = useState({
-    kataSandiSaatIni: "Data Kata Sandi",
+    kataSandiSaatIni: "",
     kataSandiBaru: "",
     konfirmasiKataSandi: "",
   });
@@ -46,7 +46,7 @@ export default function UbahKataSandiPage() {
 
   return (
     <main className="min-h-[100svh] bg-merah-putih animate-bg-pan text-gray-800">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="mx-auto w-full max-w-4xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         <HeaderCard title="Pengaturan Akun" backUrl="/masyarakat/profil/edit/akun" showBackButton={true} />
 
         {/* Info Section */}
@@ -67,13 +67,14 @@ export default function UbahKataSandiPage() {
               <input
                 type={showPassword.current ? "text" : "password"}
                 value={formData.kataSandiSaatIni}
-                className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm pr-10"
-                readOnly
+                onChange={(e) => handleInputChange("kataSandiSaatIni", e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm pr-10 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="Masukkan Kata Sandi Saat Ini"
               />
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility('current')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
               >
                 {showPassword.current ? "🙈" : "👁️"}
               </button>

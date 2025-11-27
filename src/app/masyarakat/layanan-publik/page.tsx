@@ -35,19 +35,9 @@ export default function LayananPublikPage() {
       category: "Administrasi Umum",
     },
     {
-      title: "Surat Keterangan Belum Nikah/Kawin",
-      icon: <SingleStatusIcon className="h-12 w-12 text-purple-600" />,
-      category: "Kependudukan",
-    },
-    {
       title: "Surat Keterangan Belum Bekerja",
       icon: <EmploymentIcon className="h-12 w-12 text-emerald-600" />,
       category: "Ketenagakerjaan",
-    },
-    {
-      title: "Surat Keterangan Kawin/Menikah",
-      icon: <MarriageIcon className="h-12 w-12 text-rose-600" />,
-      category: "Kependudukan",
     },
     {
       title: "Surat Keterangan Kematian",
@@ -55,7 +45,7 @@ export default function LayananPublikPage() {
       category: "Kependudukan",
     },
     {
-      title: "Surat Keterangan Perjalanan",
+      title: "Surat Keterangan Berpergian",
       icon: <TravelIcon className="h-12 w-12 text-indigo-600" />,
       category: "Perizinan",
     },
@@ -157,7 +147,7 @@ export default function LayananPublikPage() {
   }
 
   return (
-    <main className="min-h-[100svh] bg-gradient-to-br from-blue-50 via-white to-indigo-50 text-gray-900">
+    <main className="min-h-[100svh] bg-gradient-to-b from-blue-50 to-gray-100 text-gray-800">
       {isFilterOpen ? (
         <button
           type="button"
@@ -166,7 +156,8 @@ export default function LayananPublikPage() {
           onClick={() => setIsFilterOpen(false)}
         />
       ) : null}
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
+        <div className="max-w-7xl mx-auto">
         <HeaderCard 
           title="Layanan Publik" 
           subtitle="Administrasi & Perizinan"
@@ -175,20 +166,20 @@ export default function LayananPublikPage() {
         />
 
         {/* Tracking Status Button */}
-        <div className="mb-4">
+        <div className="mb-6 sm:mb-8 lg:mb-10">
           <button
             onClick={() => setShowTrackingModal(true)}
-            className="w-full flex items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-500 to-indigo-600 p-4 shadow-lg ring-1 ring-blue-100/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
+            className="w-full flex items-center justify-between gap-3 sm:gap-4 lg:gap-5 rounded-2xl sm:rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-500 to-indigo-600 p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-blue-100/50 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
           >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-white/20">
-                <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-2.5 lg:p-3 rounded-full bg-white/20">
+                <svg className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
               <div className="text-left">
-                <h3 className="text-white font-semibold">Tracking Status</h3>
-                <p className="text-white/80 text-sm">Lihat status permohonan Anda</p>
+                <h3 className="text-white font-semibold text-sm sm:text-base lg:text-lg">Tracking Status</h3>
+                <p className="text-white/80 text-xs sm:text-sm lg:text-base">Lihat status permohonan Anda</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-white/80">
@@ -204,14 +195,14 @@ export default function LayananPublikPage() {
           </button>
         </div>
 
-        <section className="mb-6 space-y-4">
-          <div className="relative flex items-center gap-3">
-            <label className="flex flex-1 items-center gap-3 rounded-full border border-blue-100 bg-white/95 backdrop-blur-sm px-4 py-3 shadow-lg ring-1 ring-blue-100/50 transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-300/50">
-              <SearchIcon className="h-5 w-5 text-blue-500" />
+        <section className="mb-6 sm:mb-8 lg:mb-10 space-y-4 sm:space-y-5 lg:space-y-6">
+          <div className="relative flex items-center gap-3 sm:gap-4">
+            <label className="flex flex-1 items-center gap-3 sm:gap-4 rounded-full border border-blue-100 bg-white/95 backdrop-blur-sm px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 shadow-lg ring-1 ring-blue-100/50 transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-300/50">
+              <SearchIcon className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-blue-500" />
               <span className="sr-only">Cari layanan</span>
               <input
                 type="search"
-                className="w-full bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
+                className="w-full bg-transparent text-sm sm:text-base lg:text-lg text-gray-800 outline-none placeholder:text-gray-400"
                 placeholder="Cari layanan"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -220,7 +211,7 @@ export default function LayananPublikPage() {
             <div className="relative">
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-full border border-blue-100 bg-white/95 backdrop-blur-sm px-4 py-3 text-sm font-semibold text-gray-800 shadow-lg ring-1 ring-blue-100/50 transition-all duration-300 hover:bg-blue-50 hover:ring-2 hover:ring-blue-300/50"
+                className="flex items-center gap-2 rounded-full border border-blue-100 bg-white/95 backdrop-blur-sm px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 text-sm sm:text-base lg:text-lg font-semibold text-gray-800 shadow-lg ring-1 ring-blue-100/50 transition-all duration-300 hover:bg-blue-50 hover:ring-2 hover:ring-blue-300/50"
                 onClick={() => setIsFilterOpen((prev) => !prev)}
                 aria-expanded={isFilterOpen}
                 aria-haspopup="true"
@@ -266,16 +257,16 @@ export default function LayananPublikPage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 backdrop-blur-sm px-4 py-4 shadow-lg ring-1 ring-blue-100/50">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center mt-0.5">
-                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <div className="rounded-2xl sm:rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 backdrop-blur-sm px-4 sm:px-5 lg:px-6 py-4 sm:py-5 lg:py-6 shadow-lg ring-1 ring-blue-100/50">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center mt-0.5">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-blue-900 mb-1">Penting!</p>
-                <p className="text-xs leading-relaxed text-blue-700/90">
+                <p className="text-sm sm:text-base lg:text-lg font-bold text-blue-900 mb-1 sm:mb-2">Penting!</p>
+                <p className="text-xs sm:text-sm lg:text-base leading-relaxed text-blue-700/90">
                   Untuk layanan pemohon dapat menyiapkan berkas sesuai persyaratan
                   dan mengajukan permohonan langsung melalui sistem desa.
                 </p>
@@ -284,9 +275,9 @@ export default function LayananPublikPage() {
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4 sm:space-y-5 lg:space-y-6">
           {filteredServices.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
               {filteredServices.map((service, index) => {
                 const gradients = [
                   "from-blue-50 to-blue-100/50",
@@ -315,6 +306,29 @@ export default function LayananPublikPage() {
                   "border-indigo-100 hover:border-indigo-200 ring-indigo-100/50",
                   "border-amber-100 hover:border-amber-200 ring-amber-100/50"
                 ];
+                
+                // Jika Form Taring Dukcapil, redirect ke halaman pilihan
+                if (service.title === "Form Taring Dukcapil") {
+                  return (
+                    <Link
+                      key={service.title}
+                      href="/masyarakat/layanan-publik/pelayanan-taring-dukcapil"
+                      className={`group relative flex h-full flex-col items-center justify-between gap-3 sm:gap-4 lg:gap-5 overflow-hidden rounded-2xl sm:rounded-3xl border ${borderColors[index]} bg-gradient-to-br from-white/95 to-white/80 backdrop-blur-sm px-3 sm:px-4 lg:px-5 py-4 sm:py-5 lg:py-6 text-center shadow-lg ring-1 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500`}
+                    >
+                      <div className={`absolute inset-0 bg-gradient-to-br ${gradients[index]} opacity-0 transition-all duration-500 group-hover:opacity-100`} />
+                      <div className={`relative grid h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${gradients[index]} transition-all duration-500 ${hoverGradients[index]} shadow-lg group-hover:shadow-xl group-hover:scale-110`}>
+                        {service.icon}
+                      </div>
+                      <span className="relative text-xs sm:text-sm lg:text-base font-semibold leading-snug text-gray-800 transition duration-300 group-hover:text-gray-900">
+                        {service.title}
+                      </span>
+                      <span className="relative text-[10px] sm:text-[11px] lg:text-xs font-medium uppercase tracking-wide text-gray-500 transition duration-300 group-hover:text-gray-600">
+                        {service.category}
+                      </span>
+                    </Link>
+                  );
+                }
+                
                 return (
                 <button
                   key={service.title}
@@ -322,16 +336,16 @@ export default function LayananPublikPage() {
                     setSelectedService(service.title);
                     setShowForm(true);
                   }}
-                  className={`group relative flex h-full flex-col items-center justify-between gap-4 overflow-hidden rounded-3xl border ${borderColors[index]} bg-gradient-to-br from-white/95 to-white/80 backdrop-blur-sm px-4 py-6 text-center shadow-lg ring-1 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500`}
+                  className={`group relative flex h-full flex-col items-center justify-between gap-3 sm:gap-4 lg:gap-5 overflow-hidden rounded-2xl sm:rounded-3xl border ${borderColors[index]} bg-gradient-to-br from-white/95 to-white/80 backdrop-blur-sm px-3 sm:px-4 lg:px-5 py-4 sm:py-5 lg:py-6 text-center shadow-lg ring-1 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500`}
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${gradients[index]} opacity-0 transition-all duration-500 group-hover:opacity-100`} />
-                  <div className={`relative grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br ${gradients[index]} transition-all duration-500 ${hoverGradients[index]} shadow-lg group-hover:shadow-xl group-hover:scale-110`}>
+                  <div className={`relative grid h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${gradients[index]} transition-all duration-500 ${hoverGradients[index]} shadow-lg group-hover:shadow-xl group-hover:scale-110`}>
                     {service.icon}
                   </div>
-                  <span className="relative text-sm font-semibold leading-snug text-gray-800 transition duration-300 group-hover:text-gray-900">
+                  <span className="relative text-xs sm:text-sm lg:text-base font-semibold leading-snug text-gray-800 transition duration-300 group-hover:text-gray-900">
                     {service.title}
                   </span>
-                  <span className="relative text-[11px] font-medium uppercase tracking-wide text-gray-500 transition duration-300 group-hover:text-gray-600">
+                  <span className="relative text-[10px] sm:text-[11px] lg:text-xs font-medium uppercase tracking-wide text-gray-500 transition duration-300 group-hover:text-gray-600">
                     {service.category}
                   </span>
                 </button>
@@ -339,14 +353,15 @@ export default function LayananPublikPage() {
               })}
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed border-red-200 bg-white/80 px-6 py-10 text-center text-sm text-gray-600">
+            <div className="rounded-2xl sm:rounded-3xl border border-dashed border-red-200 bg-white/80 px-6 sm:px-8 lg:px-10 py-10 sm:py-12 lg:py-14 text-center text-sm sm:text-base lg:text-lg text-gray-600">
               <p className="font-semibold text-red-600">Tidak ditemukan</p>
-              <p className="mt-1">
+              <p className="mt-1 sm:mt-2">
                 Silakan ubah kata kunci pencarian atau pilih kategori lain.
               </p>
             </div>
           )}
         </section>
+        </div>
       </div>
 
       {/* Tracking Status Modal */}

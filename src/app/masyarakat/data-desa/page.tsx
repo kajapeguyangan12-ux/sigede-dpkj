@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from "../../components/BottomNavigation";
@@ -31,6 +31,9 @@ export default function DataDesaPage() {
   const [showKategoriDropdown, setShowKategoriDropdown] = useState(false);
   const [daerahOptions, setDaerahOptions] = useState<DaerahOption[]>([]);
   const [canAccessAnalisis, setCanAccessAnalisis] = useState(false);
+  
+  const desaDropdownRef = useRef<HTMLDivElement>(null);
+  const kategoriDropdownRef = useRef<HTMLDivElement>(null);
 
   // Function to fetch daerah data from data-desa database
   const fetchDaerahData = async () => {
@@ -181,6 +184,26 @@ export default function DataDesaPage() {
     
     checkAnalisisAccess();
   }, []);
+  
+  // Handle click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (desaDropdownRef.current && !desaDropdownRef.current.contains(event.target as Node)) {
+        setShowDesaDropdown(false);
+      }
+      if (kategoriDropdownRef.current && !kategoriDropdownRef.current.contains(event.target as Node)) {
+        setShowKategoriDropdown(false);
+      }
+    };
+
+    if (showDesaDropdown || showKategoriDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDesaDropdown, showKategoriDropdown]);
 
   // Calculate basic statistics and chart data
   const totalPenduduk = dataWarga.length;
@@ -369,8 +392,9 @@ export default function DataDesaPage() {
   };
 
   return (
-    <main className="min-h-[100svh] bg-gray-100">
-      <div className="mx-auto w-full max-w-md px-4 pb-20 pt-4">
+    <main className="min-h-[100svh] bg-gradient-to-b from-blue-50 to-gray-100 text-gray-800">
+      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <HeaderCard 
           title="Data Desa"
@@ -380,81 +404,90 @@ export default function DataDesaPage() {
         />
 
         {/* Filter Section */}
-        <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Filter Kategori</h3>
+        <div className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200 overflow-visible relative z-20">
+          <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 mb-4 sm:mb-5 lg:mb-6">Filter Kategori</h3>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-5">
             {/* Pilih Desa Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={desaDropdownRef}>
               <button
+                type="button"
                 onClick={() => {
                   setShowDesaDropdown(!showDesaDropdown);
                   setShowKategoriDropdown(false);
                 }}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-left text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 bg-gray-50 border border-gray-200 rounded-xl text-left text-sm sm:text-base lg:text-lg font-medium text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between"
               >
                 <span>{getSelectedDaerahName()}</span>
-                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               
               {showDesaDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
-                  {daerahOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => {
-                        setSelectedDesa(option.id);
-                        setShowDesaDropdown(false);
-                      }}
-                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors first:rounded-t-xl last:rounded-b-xl"
-                    >
-                      {option.name}
-                    </button>
-                  ))}
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl z-30 max-h-48 sm:max-h-56 lg:max-h-64 overflow-y-auto">
+                  <div className="py-1">
+                    {daerahOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          console.log('Desa selected:', option.id, option.name);
+                          setSelectedDesa(option.id);
+                          setShowDesaDropdown(false);
+                        }}
+                        className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 text-left text-sm sm:text-base lg:text-lg text-gray-700 hover:bg-gray-50 transition-colors block"
+                      >
+                        {option.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Pilih Kategori Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={kategoriDropdownRef}>
               <button
+                type="button"
                 onClick={() => {
                   setShowKategoriDropdown(!showKategoriDropdown);
                   setShowDesaDropdown(false);
                 }}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-left text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 bg-gray-50 border border-gray-200 rounded-xl text-left text-sm sm:text-base lg:text-lg font-medium text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between"
               >
                 <span>{getSelectedKategoriName()}</span>
-                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               
               {showKategoriDropdown && (
-                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-64">
-                  <div className="p-2 space-y-1">
+                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl z-30 w-64 sm:w-72 lg:w-80 max-h-96 overflow-y-auto">
+                  <div className="py-1">
                     {kategoriOptions.map((option) => (
-                      <div key={option.id} className="group">
-                        <button
-                          onClick={() => {
-                            setSelectedKategori(option.id);
-                            setShowKategoriDropdown(false);
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-lg group-hover:bg-gray-50"
-                        >
-                          <div className="font-medium text-gray-900">{option.name}</div>
-                          <div className="text-xs text-gray-500 mt-1 space-y-1">
-                            {option.items.slice(0, 3).map((item, idx) => (
-                              <div key={idx}>{item}</div>
-                            ))}
-                            {option.items.length > 3 && (
-                              <div className="text-blue-500">+{option.items.length - 3} lainnya</div>
-                            )}
-                          </div>
-                        </button>
-                      </div>
+                      <button
+                        key={option.id}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          console.log('Kategori selected:', option.id, option.name);
+                          setSelectedKategori(option.id);
+                          setShowKategoriDropdown(false);
+                        }}
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 text-left text-sm sm:text-base text-gray-700 hover:bg-gray-50 transition-colors block"
+                      >
+                        <div className="font-medium text-gray-900">{option.name}</div>
+                        <div className="text-xs sm:text-sm text-gray-500 mt-1 space-y-1">
+                          {option.items.slice(0, 3).map((item, idx) => (
+                            <div key={idx}>{item}</div>
+                          ))}
+                          {option.items.length > 3 && (
+                            <div className="text-blue-500">+{option.items.length - 3} lainnya</div>
+                          )}
+                        </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -469,10 +502,10 @@ export default function DataDesaPage() {
 
         {/* Analysis Button - Only show if user has access */}
         {canAccessAnalisis && (
-          <div className="mb-6">
+          <div className="mb-6 sm:mb-8 lg:mb-10">
             <Link 
               href="/masyarakat/data-desa/analisis"
-              className="block w-full py-3 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl shadow-sm transition-colors text-center"
+              className="block w-full py-3 sm:py-4 lg:py-5 px-4 sm:px-6 lg:px-8 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl sm:rounded-2xl shadow-sm transition-colors text-center text-sm sm:text-base lg:text-lg"
             >
               Analisis Data
             </Link>
@@ -480,10 +513,10 @@ export default function DataDesaPage() {
         )}
 
         {/* Charts Section */}
-        <div className="space-y-4">
+        <div className="space-y-6 sm:space-y-8 lg:space-y-10 relative z-0">
           {/* Bar Chart */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Grafik Batang</h3>
+          <div className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
+            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 mb-4 sm:mb-5 lg:mb-6">Grafik Batang</h3>
             {selectedDesa && selectedKategori && chartData ? (
               <DataChart
                 type="bar"
@@ -494,22 +527,22 @@ export default function DataDesaPage() {
                 title={`Data ${getSelectedKategoriName()}`}
               />
             ) : (
-              <div className="h-48 bg-gray-100 rounded-xl flex items-center justify-center">
+              <div className="h-48 sm:h-56 lg:h-64 bg-gray-100 rounded-xl flex items-center justify-center">
                 <div className="text-center text-gray-500">
-                  <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 mx-auto mb-2 sm:mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  <p className="text-sm">Tentukan Desa dan Kategori untuk menampilkan grafik</p>
+                  <p className="text-sm sm:text-base lg:text-lg">Tentukan Desa dan Kategori untuk menampilkan grafik</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Donut Chart */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Grafik Donut</h3>
+          <div className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
+            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 mb-4 sm:mb-5 lg:mb-6">Grafik Donut</h3>
             {selectedDesa && selectedKategori && chartData ? (
-              <div className="h-64">
+              <div className="h-64 sm:h-72 lg:h-80">
                 <DataChart
                   type="doughnut"
                   data={{
@@ -521,30 +554,20 @@ export default function DataDesaPage() {
                 />
               </div>
             ) : (
-              <div className="h-48 bg-gray-100 rounded-xl flex items-center justify-center">
+              <div className="h-48 sm:h-56 lg:h-64 bg-gray-100 rounded-xl flex items-center justify-center">
                 <div className="text-center text-gray-500">
-                  <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 mx-auto mb-2 sm:mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10" />
                     <circle cx="12" cy="12" r="6" />
                   </svg>
-                  <p className="text-sm">Tentukan Desa dan Kategori untuk menampilkan grafik</p>
+                  <p className="text-sm sm:text-base lg:text-lg">Tentukan Desa dan Kategori untuk menampilkan grafik</p>
                 </div>
               </div>
             )}
           </div>
         </div>
+        </div>
       </div>
-
-      {/* Click outside to close dropdowns */}
-      {(showDesaDropdown || showKategoriDropdown) && (
-        <div 
-          className="fixed inset-0 z-10" 
-          onClick={() => {
-            setShowDesaDropdown(false);
-            setShowKategoriDropdown(false);
-          }}
-        />
-      )}
 
       <BottomNavigation />
     </main>

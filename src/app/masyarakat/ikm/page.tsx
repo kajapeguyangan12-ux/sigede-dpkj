@@ -140,7 +140,7 @@ export default function IKMPage() {
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-br from-red-50 via-white to-blue-50">
-      <div className="mx-auto w-full max-w-md px-4 pb-32 pt-4">
+      <div className="mx-auto w-full max-w-4xl px-3 sm:px-4 md:px-6 lg:px-8 pb-32 pt-3 sm:pt-4">
         <HeaderCard 
           title="Indeks Kepuasan Masyarakat" 
           subtitle="Survei IKM Desa Peguyangan"

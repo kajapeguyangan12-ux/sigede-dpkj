@@ -672,7 +672,7 @@ class AuthenticationService {
 
   // Cek apakah user adalah admin
   isAdmin(role: UserRole): boolean {
-    return ['administrator', 'admin_desa', 'kepala_desa'].includes(role);
+    return ['administrator', 'admin_desa'].includes(role);
   }
 
   // Validate login credentials format

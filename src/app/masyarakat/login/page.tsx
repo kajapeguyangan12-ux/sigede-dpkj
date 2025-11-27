@@ -141,8 +141,16 @@ export default function LoginMasyarakatPage() {
         console.log('✅ MASYARAKAT LOGIN: Masyarakat login successful');
         setIsLoading(false);
         
-        // Let layout handle the redirect
-        // No manual redirect needed
+        // Check if there's a redirect path stored
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          console.log('🔄 Redirecting to stored path:', redirectPath);
+          sessionStorage.removeItem('redirectAfterLogin');
+          router.push(redirectPath);
+        } else {
+          // Default redirect to home
+          router.push('/masyarakat/home');
+        }
       } else {
         clearTimeout(loginTimeout);
         throw new Error('Session data not found after login');

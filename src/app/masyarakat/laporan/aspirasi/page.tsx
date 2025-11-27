@@ -115,7 +115,7 @@ export default function LaporanAspirasiPage() {
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-50 text-gray-900">
-        <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+        <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         {/* Header Card */}
         <HeaderCard 
           title="Aspirasi"

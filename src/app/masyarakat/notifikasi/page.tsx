@@ -119,7 +119,7 @@ export default function NotifikasiPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         <HeaderCard 
           title="Notifikasi" 
           subtitle={`${unreadCount} belum dibaca`}
@@ -128,12 +128,12 @@ export default function NotifikasiPage() {
         />
 
         {/* Filter Tabs */}
-        <div className="mb-4 flex gap-2">
+        <div className="mb-4 sm:mb-6 flex flex-wrap gap-2 sm:gap-3">
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-medium transition-all shadow-sm ${
               filter === 'all'
-                ? 'bg-blue-500 text-white'
+                ? 'bg-blue-500 text-white shadow-md'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -141,9 +141,9 @@ export default function NotifikasiPage() {
           </button>
           <button
             onClick={() => setFilter('pengaduan')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-medium transition-all shadow-sm ${
               filter === 'pengaduan'
-                ? 'bg-blue-500 text-white'
+                ? 'bg-blue-500 text-white shadow-md'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -151,9 +151,9 @@ export default function NotifikasiPage() {
           </button>
           <button
             onClick={() => setFilter('layanan_publik')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-medium transition-all shadow-sm ${
               filter === 'layanan_publik'
-                ? 'bg-blue-500 text-white'
+                ? 'bg-blue-500 text-white shadow-md'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -163,10 +163,10 @@ export default function NotifikasiPage() {
 
         {/* Mark All Read Button */}
         {unreadCount > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 sm:mb-6">
             <button
               onClick={handleMarkAllAsRead}
-              className="w-full py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+              className="w-full py-2.5 sm:py-3 px-4 sm:px-6 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors text-sm sm:text-base font-medium shadow-md hover:shadow-lg"
             >
               Tandai Semua Sudah Dibaca ({unreadCount})
             </button>
@@ -174,19 +174,19 @@ export default function NotifikasiPage() {
         )}
 
         {/* Notifications List */}
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-600 mt-2">Memuat notifikasi...</p>
+            <div className="lg:col-span-2 text-center py-12 sm:py-16">
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-3 sm:mt-4 text-sm sm:text-base">Memuat notifikasi...</p>
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">📭</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div className="lg:col-span-2 text-center py-12 sm:py-16 lg:py-20">
+              <div className="text-5xl sm:text-6xl lg:text-7xl mb-4 sm:mb-6">📭</div>
+              <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-2">
                 Tidak Ada Notifikasi
               </h3>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600 px-4">
                 {filter === 'all' 
                   ? 'Belum ada notifikasi untuk ditampilkan'
                   : `Tidak ada notifikasi ${getTypeLabel(filter)}`
@@ -197,49 +197,49 @@ export default function NotifikasiPage() {
             filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`border rounded-xl p-4 transition-all hover:shadow-lg ${
+                className={`border rounded-2xl p-4 sm:p-5 transition-all hover:shadow-xl hover:scale-[1.01] ${
                   notification.status === 'unread'
                     ? 'bg-blue-50 border-blue-200 shadow-md'
                     : 'bg-white border-gray-200'
                 }`}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 sm:gap-4">
                   {/* Icon */}
-                  <div className="text-2xl flex-shrink-0 mt-1">
+                  <div className="text-2xl sm:text-3xl flex-shrink-0 mt-1">
                     {getNotificationIcon(notification.type, notification.priority)}
                   </div>
                   
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium border ${getPriorityColor(notification.priority)}`}>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className={`text-xs sm:text-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full font-medium border ${getPriorityColor(notification.priority)}`}>
                         {getTypeLabel(notification.type)}
                       </span>
                       {notification.status === 'unread' && (
-                        <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
+                        <span className="text-xs sm:text-sm bg-red-500 text-white px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full font-medium">
                           Baru
                         </span>
                       )}
                       {notification.actionRequired && (
-                        <span className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full">
+                        <span className="text-xs sm:text-sm bg-orange-500 text-white px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full font-medium">
                           Perlu Tindakan
                         </span>
                       )}
                     </div>
                     
-                    <h3 className={`font-semibold mb-1 ${
+                    <h3 className={`font-semibold text-sm sm:text-base mb-2 ${
                       notification.status === 'unread' ? 'text-blue-900' : 'text-gray-900'
                     }`}>
                       {notification.title}
                     </h3>
                     
-                    <p className="text-gray-700 text-sm mb-2 leading-relaxed">
+                    <p className="text-gray-700 text-sm sm:text-base mb-3 leading-relaxed">
                       {notification.message}
                     </p>
 
                     {/* Metadata */}
                     {notification.metadata && (
-                      <div className="text-xs text-gray-500 space-y-1">
+                      <div className="text-xs sm:text-sm text-gray-500 space-y-1.5 sm:space-y-2">
                         {notification.metadata.jenisLayanan && (
                           <div>Jenis: {notification.metadata.jenisLayanan}</div>
                         )}
@@ -247,7 +247,7 @@ export default function NotifikasiPage() {
                           <div>Kategori: {notification.metadata.kategoriPengaduan}</div>
                         )}
                         {notification.metadata.buktiApproval && (
-                          <div className="font-mono bg-gray-100 px-2 py-1 rounded">
+                          <div className="font-mono bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg">
                             Bukti: {notification.metadata.buktiApproval}
                           </div>
                         )}
@@ -257,14 +257,14 @@ export default function NotifikasiPage() {
                       </div>
                     )}
                     
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs text-gray-500">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-3 sm:mt-4">
+                      <span className="text-xs sm:text-sm text-gray-500">
                         {formatDate(notification.createdAt)}
                       </span>
                       {notification.status === 'unread' && (
                         <button
                           onClick={() => handleMarkAsRead(notification.id!)}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                          className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline"
                         >
                           Tandai Dibaca
                         </button>

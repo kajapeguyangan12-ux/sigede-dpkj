@@ -144,17 +144,17 @@ export default function KeuanganMasyarakatPage() {
   if (loading) {
     return (
       <main className="min-h-[100svh] bg-gradient-to-b from-blue-50 to-gray-100 text-gray-800">
-        <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
           <HeaderCard 
             title="Keuangan" 
             subtitle="Informasi Keuangan Desa"
             backUrl="/masyarakat/home"
             showBackButton={true}
           />
-          <div className="flex items-center justify-center h-64">
+          <div className="flex items-center justify-center h-64 max-w-4xl mx-auto">
             <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
-              <p className="text-gray-600">Memuat data keuangan...</p>
+              <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 animate-spin mx-auto mb-4 text-blue-500" />
+              <p className="text-gray-600 text-sm sm:text-base lg:text-lg">Memuat data keuangan...</p>
             </div>
           </div>
         </div>
@@ -165,7 +165,7 @@ export default function KeuanganMasyarakatPage() {
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-b from-blue-50 to-gray-100 text-gray-800">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
         <HeaderCard 
           title="Keuangan" 
           subtitle="Informasi Keuangan Desa"
@@ -173,26 +173,28 @@ export default function KeuanganMasyarakatPage() {
           showBackButton={true}
         />
 
-        {/* Analisis Keuangan Card */}
-        <div className="mb-4 rounded-2xl bg-white/90 backdrop-blur-sm p-4 shadow-lg ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">Analisis Keuangan</h2>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-3 py-2">
-              <TrendingUp className="w-5 h-5 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">Analisa Realisasi Keuangan</span>
-            </div>
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 border border-gray-300">
-              <BarChart3 className="w-5 h-5 text-gray-600" />
+        <div className="max-w-7xl mx-auto">
+          {/* Analisis Keuangan Card */}
+          <div className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-gray-800 mb-4 sm:mb-5 lg:mb-6">Analisis Keuangan</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 bg-gray-100 rounded-xl px-4 sm:px-5 lg:px-6 py-3 sm:py-4 lg:py-5 flex-1">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-gray-600" />
+                <span className="text-sm sm:text-base md:text-lg lg:text-xl font-medium text-gray-700">Analisa Realisasi Keuangan</span>
+              </div>
+              <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl bg-gray-100 border border-gray-300">
+                <BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-gray-600" />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Grafik Ringkasan Keuangan */}
-        <div className="mb-4 rounded-2xl bg-white/90 backdrop-blur-sm p-4 shadow-lg ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan Keuangan Tahun {selectedYear}</h2>
+          {/* Grafik Ringkasan Keuangan */}
+          <div className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-gray-800 mb-4 sm:mb-5 lg:mb-6">Ringkasan Keuangan Tahun {selectedYear}</h2>
           
-          {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 mb-6 sm:mb-8">
             {(["pendapatan", "belanja", "pembiayaan"] as FinanceCategory[]).map((category) => {
               const categoryData = financeData[category]?.[selectedYear];
               const totalAnggaran = categoryData?.anggaran.reduce((sum, item) => sum + item.amount, 0) || 0;
@@ -202,22 +204,22 @@ export default function KeuanganMasyarakatPage() {
               return (
                 <div 
                   key={category} 
-                  className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                  className={`p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl border-2 cursor-pointer transition-all hover:scale-105 ${
                     activeCategory === category 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                      : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:shadow-md'
                   }`}
                   onClick={() => setActiveCategory(category)}
                 >
                   <div className="text-center">
-                    <p className="text-xs font-medium text-gray-600 mb-1">{categoryLabels[category]}</p>
-                    <p className="text-sm font-bold text-gray-800">Rp {totalRealisasi.toLocaleString('id-ID')}</p>
-                    <p className="text-xs text-gray-500">{percentage.toFixed(1)}% realisasi</p>
+                    <p className="text-xs sm:text-sm lg:text-base font-medium text-gray-600 mb-2">{ categoryLabels[category]}</p>
+                    <p className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-800">Rp {totalRealisasi.toLocaleString('id-ID')}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{percentage.toFixed(1)}% realisasi</p>
                     
                     {/* Progress bar */}
-                    <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+                    <div className="mt-3 w-full bg-gray-200 rounded-full h-2 sm:h-2.5">
                       <div 
-                        className={`h-1.5 rounded-full ${
+                        className={`h-2 sm:h-2.5 rounded-full ${
                           category === 'pendapatan' ? 'bg-green-500' :
                           category === 'belanja' ? 'bg-red-500' : 'bg-blue-500'
                         }`}
@@ -230,9 +232,9 @@ export default function KeuanganMasyarakatPage() {
             })}
           </div>
           
-          {/* Bar Chart Visual */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700">Perbandingan Anggaran vs Realisasi</h3>
+            {/* Bar Chart Visual */}
+            <div className="space-y-4 sm:space-y-5 lg:space-y-6">
+              <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-gray-700">Perbandingan Anggaran vs Realisasi</h3>
             {(["pendapatan", "belanja", "pembiayaan"] as FinanceCategory[]).map((category) => {
               const categoryData = financeData[category]?.[selectedYear];
               const totalAnggaran = categoryData?.anggaran.reduce((sum, item) => sum + item.amount, 0) || 0;
@@ -278,31 +280,31 @@ export default function KeuanganMasyarakatPage() {
           </div>
         </div>
 
-        {/* APBD Section */}
-        <div className="mb-4 rounded-2xl bg-white/90 backdrop-blur-sm p-4 shadow-lg ring-1 ring-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">APBD Desa Tahun {selectedYear}</h2>
-              <p className="text-sm text-gray-600">{categoryLabels[activeCategory]}</p>
+          {/* APBD Section */}
+          <div className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 mb-6 sm:mb-8">
+              <div>
+                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-gray-800">APBD Desa Tahun {selectedYear}</h2>
+                <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-1">{categoryLabels[activeCategory]}</p>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs sm:text-sm font-semibold text-gray-600 mb-2">Filter Tahun:</label>
+                <select
+                  className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 sm:py-3 text-sm sm:text-base font-medium text-gray-800 shadow-sm focus:border-gray-400 focus:outline-none hover:border-gray-400 transition-colors"
+                  value={selectedYear}
+                  onChange={(event) => setSelectedYear(Number(event.target.value))}
+                >
+                  {yearOptions.map((year: number) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label className="text-xs font-semibold text-gray-600 mb-1">Filter Tahun:</label>
-              <select
-                className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm focus:border-gray-400 focus:outline-none"
-                value={selectedYear}
-                onChange={(event) => setSelectedYear(Number(event.target.value))}
-              >
-                {yearOptions.map((year: number) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
 
           {/* Category Buttons */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 mb-6 sm:mb-8">
             {(Object.keys(categoryLabels) as FinanceCategory[]).map((category) => {
               const isActive = category === activeCategory;
               return (
@@ -310,10 +312,10 @@ export default function KeuanganMasyarakatPage() {
                   key={category}
                   type="button"
                   onClick={() => setActiveCategory(category)}
-                  className={`rounded-full border px-3 py-2 text-sm font-semibold transition ${
+                  className={`rounded-full border px-4 py-3 sm:px-5 sm:py-3.5 lg:px-6 lg:py-4 text-sm sm:text-base lg:text-lg font-semibold transition-all hover:scale-105 ${
                     isActive
-                      ? "border-red-300 bg-red-200 text-red-800 shadow"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50"
+                      ? "border-red-300 bg-red-200 text-red-800 shadow-lg"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50 hover:shadow-md"
                   }`}
                 >
                   {categoryLabels[category]}
@@ -323,13 +325,13 @@ export default function KeuanganMasyarakatPage() {
           </div>
 
           {/* Grafik Section */}
-          <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
-            <h3 className="text-center text-lg font-semibold text-gray-700 mb-4">
+          <div className="mb-6 sm:mb-8 lg:mb-10 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:p-5 md:p-6 lg:p-7">
+            <h3 className="text-center text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 mb-5 sm:mb-6 lg:mb-8">
               Grafik {datasetLabels[activeDataset]} - {categoryLabels[activeCategory]}
             </h3>
             
             {chartRows.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4 sm:space-y-5 lg:space-y-6">
                 {chartRows.slice(0, 5).map((row: FinanceRow, index: number) => {
                   const percentage = maxChartValue > 0 ? Math.abs((row.amount / maxChartValue) * 100) : 0;
                   const isNegative = row.amount < 0;

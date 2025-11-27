@@ -253,7 +253,7 @@ export default function EUMKMPage() {
           </div>
         </>
       )}
-      <div className="mx-auto w-full max-w-md px-4 pb-20 pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-32 pt-4">
         {/* Header Card - Custom untuk E-UMKM */}
         <div className="mb-6 overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-gray-200/50 backdrop-blur-xl">
           <div className="relative">
@@ -267,7 +267,7 @@ export default function EUMKMPage() {
                                radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 0%, transparent 50%)`
             }}></div>
 
-            <div className="relative z-10 flex items-center justify-between px-6 py-4">
+            <div className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4">
               {/* Left Section - Back Button */}
               <Link 
                 href="/masyarakat/home"
@@ -280,8 +280,8 @@ export default function EUMKMPage() {
 
               {/* Center Section - Title & Subtitle */}
               <div className="text-center">
-                <h1 className="text-lg font-bold text-white tracking-wide">E-UMKM</h1>
-                <p className="text-xs text-white/80 font-medium mt-0.5">Marketplace Desa</p>
+                <h1 className="text-lg sm:text-xl font-bold text-white tracking-wide">E-UMKM</h1>
+                <p className="text-xs sm:text-sm text-white/80 font-medium mt-0.5">Marketplace Desa</p>
               </div>
 
               {/* Right Section - Menu Button (No Logo) */}
@@ -302,14 +302,14 @@ export default function EUMKMPage() {
 
         {/* Search Bar */}
         <section className="mb-6">
-          <div className="rounded-3xl bg-white/90 p-4 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
+          <div className="rounded-3xl bg-white/90 p-4 sm:p-5 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search"
+                placeholder="Cari UMKM, produk, atau pemilik..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 bg-white/50"
+                className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 bg-white/50 text-sm sm:text-base"
               />
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -322,8 +322,8 @@ export default function EUMKMPage() {
 
         {/* Categories */}
         <section className="mb-6">
-          <div className="rounded-3xl bg-white/90 p-4 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
-            <div className="flex space-x-2 overflow-x-auto pb-2">
+          <div className="rounded-3xl bg-white/90 p-4 sm:p-5 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
+            <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
               {categories.map((category) => (
                 <button
                   key={category}
@@ -343,7 +343,7 @@ export default function EUMKMPage() {
 
         {/* Products Grid */}
         <section className="mb-6">
-          <div className="rounded-3xl bg-white/90 p-6 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
+          <div className="rounded-3xl bg-white/90 p-4 sm:p-5 md:p-6 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
             {loading ? (
               <div className="flex justify-center items-center py-20">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-red-600"></div>
@@ -359,11 +359,11 @@ export default function EUMKMPage() {
                 <p className="text-gray-500 text-sm">Belum ada UMKM yang terdaftar</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
                 {filteredProducts.map((product) => (
                   <div 
                     key={product.id} 
-                    className="bg-white rounded-2xl shadow-lg p-4 ring-1 ring-red-100 relative group hover:shadow-2xl hover:ring-2 hover:ring-red-300 transition-all duration-300 cursor-pointer"
+                    className="bg-white rounded-2xl shadow-lg p-3 sm:p-4 ring-1 ring-red-100 relative group hover:shadow-2xl hover:ring-2 hover:ring-red-300 transition-all duration-300 cursor-pointer"
                     onClick={() => handleProductClick(product)}
                   >
                     {/* Bookmark Button with Animation */}
@@ -372,7 +372,7 @@ export default function EUMKMPage() {
                         e.stopPropagation();
                         toggleSaveProduct(product);
                       }}
-                      className={`absolute top-3 right-3 p-2 rounded-full z-10 transition-all duration-300 transform hover:scale-110 active:scale-95 ${
+                      className={`absolute top-2 sm:top-3 right-2 sm:right-3 p-1.5 sm:p-2 rounded-full z-10 transition-all duration-300 transform hover:scale-110 active:scale-95 ${
                         savedProducts.includes(product.id)
                           ? 'bg-red-100 text-red-600 shadow-lg shadow-red-200'
                           : 'bg-white/80 text-gray-400 hover:bg-gray-100 shadow-md'
@@ -380,7 +380,7 @@ export default function EUMKMPage() {
                       title={savedProducts.includes(product.id) ? 'Hapus dari tersimpan' : 'Simpan produk'}
                     >
                       <svg 
-                        className={`w-5 h-5 transition-all duration-300 ${
+                        className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ${
                           savedProducts.includes(product.id) ? 'scale-110' : ''
                         }`} 
                         fill={savedProducts.includes(product.id) ? 'currentColor' : 'none'} 
@@ -392,7 +392,7 @@ export default function EUMKMPage() {
                     </button>
                     
                     {/* Image */}
-                    <div className="w-full h-32 bg-gradient-to-br from-red-100 to-red-200 rounded-xl mb-3 flex items-center justify-center shadow-inner overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                    <div className="w-full h-28 sm:h-32 md:h-36 lg:h-40 bg-gradient-to-br from-red-100 to-red-200 rounded-xl mb-2 sm:mb-3 flex items-center justify-center shadow-inner overflow-hidden group-hover:scale-105 transition-transform duration-300">
                       {product.fotoUsaha && product.fotoUsaha[0] ? (
                         <img 
                           src={product.fotoUsaha[0]} 
@@ -400,16 +400,16 @@ export default function EUMKMPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="text-red-600 text-sm font-medium">Foto Produk</span>
+                        <span className="text-red-600 text-xs sm:text-sm font-medium">Foto Produk</span>
                       )}
                     </div>
                     
-                    <h3 className="font-semibold text-gray-800 mb-1 line-clamp-1 group-hover:text-red-600 transition-colors">{product.namaUsaha}</h3>
-                    <p className="text-red-600 font-bold mb-1">{product.hargaRataRata || 'Hubungi penjual'}</p>
-                    <p className="text-gray-500 text-sm mb-1 line-clamp-1">{product.namaPemilik}</p>
+                    <h3 className="font-semibold text-sm sm:text-base text-gray-800 mb-1 line-clamp-1 group-hover:text-red-600 transition-colors">{product.namaUsaha}</h3>
+                    <p className="text-red-600 font-bold text-sm sm:text-base mb-1">{product.hargaRataRata || 'Hubungi penjual'}</p>
+                    <p className="text-gray-500 text-xs sm:text-sm mb-1 line-clamp-1">{product.namaPemilik}</p>
                     <div className="flex items-center">
-                      <span className="text-yellow-400 text-sm">★</span>
-                      <span className="text-gray-600 text-sm ml-1">{product.rating?.toFixed(1) || '0.0'}</span>
+                      <span className="text-yellow-400 text-xs sm:text-sm">★</span>
+                      <span className="text-gray-600 text-xs sm:text-sm ml-1">{product.rating?.toFixed(1) || '0.0'}</span>
                     </div>
                   </div>
                 ))}
@@ -422,11 +422,11 @@ export default function EUMKMPage() {
       {/* Floating Action Button - Buat Toko (Only for non-external users) */}
       {user?.role !== 'warga_luar_dpkj' && (
         <Link href="/masyarakat/e-umkm/create">
-          <button className="fixed right-6 bottom-24 z-50 flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 active:scale-95 group">
-            <svg className="w-6 h-6 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button className="fixed right-4 sm:right-6 bottom-20 sm:bottom-24 z-50 flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 active:scale-95 group">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span className="font-bold">Buat Toko</span>
+            <span className="font-bold text-sm sm:text-base">Buat Toko</span>
           </button>
         </Link>
       )}

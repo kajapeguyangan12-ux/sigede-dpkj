@@ -325,37 +325,42 @@ export default function MasyarakatHomePage(): JSX.Element {
         console.log('🔍 Fetching berita from e-news_berita collection');
         
         try {
-          // Try with composite index (status + createdAt)
+          // Try simple query first without where clause to avoid index issues
           const queryTerbaru = query(
             collection(db, "e-news_berita"),
-            where("status", "==", "published"),
             orderBy("createdAt", "desc"),
-            limit(5) // Ambil 5 berita terbaru
+            limit(10) // Ambil 10 berita untuk di-filter client-side
           );
           const snapshotTerbaru = await getDocs(queryTerbaru);
           
-          // Process berita terbaru
+          // Process berita terbaru dan filter published di client-side
           snapshotTerbaru.forEach((doc) => {
             const data = doc.data();
             
-            allBerita.push({ 
-              id: doc.id, 
-              ...data,
-              // Map field names dari e-news_berita ke interface Berita
-              judul: data.title || data.judul || 'Berita Terbaru',
-              foto: data.imageUrl || data.foto || data.gambar || data.image,
-              createdAt: data.createdAt,
-              createdBy: data.createdBy,
-              authorRole: data.authorRole,
-              status: data.status,
-              kategori: 'terbaru'
-            } as Berita);
+            // Only add if status is published
+            if (data.status === "published") {
+              allBerita.push({ 
+                id: doc.id, 
+                ...data,
+                // Map field names dari e-news_berita ke interface Berita
+                judul: data.title || data.judul || 'Berita Terbaru',
+                foto: data.imageUrl || data.foto || data.gambar || data.image,
+                createdAt: data.createdAt,
+                createdBy: data.createdBy,
+                authorRole: data.authorRole,
+                status: data.status,
+                kategori: 'terbaru'
+              } as Berita);
+            }
           });
           
-          console.log(`✅ Loaded ${allBerita.length} berita from e-news_berita (with index)`, allBerita);
+          // Limit to 5 berita
+          allBerita.splice(5);
+          
+          console.log(`✅ Loaded ${allBerita.length} berita from e-news_berita`, allBerita);
         } catch (indexError: any) {
-          // Fallback: Index masih building, fetch semua lalu filter di client
-          console.warn('⚠️ Index still building, using client-side filtering...', indexError.message);
+          // Fallback: fetch all if index error
+          console.warn('⚠️ Query error, using fallback...', indexError.message);
           
           const queryAll = query(
             collection(db, "e-news_berita"),
@@ -417,36 +422,14 @@ export default function MasyarakatHomePage(): JSX.Element {
       }
 
       // Fetch 3 UMKM dengan kunjungan terbanyak (hanya yang aktif)
-      // Try with composite index first, fallback to client-side filtering if index not available
       try {
+        // Simple query without composite index
         const umkmQuery = query(
           collection(db, "e-umkm"),
           where("status", "==", "aktif"),
-          orderBy("totalKunjungan", "desc"),
-          limit(3)
+          limit(20) // Fetch more to sort client-side
         );
         const umkmSnapshot = await getDocs(umkmQuery);
-        const umkm: UMKM[] = [];
-        umkmSnapshot.forEach((doc) => {
-          const data = doc.data();
-          umkm.push({ 
-            id: doc.id, 
-            ...data,
-            // Handle different field names for visits
-            totalKunjungan: data.totalKunjungan || data.visits || 0
-          } as UMKM);
-        });
-        setUmkmList(umkm);
-        console.log('🏪 UMKM terpopuler (kunjungan terbanyak):', umkm);
-      } catch (indexError: any) {
-        console.warn('⚠️ Composite index for totalKunjungan not available, using fallback query:', indexError.message);
-        
-        // Fallback: Fetch all active UMKM and sort client-side by visits
-        const umkmFallbackQuery = query(
-          collection(db, "e-umkm"),
-          where("status", "==", "aktif")
-        );
-        const umkmSnapshot = await getDocs(umkmFallbackQuery);
         const umkm: UMKM[] = [];
         umkmSnapshot.forEach((doc) => {
           const data = doc.data();
@@ -464,7 +447,10 @@ export default function MasyarakatHomePage(): JSX.Element {
           .slice(0, 3);
         
         setUmkmList(sortedUmkm);
-        console.log('🏪 UMKM terpopuler (fallback - kunjungan terbanyak):', sortedUmkm);
+        console.log('🏪 UMKM terpopuler:', sortedUmkm);
+      } catch (umkmError: any) {
+        console.warn('⚠️ Error fetching UMKM:', umkmError.message);
+        setUmkmList([]);
       }
 
     } catch (error) {
@@ -576,7 +562,7 @@ export default function MasyarakatHomePage(): JSX.Element {
       {/* Popup Modal - Using PopupIklan Component */}
       {showPopup && <PopupIklan onClose={() => setShowPopup(false)} />}
 
-      <div className="relative mx-auto w-full max-w-lg px-4 sm:px-6 pb-24 sm:pb-28 pt-6">
+      <div className="relative w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
         {/* Using HeaderCard Component */}
         <HeaderCard 
           title="Beranda" 
@@ -660,14 +646,14 @@ export default function MasyarakatHomePage(): JSX.Element {
                 <div className="relative">
                   <div className="bg-white/95 backdrop-blur-md rounded-xl overflow-hidden shadow-lg">
                     {loading ? (
-                      <div className="flex items-center justify-center gap-2 text-gray-400 h-28 sm:h-32">
+                      <div className="flex items-center justify-center gap-2 text-gray-400 h-32 sm:h-40 md:h-48 lg:h-64 xl:h-80">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
                         <span className="text-xs">Memuat...</span>
                       </div>
                     ) : pengaturan?.fotoSlideshow && pengaturan.fotoSlideshow.length > 0 ? (
                       <div className="relative">
-                        {/* Slideshow Image - Sliding Container - Smaller height */}
-                        <div className="relative h-28 sm:h-32 overflow-hidden">
+                        {/* Slideshow Image - Sliding Container - Responsive height */}
+                        <div className="relative h-32 sm:h-40 md:h-48 lg:h-64 xl:h-80 overflow-hidden">
                           {/* Slides Wrapper with Transform */}
                           <div 
                             className="flex h-full transition-transform duration-[1000ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
@@ -696,37 +682,37 @@ export default function MasyarakatHomePage(): JSX.Element {
                         </div>
 
                         {/* Info overlay at bottom - Compact */}
-                        <div className="absolute bottom-0 left-0 right-0 p-2">
+                        <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center ring-2 ring-white/50">
-                                <span className="text-white text-xs font-bold">
+                            <div className="flex items-center gap-1 sm:gap-1.5">
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center ring-2 ring-white/50">
+                                <span className="text-white text-[10px] sm:text-xs font-bold">
                                   {pengaturan.namaKepalaDesa?.charAt(0) || 'K'}
                                 </span>
                               </div>
                               <div>
-                                <p className="text-xs font-semibold text-white drop-shadow-lg">
+                                <p className="text-[10px] sm:text-xs font-semibold text-white drop-shadow-lg">
                                   {pengaturan.namaKepalaDesa || 'Kepala Desa'}
                                 </p>
-                                <p className="text-[10px] text-white/90 drop-shadow-lg">Dauh Puri Kaja</p>
+                                <p className="text-[9px] sm:text-[10px] text-white/90 drop-shadow-lg">Dauh Puri Kaja</p>
                               </div>
                             </div>
-                            <div className="text-[10px] text-white/90 drop-shadow-lg bg-black/30 px-1.5 py-0.5 rounded-full">
+                            <div className="text-[9px] sm:text-[10px] text-white/90 drop-shadow-lg bg-black/30 px-1.5 py-0.5 rounded-full">
                               {currentSlideshowIndex + 1}/{pengaturan.fotoSlideshow.length}
                             </div>
                           </div>
                         </div>
 
                         {/* Navigation dots - Compact */}
-                        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex gap-1">
+                        <div className="absolute bottom-8 sm:bottom-10 left-1/2 transform -translate-x-1/2 flex gap-1">
                           {pengaturan.fotoSlideshow.map((_, index) => (
                             <button
                               key={index}
                               onClick={() => setCurrentSlideshowIndex(index)}
-                              className={`transition-all duration-300 rounded-full cursor-pointer ${
+                              className={`transition-all duration-300 rounded-full cursor-pointer touch-manipulation ${
                                 index === currentSlideshowIndex 
-                                  ? 'w-4 h-1.5 bg-white shadow-lg scale-110' 
-                                  : 'w-1.5 h-1.5 bg-white/60 hover:bg-white hover:scale-105'
+                                  ? 'w-3 h-1 sm:w-4 sm:h-1.5 bg-white shadow-lg scale-110' 
+                                  : 'w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white/60 hover:bg-white active:scale-105'
                               }`}
                             />
                           ))}
@@ -750,27 +736,53 @@ export default function MasyarakatHomePage(): JSX.Element {
                   <div className="absolute -top-2 -left-1 text-white/20 text-4xl font-serif leading-none">"</div>
                 </div>
 
-                {/* Indicator dots */}
-                <div className="flex justify-center sm:justify-start gap-2 mt-4">
-                  <span className="h-2 w-8 rounded-full bg-white shadow-lg" />
-                  <span className="h-2 w-2 rounded-full bg-white/40" />
-                  <span className="h-2 w-2 rounded-full bg-white/40" />
+                {/* Indicator dots - Mobile only */}
+                <div className="flex lg:hidden justify-center sm:justify-start gap-1.5 sm:gap-2 mt-3 sm:mt-4">
+                  <span className="h-1.5 w-6 sm:h-2 sm:w-8 rounded-full bg-white shadow-lg" />
+                  <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-white/40" />
+                  <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-white/40" />
                 </div>
               </div>
             </div>
 
             {/* Bottom decorative line */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/50 to-transparent"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-transparent via-white/50 to-transparent"></div>
           </div>
         </section>
 
         {/* Services Card */}
-        <section className="mb-10">
-          <div className="rounded-3xl bg-white/98 p-8 shadow-2xl ring-1 ring-gray-100 backdrop-blur-sm border border-white/40">
-            {/* Professional Menu Grid - Organized Layout */}
-            <div className="space-y-6">
-              {/* Top Row - 5 items */}
-              <div className="grid grid-cols-5 gap-4 sm:gap-6">
+        <section className="mb-6 sm:mb-8 md:mb-10 lg:mb-12">
+          <div className="rounded-2xl sm:rounded-3xl bg-white/98 p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 shadow-2xl ring-1 ring-gray-100 backdrop-blur-sm border border-white/40">
+            {/* Professional Menu Grid - Desktop: 5 columns, Mobile: 5 top + 4 bottom */}
+            <div className="space-y-4 sm:space-y-5 md:space-y-6 lg:space-y-0">
+              {/* Desktop: Single grid 5 columns 2 rows, Mobile: Separate rows */}
+              <div className="hidden lg:grid lg:grid-cols-5 xl:grid-cols-9 lg:gap-8 xl:gap-10 lg:gap-y-10 xl:gap-y-12">
+                {menuItems.map((item) => (
+                  <Link 
+                    key={item.title} 
+                    href={item.href}
+                    className="group cursor-pointer"
+                  >
+                    <div className="flex flex-col items-center group-hover:transform group-hover:scale-105 transition-all duration-300">
+                      <div className="relative mb-4">
+                        <div
+                          className={`relative grid h-18 w-18 xl:h-20 xl:w-20 place-items-center rounded-xl bg-gradient-to-br ${item.gradient} text-2xl text-white shadow-lg transition-all duration-300 group-hover:shadow-xl`}
+                        >
+                          {item.icon}
+                          <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm`}></div>
+                        </div>
+                        <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300 scale-110`}></div>
+                      </div>
+                      <span className="text-center font-medium leading-tight text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300 max-w-20">
+                        {item.title}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              
+              {/* Mobile: Top Row - 5 items */}
+              <div className="grid lg:hidden grid-cols-5 gap-3 sm:gap-4 md:gap-6">
                 {menuItems.slice(0, 5).map((item) => (
                   <Link 
                     key={item.title} 
@@ -779,22 +791,22 @@ export default function MasyarakatHomePage(): JSX.Element {
                   >
                     <div className="flex flex-col items-center group-hover:transform group-hover:scale-105 transition-all duration-300">
                       {/* Professional Icon Container */}
-                      <div className="relative mb-3">
+                      <div className="relative mb-2 sm:mb-2.5 md:mb-3 lg:mb-4">
                         <div
-                          className={`relative grid h-14 w-14 sm:h-16 sm:w-16 place-items-center rounded-xl bg-gradient-to-br ${item.gradient} text-lg sm:text-xl text-white shadow-lg transition-all duration-300 group-hover:shadow-xl`}
+                          className={`relative grid h-11 w-11 xs:h-12 xs:w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 lg:h-18 lg:w-18 xl:h-20 xl:w-20 place-items-center rounded-lg sm:rounded-xl bg-gradient-to-br ${item.gradient} text-base xs:text-lg sm:text-xl lg:text-2xl text-white shadow-lg transition-all duration-300 group-hover:shadow-xl`}
                         >
                           {item.icon}
                           
                           {/* Subtle glow effect */}
-                          <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm`}></div>
+                          <div className={`absolute inset-0 rounded-lg sm:rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm`}></div>
                         </div>
                         
                         {/* Enhanced ring effect */}
-                        <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300 scale-110`}></div>
+                        <div className={`absolute inset-0 rounded-lg sm:rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300 scale-110`}></div>
                       </div>
                       
                       {/* Professional Text Label */}
-                      <span className="text-center font-medium leading-tight text-xs text-gray-700 group-hover:text-gray-900 transition-colors duration-300 max-w-16">
+                      <span className="text-center font-medium leading-tight text-[10px] xs:text-[11px] sm:text-xs lg:text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300 max-w-[60px] sm:max-w-16 lg:max-w-20">
                         {item.title}
                       </span>
                     </div>
@@ -802,9 +814,9 @@ export default function MasyarakatHomePage(): JSX.Element {
                 ))}
               </div>
               
-              {/* Bottom Row - 4 items (centered) */}
+              {/* Mobile: Bottom Row - 4 items (centered) */}
               {menuItems.length > 5 && (
-                <div className="grid grid-cols-4 gap-4 sm:gap-6 max-w-sm mx-auto">
+                <div className="grid lg:hidden grid-cols-4 gap-3 sm:gap-4 md:gap-6 max-w-[280px] xs:max-w-xs sm:max-w-sm mx-auto">
                   {menuItems.slice(5).map((item) => (
                     <Link 
                       key={item.title} 
@@ -840,29 +852,31 @@ export default function MasyarakatHomePage(): JSX.Element {
           </div>
         </section>
 
-        {/* E-News Section - Auto Slide with Photos */}
-        <section className="mb-10">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-red-700 to-rose-700 bg-clip-text text-transparent">
-              📰 Berita Terkini
-            </h3>
-            <div className="h-0.5 flex-1 ml-4 bg-gradient-to-r from-red-200 to-transparent rounded-full"></div>
-          </div>
+        {/* Desktop: E-News and UMKM side by side, Mobile: Stacked */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-10 lg:gap-8 xl:gap-10 mb-6">
+          {/* E-News Section */}
+          <section className="lg:mb-0">
+            <div className="flex items-center justify-between mb-3 sm:mb-4 md:mb-5">
+              <h3 className="text-base sm:text-xl md:text-2xl lg:text-2xl xl:text-3xl font-bold bg-gradient-to-r from-red-700 to-rose-700 bg-clip-text text-transparent whitespace-nowrap">
+                📰 Berita Terkini
+              </h3>
+              <div className="h-0.5 flex-1 ml-3 sm:ml-4 lg:ml-5 bg-gradient-to-r from-red-200 to-transparent rounded-full"></div>
+            </div>
           {loading ? (
-            <div className="rounded-3xl bg-white/95 p-10 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20">
-              <div className="flex flex-col justify-center items-center gap-4">
-                <div className="animate-spin rounded-full h-14 w-14 border-b-4 border-red-600 border-t-4 border-t-transparent"></div>
-                <p className="text-red-700 font-medium">Memuat berita...</p>
+            <div className="rounded-2xl sm:rounded-3xl bg-white/95 p-6 sm:p-8 md:p-10 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20">
+              <div className="flex flex-col justify-center items-center gap-3 sm:gap-4">
+                <div className="animate-spin rounded-full h-12 w-12 sm:h-14 sm:w-14 border-b-4 border-red-600 border-t-4 border-t-transparent"></div>
+                <p className="text-red-700 font-medium text-sm sm:text-base">Memuat berita...</p>
               </div>
             </div>
           ) : beritaList.length > 0 ? (
             <div 
               onMouseEnter={() => setIsBeritaHovered(true)}
               onMouseLeave={() => setIsBeritaHovered(false)}
-              className="rounded-3xl bg-white/95 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20 overflow-hidden hover:shadow-2xl hover:ring-2 hover:ring-red-300/70 transition-all duration-500 group"
+              className="rounded-2xl sm:rounded-3xl bg-white/95 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20 overflow-hidden hover:shadow-2xl hover:ring-2 hover:ring-red-300/70 transition-all duration-500 group"
             >
               {/* Slider Container */}
-              <div className="relative h-48 sm:h-64 overflow-hidden">
+              <div className="relative h-44 xs:h-48 sm:h-56 md:h-64 lg:h-80 overflow-hidden">
                 {/* Slides Wrapper */}
                 <div 
                   className="flex h-full transition-transform duration-[800ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
@@ -894,23 +908,23 @@ export default function MasyarakatHomePage(): JSX.Element {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       
                       {/* News counter badge */}
-                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
-                        <Newspaper className="h-4 w-4 text-red-500" />
-                        <span className="text-sm font-bold text-gray-800">
+                      <div className="absolute top-2 sm:top-3 lg:top-4 right-2 sm:right-3 lg:right-4 bg-white/90 backdrop-blur-sm rounded-full px-2 py-0.5 sm:px-3 sm:py-1 lg:px-4 lg:py-1.5 flex items-center gap-1">
+                        <Newspaper className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-red-500" />
+                        <span className="text-xs sm:text-sm lg:text-base font-bold text-gray-800">
                           {index + 1} / {beritaList.length}
                         </span>
                       </div>
                       
                       {/* Admin badge */}
                       {(berita.authorRole === 'admin' || berita.createdBy) && (
-                        <div className="absolute top-14 right-3 bg-red-600/90 backdrop-blur-sm rounded-full px-2 py-1">
-                          <span className="text-xs font-medium text-white">Admin</span>
+                        <div className="absolute top-10 right-2 sm:top-14 sm:right-3 lg:top-16 lg:right-4 bg-red-600/90 backdrop-blur-sm rounded-full px-1.5 py-0.5 sm:px-2 sm:py-1 lg:px-3 lg:py-1">
+                          <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-white">Admin</span>
                         </div>
                       )}
                       
                       {/* Date badge */}
-                      <div className="absolute top-3 left-3 bg-gray-800/90 backdrop-blur-sm rounded-full px-3 py-1">
-                        <span className="text-xs font-medium text-white">
+                      <div className="absolute top-2 left-2 sm:top-3 sm:left-3 lg:top-4 lg:left-4 bg-gray-800/90 backdrop-blur-sm rounded-full px-2 py-0.5 sm:px-3 sm:py-1 lg:px-4 lg:py-1.5">
+                        <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-white">
                           {berita.createdAt?.toDate?.()?.toLocaleDateString('id-ID', {
                             day: 'numeric',
                             month: 'short'
@@ -922,16 +936,16 @@ export default function MasyarakatHomePage(): JSX.Element {
                       </div>
                       
                       {/* Title overlay */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-500/90 text-white">
+                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-5">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                          <span className="inline-flex items-center px-1.5 py-0.5 sm:px-2 sm:py-1 lg:px-3 lg:py-1 rounded-full text-[10px] sm:text-xs lg:text-sm font-medium bg-emerald-500/90 text-white">
                             📈 E-News Terbaru
                           </span>
                         </div>
-                        <h4 className="text-white font-bold text-sm sm:text-base line-clamp-2 mb-1">
+                        <h4 className="text-white font-bold text-xs sm:text-sm md:text-base lg:text-lg line-clamp-2 mb-1">
                           {berita.judul || 'Berita Terkini'}
                         </h4>
-                        <p className="text-white/80 text-xs flex items-center gap-1">
+                        <p className="text-white/80 text-[10px] sm:text-xs lg:text-sm flex items-center gap-1">
                           <span>👆</span> Klik untuk membaca selengkapnya
                         </p>
                       </div>
@@ -945,9 +959,9 @@ export default function MasyarakatHomePage(): JSX.Element {
                     e.stopPropagation();
                     setCurrentBeritaIndex((prev) => prev === 0 ? beritaList.length - 1 : prev - 1);
                   }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-sm rounded-full p-2 text-white hover:bg-black/50 hover:scale-110 transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg"
+                  className="absolute left-1.5 sm:left-2 lg:left-3 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2 lg:p-3 text-white hover:bg-black/50 hover:scale-110 active:scale-95 transition-all duration-300 opacity-60 sm:opacity-0 group-hover:opacity-100 shadow-lg touch-manipulation"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
@@ -957,16 +971,16 @@ export default function MasyarakatHomePage(): JSX.Element {
                     e.stopPropagation();
                     setCurrentBeritaIndex((prev) => (prev + 1) % beritaList.length);
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-sm rounded-full p-2 text-white hover:bg-black/50 hover:scale-110 transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-lg"
+                  className="absolute right-1.5 sm:right-2 lg:right-3 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2 lg:p-3 text-white hover:bg-black/50 hover:scale-110 active:scale-95 transition-all duration-300 opacity-60 sm:opacity-0 group-hover:opacity-100 shadow-lg touch-manipulation"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
               </div>
               
-              <div className="bg-gradient-to-r from-red-50/80 to-rose-50/80 p-5 text-center border-t border-red-100/50">
-                <div className="flex justify-center gap-3 mb-3">
+              <div className="bg-gradient-to-r from-red-50/80 to-rose-50/80 p-3 sm:p-4 md:p-5 lg:p-6 text-center border-t border-red-100/50">
+                <div className="flex justify-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                   {beritaList.map((_, index) => (
                     <button
                       key={index}
@@ -974,10 +988,10 @@ export default function MasyarakatHomePage(): JSX.Element {
                         e.stopPropagation();
                         setCurrentBeritaIndex(index);
                       }}
-                      className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                      className={`h-2 sm:h-2.5 lg:h-3 rounded-full transition-all duration-300 cursor-pointer touch-manipulation ${
                         index === currentBeritaIndex 
-                          ? 'w-10 bg-gradient-to-r from-red-600 to-rose-600 shadow-lg' 
-                          : 'w-2.5 bg-red-300 hover:bg-red-500 hover:scale-110'
+                          ? 'w-8 sm:w-10 lg:w-12 bg-gradient-to-r from-red-600 to-rose-600 shadow-lg' 
+                          : 'w-2 sm:w-2.5 lg:w-3 bg-red-300 hover:bg-red-500 active:scale-110'
                       }`}
                     />
                   ))}
@@ -985,31 +999,36 @@ export default function MasyarakatHomePage(): JSX.Element {
               </div>
             </div>
           ) : (
-            <div className="rounded-3xl bg-white/95 p-8 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20 text-center">
-              <div className="bg-gradient-to-br from-red-100 to-rose-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Newspaper className="h-8 w-8 text-red-600" />
+            <div className="rounded-2xl sm:rounded-3xl bg-white/95 p-6 sm:p-8 lg:p-10 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20 text-center">
+              <div className="bg-gradient-to-br from-red-100 to-rose-100 rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <Newspaper className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-red-600" />
               </div>
-              <h4 className="text-lg font-bold text-gray-800 mb-2">Belum Ada Berita</h4>
-              <p className="text-red-600 text-sm">Berita terbaru akan muncul di sini</p>
+              <h4 className="text-base sm:text-lg lg:text-xl font-bold text-gray-800 mb-1.5 sm:mb-2">Belum Ada Berita</h4>
+              <p className="text-red-600 text-xs sm:text-sm lg:text-base">Berita terbaru akan muncul di sini</p>
             </div>
           )}
-        </section>
+          </section>
 
-        {/* UKM Data Section - Auto Slide with Rating */}
-        <section className="mb-6">
-          <h3 className="mb-4 text-base sm:text-lg font-bold text-amber-800">Data UKM</h3>
+          {/* UKM Data Section - Auto Slide with Rating */}
+          <section className="lg:mb-0">
+            <div className="flex items-center justify-between mb-3 sm:mb-4 md:mb-5">
+              <h3 className="text-base sm:text-xl md:text-2xl lg:text-2xl xl:text-3xl font-bold bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent whitespace-nowrap">
+                🏪 Data UKM
+              </h3>
+              <div className="h-0.5 flex-1 ml-3 sm:ml-4 lg:ml-5 bg-gradient-to-r from-amber-200 to-transparent rounded-full"></div>
+            </div>
           {loading ? (
-            <div className="rounded-3xl bg-white/90 p-8 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm">
+            <div className="rounded-2xl sm:rounded-3xl bg-white/90 p-6 sm:p-8 lg:p-10 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm">
               <div className="flex justify-center items-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-amber-600"></div>
+                <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 border-b-4 border-amber-600"></div>
               </div>
             </div>
           ) : umkmList.length > 0 ? (
             <div 
               onClick={handleUmkmClick}
-              className="rounded-3xl bg-white/90 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 group"
+              className="rounded-2xl sm:rounded-3xl bg-white/90 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 group"
             >
-              <div className="relative h-48 sm:h-64 bg-gradient-to-br from-amber-100 to-amber-200">
+              <div className="relative h-44 xs:h-48 sm:h-56 md:h-64 lg:h-80 bg-gradient-to-br from-amber-100 to-amber-200">
                 {umkmList[currentUmkmIndex]?.fotoUsaha?.[0] ? (
                   <img
                     src={umkmList[currentUmkmIndex].fotoUsaha[0]}
@@ -1025,28 +1044,28 @@ export default function MasyarakatHomePage(): JSX.Element {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 
                 {/* Rating badge */}
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
-                  <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                  <span className="text-sm font-bold text-gray-800">
+                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 lg:top-4 lg:right-4 bg-white/90 backdrop-blur-sm rounded-full px-2 py-0.5 sm:px-3 sm:py-1 lg:px-4 lg:py-1.5 flex items-center gap-1">
+                  <Star className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-amber-500 fill-amber-500" />
+                  <span className="text-xs sm:text-sm lg:text-base font-bold text-gray-800">
                     {umkmList[currentUmkmIndex]?.rating?.toFixed(1) || '0.0'}
                   </span>
                 </div>
                 
                 {/* Title overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <h4 className="text-white font-bold text-sm sm:text-base line-clamp-2">
+                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-5">
+                  <h4 className="text-white font-bold text-xs sm:text-sm md:text-base lg:text-lg line-clamp-2">
                     {umkmList[currentUmkmIndex]?.namaUsaha || 'UMKM Terbaik'}
                   </h4>
                   {umkmList[currentUmkmIndex]?.kategori && (
-                    <p className="text-white/80 text-xs mt-1">
+                    <p className="text-white/80 text-[10px] sm:text-xs lg:text-sm mt-1">
                       {umkmList[currentUmkmIndex].kategori}
                     </p>
                   )}
                 </div>
               </div>
               
-              <div className="p-4 text-center">
-                <div className="flex justify-center gap-2">
+              <div className="p-3 sm:p-4 lg:p-5 text-center">
+                <div className="flex justify-center gap-1.5 sm:gap-2">
                   {umkmList.map((_, index) => (
                     <button
                       key={index}
@@ -1054,10 +1073,10 @@ export default function MasyarakatHomePage(): JSX.Element {
                         e.stopPropagation();
                         setCurrentUmkmIndex(index);
                       }}
-                      className={`h-2 rounded-full transition-all duration-300 ${
+                      className={`h-1.5 sm:h-2 lg:h-2.5 rounded-full transition-all duration-300 touch-manipulation ${
                         index === currentUmkmIndex 
-                          ? 'w-8 bg-amber-600' 
-                          : 'w-2 bg-amber-300 hover:bg-amber-400'
+                          ? 'w-6 sm:w-8 lg:w-10 bg-amber-600' 
+                          : 'w-1.5 sm:w-2 lg:w-2.5 bg-amber-300 hover:bg-amber-400 active:scale-110'
                       }`}
                     />
                   ))}
@@ -1065,11 +1084,12 @@ export default function MasyarakatHomePage(): JSX.Element {
               </div>
             </div>
           ) : (
-            <div className="rounded-3xl bg-white/90 p-8 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm text-center text-gray-500">
+            <div className="rounded-2xl sm:rounded-3xl bg-white/90 p-6 sm:p-8 lg:p-10 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm text-center text-gray-500 text-sm sm:text-base lg:text-lg">
               Tidak ada UMKM tersedia
             </div>
           )}
-        </section>
+          </section>
+        </div>
       </div>
 
       <BottomNavigation />

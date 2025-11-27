@@ -14,6 +14,7 @@ interface AuthContextType {
   logout: (userType?: 'admin' | 'masyarakat') => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  canAccessAdmin?: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -225,7 +226,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const isAuthenticated = !!user;
+  // isAdmin for strict admin roles (administrator, admin_desa only)
   const isAdmin = user ? authService.isAdmin(user.role) : false;
+  // canAccessAdmin for all roles that can access admin panel (including kepala_desa, kepala_dusun)
+  const canAccessAdmin = user ? ['administrator', 'admin_desa', 'kepala_desa', 'kepala_dusun'].includes(user.role) : false;
 
   const value: AuthContextType = {
     user,
@@ -234,7 +238,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     isAuthenticated,
-    isAdmin
+    isAdmin,
+    canAccessAdmin
   };
 
   return (

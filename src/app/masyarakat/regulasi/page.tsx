@@ -43,15 +43,18 @@ export default function RegulasiPage() {
   if (loading) {
     return (
       <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
-        <div className="mx-auto w-full max-w-md px-3 sm:px-4 pb-24 sm:pb-28 pt-4">
+        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
           <HeaderCard 
             title="Regulasi Desa" 
             subtitle="Peraturan & Kebijakan"
             backUrl="/masyarakat/home"
             showBackButton={true}
           />
-          <div className="flex justify-center items-center py-8">
-            <div className="text-gray-500">Memuat data regulasi...</div>
+          <div className="flex justify-center items-center py-12 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 border-b-2 border-red-500 mx-auto mb-4"></div>
+              <div className="text-gray-500 text-sm sm:text-base lg:text-lg">Memuat data regulasi...</div>
+            </div>
           </div>
         </div>
         <BottomNavigation />
@@ -62,17 +65,17 @@ export default function RegulasiPage() {
   if (regulasiData.length === 0) {
     return (
       <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
-        <div className="mx-auto w-full max-w-md px-3 sm:px-4 pb-24 sm:pb-28 pt-4">
+        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
           <HeaderCard 
             title="Regulasi Desa" 
             subtitle="Peraturan & Kebijakan"
             backUrl="/masyarakat/home"
             showBackButton={true}
           />
-          <div className="flex justify-center items-center py-8">
+          <div className="flex justify-center items-center py-12 max-w-4xl mx-auto">
             <div className="text-center">
-              <div className="text-gray-500 mb-2">Belum ada regulasi yang tersedia</div>
-              <div className="text-sm text-gray-400">Regulasi akan ditampilkan setelah ditambahkan oleh admin</div>
+              <div className="text-gray-500 text-sm sm:text-base lg:text-lg mb-2">Belum ada regulasi yang tersedia</div>
+              <div className="text-xs sm:text-sm text-gray-400">Regulasi akan ditampilkan setelah ditambahkan oleh admin</div>
             </div>
           </div>
         </div>
@@ -84,7 +87,7 @@ export default function RegulasiPage() {
   return (
     <>
       <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
-        <div className="mx-auto w-full max-w-md px-3 sm:px-4 pb-24 sm:pb-28 pt-4">
+        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
           <HeaderCard 
             title="Regulasi Desa" 
             subtitle="Peraturan & Kebijakan"
@@ -92,28 +95,28 @@ export default function RegulasiPage() {
             showBackButton={true}
           />
 
-          {/* Regulasi Cards */}
-          <div className="space-y-3 sm:space-y-4">
+          {/* Regulasi Cards - Grid Layout untuk Desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 max-w-7xl mx-auto">
             {regulasiData.map((regulasi) => (
-              <div key={regulasi.id} className="rounded-3xl bg-white/90 backdrop-blur-sm p-4 shadow-xl ring-1 ring-red-200">
-                <div className="space-y-4">
+              <div key={regulasi.id} className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 lg:p-6 shadow-xl ring-1 ring-red-200 hover:shadow-2xl transition-shadow duration-300">
+                <div className="space-y-4 sm:space-y-5">
                   {/* Judul Regulasi */}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Nama Regulasi</h3>
-                    <p className="text-xs sm:text-sm text-gray-700 overflow-hidden text-ellipsis line-clamp-2">{regulasi.judul}</p>
+                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-800 mb-2">Nama Regulasi</h3>
+                    <p className="text-xs sm:text-sm md:text-base text-gray-700 overflow-hidden text-ellipsis line-clamp-2">{regulasi.judul}</p>
                   </div>
 
                   {/* Deskripsi Regulasi */}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-800 mb-1">Deskripsi Regulasi</h3>
-                    <p className="text-xs sm:text-sm text-gray-700 overflow-hidden text-ellipsis line-clamp-3">{regulasi.deskripsi}</p>
+                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-800 mb-2">Deskripsi Regulasi</h3>
+                    <p className="text-xs sm:text-sm md:text-base text-gray-700 overflow-hidden text-ellipsis line-clamp-3">{regulasi.deskripsi}</p>
                   </div>
 
                   {/* Status dan Detail Button */}
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center justify-between pt-2 sm:pt-3">
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-800 mb-1">Status :</h3>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-1 sm:mb-2">Status :</h3>
+                      <span className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${
                         regulasi.status === 'aktif' 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-gray-100 text-gray-800'
@@ -124,9 +127,9 @@ export default function RegulasiPage() {
                     
                     <button
                       onClick={() => openDetailModal(regulasi)}
-                      className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-colors"
+                      className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all duration-300 hover:scale-105"
                     >
-                      <Eye size={20} />
+                      <Eye size={20} className="sm:w-6 sm:h-6" />
                     </button>
                   </div>
                 </div>

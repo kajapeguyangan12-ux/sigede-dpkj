@@ -22,6 +22,8 @@ function RenderIcon({ name, className = '' }: { name: string; className?: string
     case 'home-alt': return (<svg {...baseProps}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>);
     case 'compass': return (<svg {...baseProps}><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 9 8 12 12 15 16 12"/></svg>);
     case 'briefcase': return (<svg {...baseProps}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>);
+    case 'clipboard': return (<svg {...baseProps}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>);
+    case 'document-text': return (<svg {...baseProps}><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>);
     case 'star': return (<svg {...baseProps}><polygon points="12 2 15.09 10.26 23.77 10.5 17.39 16.62 19.54 25.29 12 20.88 4.46 25.29 6.61 16.62 0.23 10.5 8.91 10.26 12 2"/></svg>);
     case 'map': return (<svg {...baseProps}><polygon points="1 6 1 22 8 18 16 22 23 18 23 6 16 10 8 6 1 10 1 6"/></svg>);
     case 'message': return (<svg {...baseProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>);
@@ -35,9 +37,42 @@ function RenderIcon({ name, className = '' }: { name: string; className?: string
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [isLoaded, setIsLoaded] = useState(false);
   const [animateMenu, setAnimateMenu] = useState(false);
+  const sidebarRef = React.useRef<HTMLElement>(null);
+  const scrollPositionRef = React.useRef<number>(0);
+
+  // Save scroll position on scroll
+  useEffect(() => {
+    const sidebar = sidebarRef.current?.querySelector('nav');
+    if (!sidebar) return;
+    
+    const saveScroll = () => {
+      scrollPositionRef.current = sidebar.scrollTop;
+      sessionStorage.setItem('admin-sidebar-scroll', String(sidebar.scrollTop));
+    };
+    
+    sidebar.addEventListener('scroll', saveScroll, { passive: true });
+    return () => sidebar.removeEventListener('scroll', saveScroll);
+  }, []);
+
+  // Restore scroll position on mount and navigation
+  useEffect(() => {
+    const sidebar = sidebarRef.current?.querySelector('nav');
+    if (!sidebar) return;
+    
+    // Restore from sessionStorage or ref
+    const savedScroll = sessionStorage.getItem('admin-sidebar-scroll');
+    const scrollPos = savedScroll ? parseInt(savedScroll) : scrollPositionRef.current;
+    
+    if (scrollPos > 0) {
+      requestAnimationFrame(() => {
+        sidebar.scrollTop = scrollPos;
+      });
+    }
+  }, [pathname]);
 
   // Initialize animations
   useEffect(() => {
@@ -62,18 +97,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       // Set flag FIRST to prevent auth check from running
       sessionStorage.setItem('admin_logout_in_progress', 'true');
       
-      // Show loading state to prevent interaction during logout
-      const logoutButton = document.querySelector('[data-logout-btn]');
-      if (logoutButton) {
-        logoutButton.setAttribute('disabled', 'true');
-        logoutButton.textContent = 'Logging out...';
-      }
-      
-      // Manual logout process for immediate effect
-      console.log('🚪 Admin Layout: Starting manual logout process');
-      
       // Clear all auth data immediately
-      localStorage.clear(); // Clear everything
+      localStorage.clear();
+      sessionStorage.clear();
       sessionStorage.setItem('admin_logout_in_progress', 'true'); // Keep this flag
       
       try {
@@ -82,12 +108,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         console.error('Context logout failed, but continuing with manual logout');
       }
       
-      // Clean up and redirect
+      // Clean up
       sessionStorage.removeItem('admin_logout_in_progress');
       
       // Force immediate redirect
       console.log('✅ Admin Layout: Forcing redirect to login');
-      window.location.replace('/admin/login'); // Use replace instead of href
+      window.location.href = '/admin/login';
     } catch (error) {
       console.error('Admin Layout: Logout error:', error);
       // Clear everything on error
@@ -95,11 +121,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       sessionStorage.clear();
       
       // Force redirect even on error
-      window.location.replace('/admin/login');
+      window.location.href = '/admin/login';
     }
   };
 
   // Define all menu items with their permission keys
+  // NOTE: Order matters! More specific paths should come BEFORE general paths
   const allMenuItems = [
     { label: 'Home', path: '/admin/home', key: null }, // Home always accessible
     { label: 'Super Admin', path: '/admin/super-admin', key: 'super-admin' },
@@ -109,7 +136,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Regulasi Desa', path: '/admin/regulasi', key: 'regulasi-desa' },
     { label: 'Keuangan', path: '/admin/keuangan', key: 'keuangan' },
     { label: 'Data Desa', path: '/admin/data-desa', key: 'data-desa' },
-    { label: 'Layanan Publik', path: '/admin/layanan-publik', key: 'layanan-publik' },
+    { label: 'Form Taring Dukcapil', path: '/admin/layanan-publik/taring-dukcapil', key: 'layanan-publik' }, // Specific path first
+    { label: 'Layanan Publik', path: '/admin/layanan-publik', key: 'layanan-publik' }, // General path after
     { label: 'IKM', path: '/admin/ikm', key: 'ikm' },
     { label: 'Wisata & Budaya', path: '/admin/wisata-budaya', key: 'wisata-budaya' },
     { label: 'Pengaduan', path: '/admin/pengaduan', key: 'pengaduan' },
@@ -123,29 +151,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!user?.role) return false; // No role, hide all permission-based items
     return hasPermission(user.role as UserRole, item.key as any, 'read');
   });
-  // Find active index by matching pathname
-  const activeIndex = menuItems.findIndex(item => pathname?.startsWith(item.path));
-  // top-right account avatar removed per request
+  
+  // Find active index by matching pathname (check longer paths first for exact match)
+  const activeIndex = menuItems.findIndex(item => {
+    // Exact match first
+    if (pathname === item.path) return true;
+    // For nested routes, ensure it starts with the path and has a trailing slash or segment
+    if (pathname?.startsWith(item.path + '/')) return true;
+    return false;
+  });
 
 
   return (
     <AdminProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50 relative">
-        {/* Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -left-32 w-80 h-80 bg-gradient-to-br from-red-200/20 to-pink-200/20 rounded-full blur-3xl animate-floating"></div>
-          <div className="absolute -bottom-32 -right-40 w-96 h-96 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-full blur-3xl animate-floating-delayed"></div>
-        </div>
-
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 relative">
         {/* Desktop Sidebar - Fixed Position */}
-        <aside className={`hidden md:flex md:w-80 flex-col bg-white/95 backdrop-blur-xl border-r border-gray-200/50 shadow-2xl fixed top-0 left-0 h-screen z-30 transition-all duration-700 ${isLoaded ? 'animate-slide-in-left' : 'opacity-0 -translate-x-full'}`}>
-          {/* Sidebar Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white via-gray-50/30 to-blue-50/40"></div>
+        <aside ref={sidebarRef} className="hidden md:flex md:w-80 flex-col bg-white border-r border-gray-200 shadow-lg fixed top-0 left-0 h-screen z-30">
           
-          {/* Logo Section with Animation */}
-          <div className={`relative flex items-center justify-center py-8 mb-4 transition-all duration-500 ${isLoaded ? 'animate-bounce-in' : 'opacity-0 scale-50'}`}>
+          {/* Logo Section */}
+          <div className="relative flex items-center justify-center py-8 mb-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-500">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-300">
                 <Image 
                   src="/logo/Logo_BGD1.png"
                   alt="Logo BGD"
@@ -154,21 +180,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   className="w-16 h-16 object-contain filter brightness-0 invert"
                 />
               </div>
-              <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white shadow-lg animate-pulse"></div>
+              <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white shadow-md"></div>
             </div>
           </div>
 
-          {/* Brand Title with Animation */}
-          <div className={`relative text-center mb-6 px-6 transition-all duration-500 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-4'}`} style={{ animationDelay: '200ms' }}>
+          {/* Brand Title */}
+          <div className="relative text-center mb-6 px-6">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent mb-2">
               SiGede DPKJ
             </h1>
             <p className="text-sm text-gray-500 font-medium">Admin Dashboard</p>
           </div>
 
-          {/* User Info Section with Animation */}
+          {/* User Info Section */}
           {user && (
-            <div className={`mx-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100/50 shadow-lg transition-all duration-500 ${isLoaded ? 'animate-scale-in' : 'opacity-0 scale-90'}`} style={{ animationDelay: '400ms' }}>
+            <div className="mx-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 shadow-md">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
                   <span className="text-white text-sm font-bold">
@@ -185,6 +211,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
                 <button
                   onClick={handleLogout}
+                  type="button"
                   data-logout-btn
                   className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors duration-200"
                   title="Logout"
@@ -197,8 +224,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           )}
 
-          {/* Navigation with Staggered Animation */}
-          <nav className="relative flex-1 px-4 space-y-2 overflow-y-auto sidebar-scroll">
+          {/* Navigation */}
+          <nav className="relative flex-1 px-4 space-y-2 overflow-y-auto sidebar-scroll pb-24 scroll-smooth">
             {menuItems.map((item, idx) => {
               const isActive = activeIndex === idx;
               const iconColors = [
@@ -210,7 +237,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 'from-cyan-500 to-blue-600',     // Regulasi
                 'from-pink-500 to-rose-600',     // Keuangan
                 'from-indigo-500 to-purple-600', // Data Desa
-                'from-teal-500 to-green-600',    // Layanan Publik
+                'from-teal-500 to-cyan-600',     // Layanan Publik
+                'from-red-500 to-pink-500',      // Form Taring Dukcapil
                 'from-yellow-500 to-orange-600', // IKM
                 'from-violet-500 to-purple-600', // Wisata & Budaya
                 'from-emerald-500 to-teal-600',  // Pengaduan
@@ -221,24 +249,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               return (
                 <button
                   key={item.label}
-                  onClick={() => window.location.href = item.path}
-                  className={`group relative w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-medium transition-all duration-500 transform hover:scale-105 ${
-                    animateMenu ? 'animate-stagger-fade-in' : 'opacity-0'
-                  } ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-xl shadow-red-200' 
-                      : 'text-gray-700 hover:bg-white/80 hover:shadow-lg'
-                  }`}
-                  style={{
-                    animationDelay: `${600 + (idx * 100)}ms`,
-                    animationFillMode: 'both'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Navigate without scrolling to top
+                    router.push(item.path);
                   }}
+                  className={`group relative w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-medium transition-all duration-300 ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-lg' 
+                      : 'text-gray-700 hover:bg-gray-50 hover:shadow-md'
+                  }`}
                 >
                   {/* Icon Container */}
-                  <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                  <div className={`relative w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 ${
                     isActive 
-                      ? 'bg-white/20 shadow-lg' 
-                      : `bg-gradient-to-br ${iconColors[idx]} shadow-md group-hover:shadow-lg`
+                      ? 'bg-white/20' 
+                      : `bg-gradient-to-br ${iconColors[idx]}`
                   }`}>
                     <span className="relative z-10">
                       {idx === 0 && <RenderIcon name="home" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
@@ -246,20 +272,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       {idx === 2 && <RenderIcon name="newspaper" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
                       {idx === 3 && <RenderIcon name="layers" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
                       {idx === 4 && <RenderIcon name="file" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
-                      {idx === 5 && <RenderIcon name="wallet" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
-                      {idx === 6 && <RenderIcon name="bar-chart" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
-                      {idx === 7 && <RenderIcon name="briefcase" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
-                      {idx === 8 && <RenderIcon name="star" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
-                      {idx === 9 && <RenderIcon name="map" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
-                      {idx === 10 && <RenderIcon name="message" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
-                      {idx === 11 && <RenderIcon name="shopping-bag" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
-                      {idx === 12 && <RenderIcon name="settings" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 5 && <RenderIcon name="building" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 6 && <RenderIcon name="wallet" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 7 && <RenderIcon name="bar-chart" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 8 && <RenderIcon name="clipboard" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 9 && <RenderIcon name="document-text" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 10 && <RenderIcon name="help-circle" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 11 && <RenderIcon name="map" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 12 && <RenderIcon name="message" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 13 && <RenderIcon name="shopping-bag" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
+                      {idx === 14 && <RenderIcon name="settings" className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />}
                     </span>
-                    
-                    {/* Hover Glow Effect */}
-                    {!isActive && (
-                      <div className="absolute inset-0 rounded-xl bg-white/0 group-hover:bg-white/20 transition-all duration-300"></div>
-                    )}
                   </div>
                   
                   {/* Label */}
@@ -271,7 +294,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   
                   {/* Active Indicator */}
                   {isActive && (
-                    <div className="w-2 h-2 bg-white rounded-full shadow-lg animate-pulse"></div>
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
                   )}
                   
                   {/* Hover Arrow */}
@@ -287,8 +310,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             })}
           </nav>
 
+          {/* Logout Button */}
+          <div className="relative px-4 pb-4 mt-auto z-50">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleLogout();
+              }}
+              type="button"
+              className="relative w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-xl font-semibold transition-colors duration-300 shadow-md cursor-pointer z-50"
+            >
+              <svg className="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span className="pointer-events-none">Logout</span>
+            </button>
+          </div>
+
           {/* Footer Section */}
-          <div className="relative mt-auto p-4 border-t border-gray-200/50">
+          <div className="relative p-4 border-t border-gray-200/50 z-40">
             <div className="text-center text-xs text-gray-400">
               © 2024 SiGede DPKJ
             </div>
@@ -296,9 +337,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* Mobile Navigation - Fixed Top */}
-        <div className={`md:hidden fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-xl z-50 transition-all duration-500 ${isLoaded ? 'animate-slide-in-right' : 'opacity-0 translate-y-[-20px]'}`}>
+        <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50">
         {/* Mobile Header */}
-        <div className={`px-4 py-3 flex items-center justify-between transition-all duration-500 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '300ms' }}>
+        <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-lg">
               <Image 
@@ -316,25 +357,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
         
-        {/* Mobile Menu Scroll with Animation */}
-        <div className={`flex items-center gap-2 overflow-x-auto pb-3 px-4 scrollbar-hide transition-all duration-500 ${animateMenu ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '500ms' }}>
+        {/* Mobile Menu Scroll */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 px-4 scrollbar-hide">
           {menuItems.map((item, idx) => {
             const isActive = activeIndex === idx;
             return (
               <button
                 key={item.label}
                 onClick={() => window.location.href = item.path}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-500 transform hover:scale-105 ${
-                  animateMenu ? 'animate-stagger-fade-in' : 'opacity-0'
-                } ${
+                className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-300 ${
                   isActive 
-                    ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-lg shadow-red-200' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
+                    ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-md' 
+                    : 'text-gray-700 hover:bg-gray-100'
                 }`}
-                style={{
-                  animationDelay: `${700 + (idx * 50)}ms`,
-                  animationFillMode: 'both'
-                }}
               >
                 {item.label}
               </button>
@@ -344,15 +379,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Main Content Area */}
-        <main className={`md:ml-80 pt-32 md:pt-0 min-h-screen transition-all duration-700 ${isLoaded ? 'animate-slide-in-right' : 'opacity-0 translate-x-8'}`}>
-          <div className={`px-4 md:px-8 py-6 md:py-8 max-w-full transition-all duration-500 ${isLoaded ? 'animate-page-enter' : 'opacity-0'}`} style={{ animationDelay: '800ms' }}>
+        <main className="md:ml-80 pt-32 md:pt-0 min-h-screen">
+          <div className="px-4 md:px-8 py-6 md:py-8 max-w-full">
             {children}
           </div>
         </main>
 
         {/* Floating Action Button */}
-        <div className={`fixed bottom-8 right-8 z-50 md:hidden transition-all duration-500 ${isLoaded ? 'animate-bounce-in' : 'opacity-0 scale-0'}`} style={{ animationDelay: '1200ms' }}>
-          <button className="w-14 h-14 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-2xl flex items-center justify-center text-white hover:shadow-red-200 hover:shadow-2xl transform hover:scale-110 transition-all duration-300">
+        <div className="fixed bottom-8 right-8 z-50 md:hidden">
+          <button className="w-14 h-14 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg flex items-center justify-center text-white hover:shadow-xl transition-shadow duration-300">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>

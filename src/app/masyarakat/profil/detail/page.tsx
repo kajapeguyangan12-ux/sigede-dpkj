@@ -131,7 +131,7 @@ export default function ProfilDetailMasyarakatPage() {
   if (!user) {
     return (
       <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-gray-800">
-        <div className="mx-auto w-full max-w-md px-4 pb-20 pt-4">
+        <div className="mx-auto w-full max-w-4xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
           <HeaderCard title="Detail Profil" />
           <div className="flex items-center justify-center mt-20">
             <div className="text-gray-500">Silakan login terlebih dahulu</div>
@@ -143,7 +143,7 @@ export default function ProfilDetailMasyarakatPage() {
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-gray-800">
-      <div className="mx-auto w-full max-w-md px-4 pb-20 pt-4">
+      <div className="mx-auto w-full max-w-4xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         <HeaderCard title="Detail Profil" />
 
         <div className="mb-4">

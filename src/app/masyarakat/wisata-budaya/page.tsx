@@ -7,7 +7,8 @@ import BottomNavigation from '../../components/BottomNavigation';
 export default function WisataBudayaPage() {
   return (
     <main className="min-h-[100svh] bg-red-50 text-gray-900">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
+        <div className="max-w-7xl mx-auto">
         {/* Header Card */}
         <HeaderCard 
           title="Wisata & Budaya"
@@ -17,23 +18,23 @@ export default function WisataBudayaPage() {
         />
 
         {/* Main Content Cards */}
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
           {/* Wisata Card */}
           <Link href="/masyarakat/wisata-budaya/wisata">
-            <div className="group relative overflow-hidden rounded-3xl bg-white shadow-lg ring-1 ring-gray-200 transition-all hover:shadow-xl hover:scale-[1.02]">
+            <div className="group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-lg ring-1 ring-gray-200 transition-all hover:shadow-xl hover:scale-[1.02]">
               <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 opacity-0 transition-opacity group-hover:opacity-100" />
-              <div className="relative flex items-center justify-between p-6">
-                <div className="flex items-center gap-4">
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                    <TourismIcon className="h-6 w-6 text-white" />
+              <div className="relative flex items-center justify-between p-5 sm:p-6 md:p-7">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="grid h-11 w-11 sm:h-12 sm:w-12 md:h-14 md:w-14 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                    <TourismIcon className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white" />
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-gray-900">Wisata</div>
-                    <div className="text-sm text-gray-600">Jelajahi destinasi menarik</div>
+                    <div className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Wisata</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Jelajahi destinasi menarik</div>
                   </div>
                 </div>
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-gray-100 ring-1 ring-gray-200 transition-transform group-hover:translate-x-1">
-                  <ArrowIcon className="h-4 w-4 text-gray-600" />
+                <div className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-full bg-gray-100 ring-1 ring-gray-200 transition-transform group-hover:translate-x-1">
+                  <ArrowIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600" />
                 </div>
               </div>
             </div>
@@ -41,20 +42,20 @@ export default function WisataBudayaPage() {
 
           {/* Budaya Card */}
           <Link href="/masyarakat/wisata-budaya/budaya">
-            <div className="group relative overflow-hidden rounded-3xl bg-white shadow-lg ring-1 ring-gray-200 transition-all hover:shadow-xl hover:scale-[1.02]">
+            <div className="group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-lg ring-1 ring-gray-200 transition-all hover:shadow-xl hover:scale-[1.02]">
               <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 opacity-0 transition-opacity group-hover:opacity-100" />
-              <div className="relative flex items-center justify-between p-6">
-                <div className="flex items-center gap-4">
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-                    <CultureIcon className="h-6 w-6 text-white" />
+              <div className="relative flex items-center justify-between p-5 sm:p-6 md:p-7">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="grid h-11 w-11 sm:h-12 sm:w-12 md:h-14 md:w-14 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+                    <CultureIcon className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white" />
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-gray-900">Budaya</div>
-                    <div className="text-sm text-gray-600">Kekayaan tradisi dan adat</div>
+                    <div className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Budaya</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Kekayaan tradisi dan adat</div>
                   </div>
                 </div>
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-gray-100 ring-1 ring-gray-200 transition-transform group-hover:translate-x-1">
-                  <ArrowIcon className="h-4 w-4 text-gray-600" />
+                <div className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-full bg-gray-100 ring-1 ring-gray-200 transition-transform group-hover:translate-x-1">
+                  <ArrowIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600" />
                 </div>
               </div>
             </div>
@@ -62,18 +63,19 @@ export default function WisataBudayaPage() {
         </div>
 
         {/* Info Section */}
-        <div className="mt-8 rounded-3xl bg-white/90 p-6 shadow-xl ring-1 ring-gray-200 backdrop-blur-sm">
+        <div className="mt-6 sm:mt-8 rounded-2xl sm:rounded-3xl bg-white/90 p-5 sm:p-6 md:p-7 shadow-xl ring-1 ring-gray-200 backdrop-blur-sm">
           <div className="text-center">
-            <div className="mb-4 flex justify-center">
-              <InfoIllustration className="h-16 w-16 text-gray-600" />
+            <div className="mb-3 sm:mb-4 flex justify-center">
+              <InfoIllustration className="h-14 w-14 sm:h-16 sm:w-16 text-gray-600" />
             </div>
-            <div className="text-sm font-semibold text-gray-700 mb-2">
+            <div className="text-sm sm:text-base font-semibold text-gray-700 mb-2">
               Jelajahi Wisata & Budaya Peguyangan
             </div>
-            <div className="text-xs text-gray-600 leading-relaxed">
+            <div className="text-xs sm:text-sm text-gray-600 leading-relaxed">
               Temukan destinasi wisata menarik dan kekayaan budaya yang dimiliki Desa Peguyangan Kaja
             </div>
           </div>
+        </div>
         </div>
       </div>
 

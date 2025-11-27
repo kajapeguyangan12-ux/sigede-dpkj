@@ -38,7 +38,8 @@ export default function BudayaPage() {
 
   return (
     <main className="min-h-[100svh] bg-red-50 text-gray-900">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
+        <div className="max-w-7xl mx-auto">
         {/* Header Card */}
         <HeaderCard 
           title="Budaya"
@@ -48,15 +49,15 @@ export default function BudayaPage() {
         />
 
         {/* Search Bar */}
-        <div className="mb-4">
+        <div className="mb-4 sm:mb-5">
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <SearchIcon className="h-5 w-5 text-gray-400" />
+            <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+              <SearchIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>
             <input
               type="text"
               placeholder="Search..."
-              className="block w-full pl-12 pr-4 py-3 rounded-2xl border border-red-100 bg-white/95 shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+              className="block w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm sm:text-base border border-red-100 bg-white/95 shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -64,12 +65,12 @@ export default function BudayaPage() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+        <div className="mb-5 sm:mb-6 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {(["All", "Seni", "Upacara", "Sejarah", "Kerajinan"] as FilterType[]).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                 activeFilter === filter
                   ? "bg-red-500 text-white shadow-lg"
                   : "bg-white/80 text-gray-700 ring-1 ring-red-200 hover:bg-white hover:shadow-md"
@@ -78,58 +79,58 @@ export default function BudayaPage() {
               {filter}
             </button>
           ))}
-          <button className="px-3 py-2 rounded-full bg-white/80 text-gray-700 ring-1 ring-red-200 hover:bg-white hover:shadow-md">
-            <FilterIcon className="h-4 w-4" />
+          <button className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full bg-white/80 text-gray-700 ring-1 ring-red-200 hover:bg-white hover:shadow-md">
+            <FilterIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </button>
         </div>
 
         {/* Culture Listings */}
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
-              <p className="text-gray-500 mt-4">Memuat data...</p>
+            <div className="col-span-full text-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-red-500 mx-auto"></div>
+              <p className="text-gray-500 mt-4 text-sm sm:text-base">Memuat data...</p>
             </div>
           ) : filteredData.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="rounded-3xl bg-white/90 p-8 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
-                <SearchIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                <div className="text-lg font-semibold text-gray-700 mb-2">Tidak ada hasil ditemukan</div>
-                <div className="text-sm text-gray-600">Coba ubah kata kunci pencarian atau filter</div>
+            <div className="col-span-full text-center py-12">
+              <div className="rounded-2xl sm:rounded-3xl bg-white/90 p-6 sm:p-8 shadow-xl ring-1 ring-red-200 backdrop-blur-sm">
+                <SearchIcon className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mb-4" />
+                <div className="text-base sm:text-lg font-semibold text-gray-700 mb-2">Tidak ada hasil ditemukan</div>
+                <div className="text-xs sm:text-sm text-gray-600">Coba ubah kata kunci pencarian atau filter</div>
               </div>
             </div>
           ) : (
             filteredData.map((item) => (
               <div key={item.id} className="group">
-                <div className="rounded-3xl bg-white/95 shadow-lg ring-1 ring-red-100 overflow-hidden transition-all hover:shadow-xl hover:scale-[1.02]">
+                <div className="rounded-2xl sm:rounded-3xl bg-white/95 shadow-lg ring-1 ring-red-100 overflow-hidden transition-all hover:shadow-xl hover:scale-[1.02] h-full flex flex-col">
                   {/* Image Section */}
-                  <div className="relative h-48 bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                  <div className="relative h-40 sm:h-48 bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                     {item.fotoUrl ? (
                       <img src={item.fotoUrl} alt={item.judul} className="w-full h-full object-cover" />
                     ) : (
                       <div className="text-center text-red-600">
-                        <CultureIcon className="mx-auto h-16 w-16 mb-2 opacity-50" />
-                        <div className="text-sm font-medium">Foto</div>
+                        <CultureIcon className="mx-auto h-12 w-12 sm:h-16 sm:w-16 mb-2 opacity-50" />
+                        <div className="text-xs sm:text-sm font-medium">Foto</div>
                       </div>
                     )}
                   </div>
 
                   {/* Content Section */}
-                  <div className="p-4">
-                    <div className="mb-3">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">{item.judul}</h3>
+                  <div className="p-3 sm:p-4 flex-1 flex flex-col">
+                    <div className="mb-2 sm:mb-3">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 line-clamp-2">{item.judul}</h3>
                       <div className="inline-block bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">
                         {item.kategori}
                       </div>
                     </div>
 
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-3">{item.deskripsi}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-3 flex-1">{item.deskripsi}</p>
 
                     <div className="flex gap-2">
-                      <button className="flex-1 bg-red-500 text-white py-2 px-4 rounded-xl text-sm font-medium hover:bg-red-600 transition">
+                      <button className="flex-1 bg-red-500 text-white py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-medium hover:bg-red-600 transition">
                         Pelajari
                       </button>
-                      <Link href={`/masyarakat/wisata-budaya/budaya/detail/${item.id}`} className="bg-gray-100 text-gray-700 py-2 px-4 rounded-xl text-sm font-medium hover:bg-gray-200 transition">
+                      <Link href={`/masyarakat/wisata-budaya/budaya/detail/${item.id}`} className="bg-gray-100 text-gray-700 py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-medium hover:bg-gray-200 transition">
                         Detail
                       </Link>
                     </div>
@@ -138,6 +139,7 @@ export default function BudayaPage() {
               </div>
             ))
           )}
+        </div>
         </div>
       </div>
 

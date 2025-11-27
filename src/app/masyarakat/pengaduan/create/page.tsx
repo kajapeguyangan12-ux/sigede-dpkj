@@ -269,7 +269,7 @@ export default function BuatLaporanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-6 pt-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-red-50 pb-32 pt-4">
         {/* Header - Using HeaderCard Component */}
         <HeaderCard 
           title="Buat Laporan Pengaduan"
@@ -279,10 +279,10 @@ export default function BuatLaporanPage() {
         />
 
         {/* Content */}
-        <div className="max-w-2xl mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-6">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Info Card */}
-            <div className="bg-gradient-to-r from-red-100 to-pink-100 rounded-2xl p-4 border border-red-200">
+            <div className="bg-gradient-to-r from-red-100 to-pink-100 rounded-2xl p-4 sm:p-5 border border-red-200">
               <div className="flex gap-3">
                 <div className="flex-shrink-0">
                   <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
@@ -292,8 +292,8 @@ export default function BuatLaporanPage() {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-red-900 text-sm mb-1">Informasi Penting</h3>
-                  <p className="text-xs text-red-800 leading-relaxed">
+                  <h3 className="font-bold text-red-900 text-sm sm:text-base mb-1">Informasi Penting</h3>
+                  <p className="text-xs sm:text-sm text-red-800 leading-relaxed">
                     Pastikan data yang Anda isi sudah benar. Laporan akan diproses oleh admin dalam 1-3 hari kerja.
                   </p>
                 </div>
@@ -302,18 +302,18 @@ export default function BuatLaporanPage() {
 
             {/* Form Card */}
             <div className="bg-white/95 rounded-3xl shadow-xl ring-1 ring-red-100/50 overflow-hidden">
-              <div className="p-6 space-y-5">
+              <div className="p-5 sm:p-6 md:p-8 space-y-6 sm:space-y-7">
                 {/* Section: Informasi Laporan */}
                 <div>
-                  <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="w-1 h-5 bg-gradient-to-b from-red-500 to-pink-600 rounded-full"></span>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-4 sm:mb-5 flex items-center gap-2">
+                    <span className="w-1 h-5 sm:h-6 bg-gradient-to-b from-red-500 to-pink-600 rounded-full"></span>
                     Informasi Laporan
                   </h2>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-4 sm:space-y-5">
                     {/* Judul Laporan */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2">
                         Judul Laporan <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -321,7 +321,7 @@ export default function BuatLaporanPage() {
                         name="judul"
                         value={formData.judul}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm text-gray-900 placeholder:text-gray-400"
+                        className="w-full px-4 py-3 sm:py-3.5 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm sm:text-base text-gray-900 placeholder:text-gray-400"
                         placeholder="Contoh: Jalan Rusak di Gang Mawar"
                         required
                       />
@@ -329,14 +329,14 @@ export default function BuatLaporanPage() {
 
                     {/* Kategori */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2">
                         Kategori <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="kategori"
                         value={formData.kategori}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm font-medium text-gray-900"
+                        className="w-full px-4 py-3 sm:py-3.5 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm sm:text-base font-medium text-gray-900"
                         required
                       >
                         <option value="" className="text-gray-400">Pilih kategori laporan</option>
@@ -348,7 +348,7 @@ export default function BuatLaporanPage() {
 
                     {/* Isi Laporan */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2">
                         Isi Laporan <span className="text-red-500">*</span>
                       </label>
                       <textarea
@@ -356,16 +356,16 @@ export default function BuatLaporanPage() {
                         value={formData.isi}
                         onChange={handleChange}
                         rows={5}
-                        className="w-full px-4 py-3 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm resize-none text-gray-900 placeholder:text-gray-400"
+                        className="w-full px-4 py-3 sm:py-3.5 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm sm:text-base resize-none text-gray-900 placeholder:text-gray-400"
                         placeholder="Jelaskan detail laporan Anda dengan jelas..."
                         required
                       />
-                      <p className="mt-1.5 text-xs text-gray-500">Minimal 20 karakter</p>
+                      <p className="mt-1.5 text-xs sm:text-sm text-gray-500">Minimal 20 karakter</p>
                     </div>
 
                     {/* Upload Foto */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2">
                         Foto Pendukung
                       </label>
                       
@@ -413,7 +413,7 @@ export default function BuatLaporanPage() {
                           </label>
 
                           {/* Alternative: Manual camera/gallery selection */}
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3">
                             <label className="block">
                               <input
                                 type="file"
@@ -489,16 +489,16 @@ export default function BuatLaporanPage() {
 
                 {/* Section: Data Pelapor */}
                 <div>
-                  <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="w-1 h-5 bg-gradient-to-b from-red-500 to-pink-600 rounded-full"></span>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-4 sm:mb-5 flex items-center gap-2">
+                    <span className="w-1 h-5 sm:h-6 bg-gradient-to-b from-red-500 to-pink-600 rounded-full"></span>
                     Data Pelapor
                   </h2>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-4 sm:space-y-5">
                     {/* Info Note */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200">
-                      <p className="text-xs text-blue-700 flex items-center gap-2">
-                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 sm:p-4 border border-blue-200">
+                      <p className="text-xs sm:text-sm text-blue-700 flex items-start sm:items-center gap-2">
+                        <svg className="w-4 h-4 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span>Data di bawah ini diambil dari akun Anda dan tidak dapat diubah. Pastikan data akun Anda sudah benar.</span>
@@ -507,7 +507,7 @@ export default function BuatLaporanPage() {
 
                     {/* Nama Lengkap */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 flex flex-wrap items-center gap-2">
                         Nama Lengkap <span className="text-red-500">*</span>
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -521,7 +521,7 @@ export default function BuatLaporanPage() {
                         name="namaLengkap"
                         value={formData.namaLengkap}
                         readOnly
-                        className="w-full px-4 py-3 rounded-xl border-0 bg-gray-100 ring-1 ring-gray-300 text-sm text-gray-700 cursor-not-allowed"
+                        className="w-full px-4 py-3 sm:py-3.5 rounded-xl border-0 bg-gray-100 ring-1 ring-gray-300 text-sm sm:text-base text-gray-700 cursor-not-allowed"
                         placeholder="Masukkan nama lengkap"
                         required
                       />
@@ -529,7 +529,7 @@ export default function BuatLaporanPage() {
 
                     {/* NIK */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 flex flex-wrap items-center gap-2">
                         NIK <span className="text-red-500">*</span>
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -543,7 +543,7 @@ export default function BuatLaporanPage() {
                         name="nik"
                         value={formData.nik}
                         readOnly
-                        className="w-full px-4 py-3 rounded-xl border-0 bg-gray-100 ring-1 ring-gray-300 text-sm text-gray-700 cursor-not-allowed"
+                        className="w-full px-4 py-3 sm:py-3.5 rounded-xl border-0 bg-gray-100 ring-1 ring-gray-300 text-sm sm:text-base text-gray-700 cursor-not-allowed"
                         placeholder="Masukkan NIK (16 digit)"
                         maxLength={16}
                         required
@@ -552,7 +552,7 @@ export default function BuatLaporanPage() {
 
                     {/* Alamat */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 flex flex-wrap items-center gap-2">
                         Alamat <span className="text-red-500">*</span>
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -566,7 +566,7 @@ export default function BuatLaporanPage() {
                         value={formData.alamat}
                         onChange={handleInputChange}
                         rows={3}
-                        className="w-full px-4 py-3 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm resize-none text-gray-900 placeholder:text-gray-400"
+                        className="w-full px-4 py-3 sm:py-3.5 rounded-xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-red-400 focus:bg-white transition-all text-sm sm:text-base resize-none text-gray-900 placeholder:text-gray-400"
                         placeholder="Masukkan alamat lengkap"
                         required
                       />
@@ -574,7 +574,7 @@ export default function BuatLaporanPage() {
 
                     {/* No. Telepon */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 flex flex-wrap items-center gap-2">
                         No. Telepon <span className="text-red-500">*</span>
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -588,7 +588,7 @@ export default function BuatLaporanPage() {
                         name="noTelepon"
                         value={formData.noTelepon}
                         readOnly
-                        className="w-full px-4 py-3 rounded-xl border-0 bg-gray-100 ring-1 ring-gray-300 text-sm text-gray-700 cursor-not-allowed"
+                        className="w-full px-4 py-3 sm:py-3.5 rounded-xl border-0 bg-gray-100 ring-1 ring-gray-300 text-sm sm:text-base text-gray-700 cursor-not-allowed"
                         placeholder="Contoh: 08123456789"
                         required
                       />
@@ -596,7 +596,7 @@ export default function BuatLaporanPage() {
 
                     {/* Email (Opsional) */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 flex flex-wrap items-center gap-2">
                         Email
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -610,7 +610,7 @@ export default function BuatLaporanPage() {
                         name="email"
                         value={formData.email}
                         readOnly
-                        className="w-full px-4 py-3 rounded-xl border-0 bg-gray-100 ring-1 ring-gray-300 text-sm text-gray-700 cursor-not-allowed"
+                        className="w-full px-4 py-3 sm:py-3.5 rounded-xl border-0 bg-gray-100 ring-1 ring-gray-300 text-sm sm:text-base text-gray-700 cursor-not-allowed"
                         placeholder="email@contoh.com (opsional)"
                       />
                     </div>
@@ -620,11 +620,11 @@ export default function BuatLaporanPage() {
             </div>
 
             {/* Submit Button */}
-            <div className="sticky bottom-4 z-10">
+            <div className="sticky bottom-4 sm:bottom-6 z-10">
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-4 px-6 rounded-2xl font-bold text-white shadow-xl transition-all duration-300 transform ${
+                className={`w-full py-3.5 sm:py-4 px-6 rounded-2xl font-bold text-sm sm:text-base text-white shadow-xl transition-all duration-300 transform ${
                   loading
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]'

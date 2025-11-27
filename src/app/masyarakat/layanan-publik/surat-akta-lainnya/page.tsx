@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 const DesaLogo = "/logo/LOGO_DPKJ.png";
-const BgdLogo = "/logo/Logo_BGD.png";
+const BgdLogo = "/logo/Logo_BGD1.png";
 
 type FormData = {
   jenisSurat: string;
@@ -84,7 +84,7 @@ export default function SuratAktaLainnyaPage() {
 
   return (
     <main className="min-h-[100svh] bg-red-50 text-gray-900">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="mx-auto w-full max-w-4xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         <HeaderCard title="Surat Akta Lainnya" backUrl="/masyarakat/layanan-publik" showBackButton={true} />
 
         <form onSubmit={handleSubmit} className="space-y-4">

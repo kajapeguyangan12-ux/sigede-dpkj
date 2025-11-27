@@ -150,7 +150,7 @@ export default function PengaduanPage() {
 
   return (
     <main className="min-h-[100svh] bg-red-50 text-gray-900">
-      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-32 pt-4">
         {/* Header Card */}
         <HeaderCard 
           title="Pengaduan"
@@ -160,15 +160,15 @@ export default function PengaduanPage() {
         />
 
         {/* Search Bar */}
-        <div className="mb-4">
+        <div className="mb-4 sm:mb-6">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <SearchIcon className="h-5 w-5 text-gray-400" />
             </div>
             <input
               type="text"
-              placeholder="Search..."
-              className="block w-full pl-12 pr-4 py-3 rounded-2xl border border-red-100 bg-white/95 shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition"
+              placeholder="Cari laporan..."
+              className="block w-full pl-12 pr-4 py-3 sm:py-3.5 rounded-2xl border border-red-100 bg-white/95 shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition text-sm sm:text-base"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -176,13 +176,13 @@ export default function PengaduanPage() {
         </div>
 
         {/* Filter and Sort Controls */}
-        <div className="mb-6 flex gap-2">
+        <div className="mb-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
           <select
-            className="flex-1 px-4 py-2 rounded-2xl border border-red-100 bg-white/95 shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+            className="flex-1 px-4 py-2.5 sm:py-2 rounded-2xl border border-red-100 bg-white/95 shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
             value={activeFilter}
             onChange={(e) => setActiveFilter(e.target.value as FilterType)}
           >
-            <option value="All">Kategori</option>
+            <option value="All">Semua Kategori</option>
             <option value="Infrastruktur">Infrastruktur</option>
             <option value="Keamanan">Keamanan</option>
             <option value="Lingkungan">Lingkungan</option>
@@ -191,11 +191,11 @@ export default function PengaduanPage() {
           </select>
 
           <select
-            className="flex-1 px-4 py-2 rounded-2xl border border-red-100 bg-white/95 shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+            className="flex-1 px-4 py-2.5 sm:py-2 rounded-2xl border border-red-100 bg-white/95 shadow-sm ring-1 ring-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
             value={activeSort}
             onChange={(e) => setActiveSort(e.target.value as SortType)}
           >
-            <option value="Terbaru">Urutkan</option>
+            <option value="Terbaru">Urutkan: Terbaru</option>
             <option value="Terbaru">Terbaru</option>
             <option value="Terlama">Terlama</option>
             <option value="Status">Status</option>
@@ -207,22 +207,25 @@ export default function PengaduanPage() {
         <div className="mb-6">
           <button
             onClick={() => window.location.href = '/masyarakat/pengaduan/create'}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-2xl shadow-lg transition-colors"
+            className="w-full sm:w-auto sm:min-w-[200px] bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-3 sm:py-3.5 px-6 sm:px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
           >
-            + Buat Laporan Baru
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Buat Laporan Baru
           </button>
         </div>
 
         {/* Latest Reports Section */}
         <div className="mb-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Data Laporan Terbaru</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Data Laporan Terbaru</h3>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
             {filteredData.map((item) => (
               <div key={item.id} className="group">
-                <div className="rounded-3xl bg-white/95 shadow-lg ring-1 ring-red-100 overflow-hidden transition-all hover:shadow-xl hover:scale-[1.02]">
+                <div className="rounded-3xl bg-white/95 shadow-lg ring-1 ring-red-100 overflow-hidden transition-all hover:shadow-xl hover:scale-[1.02] flex flex-col h-full">
                   {/* Image Section */}
-                  <div className="relative h-32 bg-gradient-to-br from-red-100 to-red-200 overflow-hidden">
+                  <div className="relative h-40 sm:h-48 bg-gradient-to-br from-red-100 to-red-200 overflow-hidden">
                     {item.fotoUrl ? (
                       <Image
                         src={item.fotoUrl}

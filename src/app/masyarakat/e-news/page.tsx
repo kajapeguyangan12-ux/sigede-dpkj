@@ -49,7 +49,7 @@ export default function ENewsPage() {
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-b from-gray-50 to-gray-100">
-      <div className="mx-auto w-full max-w-md px-3 sm:px-4 pb-24 sm:pb-28 pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         <HeaderCard 
           title="E-News" 
           subtitle="Berita & Pengumuman"
@@ -58,47 +58,47 @@ export default function ENewsPage() {
         />
 
         {/* Tab Navigation */}
-        <div className="px-0 mb-6">
-          <div className="flex gap-2 sm:gap-3 rounded-2xl bg-gray-100 p-1">
+        <div className="px-0 mb-4 sm:mb-5 md:mb-6 lg:mb-8">
+          <div className="flex gap-2 sm:gap-3 rounded-2xl bg-gray-100 p-1 max-w-md lg:max-w-lg mx-auto">
             <button
               onClick={() => setActiveTab('berita')}
-              className={`flex-1 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              className={`flex-1 rounded-xl px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3 lg:py-3.5 text-xs sm:text-sm lg:text-base font-semibold transition-all duration-200 ${
                 activeTab === 'berita'
                   ? 'bg-white text-gray-900 shadow-md'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
               Berita
-              <span className="ml-1 font-normal text-[10px] sm:text-xs">({beritaData.length})</span>
+              <span className="ml-1 font-normal text-[10px] sm:text-xs lg:text-sm">({beritaData.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('pengumuman')}
-              className={`flex-1 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              className={`flex-1 rounded-xl px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3 lg:py-3.5 text-xs sm:text-sm lg:text-base font-semibold transition-all duration-200 ${
                 activeTab === 'pengumuman'
                   ? 'bg-white text-gray-900 shadow-md'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
               Pengumuman
-              <span className="ml-1 font-normal text-[10px] sm:text-xs">({pengumumanData.length})</span>
+              <span className="ml-1 font-normal text-[10px] sm:text-xs lg:text-sm">({pengumumanData.length})</span>
             </button>
           </div>
         </div>
 
-        {/* News Cards */}
-        <div className="space-y-3 sm:space-y-4">
+        {/* News Cards - Mobile: Single column, Desktop: Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           {error && (
-            <div className="rounded-2xl bg-red-50 border border-red-200 p-3 sm:p-4 text-red-700 mx-0">
+            <div className="col-span-full rounded-2xl bg-red-50 border border-red-200 p-3 sm:p-4 text-red-700 mx-0">
               <p className="font-semibold text-xs sm:text-sm">⚠️ Error: {error}</p>
             </div>
           )}
           
           {loading ? (
-            <div className="text-center py-16">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
-                <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+            <div className="col-span-full text-center py-12 lg:py-16">
+              <div className="inline-flex items-center justify-center w-12 h-12 lg:w-16 lg:h-16 rounded-full bg-blue-100 mb-4">
+                <div className="animate-spin h-6 w-6 lg:h-8 lg:w-8 border-2 lg:border-3 border-blue-500 border-t-transparent rounded-full"></div>
               </div>
-              <p className="text-gray-600 font-medium text-sm">Memuat data...</p>
+              <p className="text-gray-600 font-medium text-sm lg:text-base">Memuat data...</p>
             </div>
           ) : currentData.length > 0 ? (
             currentData.map((item) => (
@@ -106,9 +106,9 @@ export default function ENewsPage() {
                 key={item.id}
                 href={`/masyarakat/e-news/detail/${item.jenis}/${item.id}`}
               >
-                <div className="group rounded-2xl bg-white overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 mx-0">
+                <div className="group rounded-2xl sm:rounded-3xl bg-white overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 mx-0 h-full flex flex-col">
                   {/* Image Container */}
-                  <div className="relative h-40 sm:h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+                  <div className="relative h-40 sm:h-48 md:h-52 lg:h-56 xl:h-60 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden flex-shrink-0">
                     {item.gambar && item.gambar !== '/logo/default.png' ? (
                       <img
                         src={item.gambar}
@@ -135,8 +135,8 @@ export default function ENewsPage() {
                       </div>
                     )}
                     {/* Badge */}
-                    <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-white rounded-full px-2 sm:px-3 py-1 shadow-md">
-                      <span className={`text-[10px] sm:text-xs font-semibold ${
+                    <div className="absolute top-2 sm:top-3 lg:top-4 right-2 sm:right-3 lg:right-4 bg-white rounded-full px-2 sm:px-3 lg:px-4 py-1 lg:py-1.5 shadow-md">
+                      <span className={`text-[10px] sm:text-xs lg:text-sm font-semibold ${
                         item.jenis === 'berita' ? 'text-red-600' : 'text-purple-600'
                       }`}>
                         {item.jenis === 'berita' ? '📰 Berita' : '📢 Pengumuman'}
@@ -145,9 +145,9 @@ export default function ENewsPage() {
                   </div>
 
                   {/* Content Container */}
-                  <div className="p-3 sm:p-4">
+                  <div className="p-3 sm:p-4 lg:p-5 flex-1 flex flex-col">
                     {/* Title */}
-                    <h3 className={`text-sm sm:text-base font-bold text-gray-900 mb-2 line-clamp-2 transition-colors ${
+                    <h3 className={`text-sm sm:text-base lg:text-lg font-bold text-gray-900 mb-2 lg:mb-3 line-clamp-2 transition-colors ${
                       item.jenis === 'berita' ? 'group-hover:text-red-600' : 'group-hover:text-purple-600'
                     }`}>
                       {item.judul}
@@ -155,8 +155,8 @@ export default function ENewsPage() {
 
                     {/* Meta Information */}
                     {/* Meta Information */}
-                    <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-600 mb-2 sm:mb-3">
-                      <Calendar size={12} className="flex-shrink-0 sm:w-3 sm:h-3" />
+                    <div className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600 mb-2 sm:mb-3">
+                      <Calendar size={12} className="flex-shrink-0 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                       <span className="truncate">
                         {(() => {
                           try {
@@ -175,27 +175,27 @@ export default function ENewsPage() {
 
                     {/* Location for berita */}
                     {item.jenis === 'berita' && item.lokasi && (
-                      <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-600 mb-2 sm:mb-3">
-                        <MapPin size={12} className="flex-shrink-0 sm:w-3 sm:h-3" />
+                      <div className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-sm text-gray-600 mb-2 sm:mb-3">
+                        <MapPin size={12} className="flex-shrink-0 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                         <span className="truncate">{item.lokasi}</span>
                       </div>
                     )}
 
                     {/* Description */}
-                    <p className="text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4 line-clamp-2">
+                    <p className="text-xs sm:text-sm lg:text-base text-gray-700 mb-3 sm:mb-4 line-clamp-2 flex-1">
                       {item.deskripsi || 'Tidak ada deskripsi'}
                     </p>
 
                     {/* CTA Button */}
-                    <div className="flex items-center justify-between">
-                      <span className={`text-[10px] sm:text-xs font-semibold ${
+                    <div className="flex items-center justify-between mt-auto">
+                      <span className={`text-[10px] sm:text-xs lg:text-sm font-semibold ${
                         item.jenis === 'berita' ? 'text-red-600' : 'text-purple-600'
                       }`}>
                         Lihat Selengkapnya
                       </span>
                       <ChevronRight 
                         size={16} 
-                        className={`group-hover:translate-x-1 transition-transform sm:w-4 sm:h-4 ${
+                        className={`group-hover:translate-x-1 transition-transform sm:w-4 sm:h-4 lg:w-5 lg:h-5 ${
                           item.jenis === 'berita' ? 'text-red-600' : 'text-purple-600'
                         }`} 
                       />
@@ -205,12 +205,12 @@ export default function ENewsPage() {
               </Link>
             ))
           ) : (
-            <div className="text-center py-12">
-              <div className="text-5xl sm:text-6xl mb-4">{activeTab === 'berita' ? '📰' : '📢'}</div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">
+            <div className="col-span-full text-center py-12 lg:py-16">
+              <div className="text-5xl sm:text-6xl lg:text-7xl mb-4">{activeTab === 'berita' ? '📰' : '📢'}</div>
+              <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-800 mb-2">
                 Belum ada {activeTab === 'berita' ? 'berita' : 'pengumuman'}
               </h3>
-              <p className="text-xs sm:text-sm text-gray-600 px-4">
+              <p className="text-xs sm:text-sm lg:text-base text-gray-600 px-4">
                 {activeTab === 'berita' ? 'Berita' : 'Pengumuman'} akan muncul di sini setelah admin mempublikasikannya.
               </p>
             </div>
