@@ -69,10 +69,10 @@ export default function WisataBudayaPage() {
               <InfoIllustration className="h-14 w-14 sm:h-16 sm:w-16 text-gray-600" />
             </div>
             <div className="text-sm sm:text-base font-semibold text-gray-700 mb-2">
-              Jelajahi Wisata & Budaya Peguyangan
+              Jelajahi Wisata & Budaya Desa Dauh Puri Kaja
             </div>
             <div className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-              Temukan destinasi wisata menarik dan kekayaan budaya yang dimiliki Desa Peguyangan Kaja
+              Temukan destinasi wisata menarik dan kekayaan budaya yang dimiliki Desa Dauh Puri Kaja
             </div>
           </div>
         </div>

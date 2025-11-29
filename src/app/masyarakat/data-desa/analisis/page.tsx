@@ -151,14 +151,12 @@ if (typeof document !== 'undefined') {
 }
 
 interface FilterState {
+  desa: string;
   daerah: string;
   jenisKelamin: string;
   agama: string;
-  sukuBangsa: string;
   pendidikanTerakhir: string;
   pekerjaan: string;
-  kewarganegaraan: string;
-  statusNikah: string;
 }
 
 interface AgeGroup {
@@ -209,16 +207,16 @@ export default function AnalisisDataPage() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [showPredictionResult, setShowPredictionResult] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>({
+    desa: "dauh-puri-kaja",
     daerah: "",
     jenisKelamin: "",
     agama: "",
-    sukuBangsa: "",
     pendidikanTerakhir: "",
     pekerjaan: "",
-    kewarganegaraan: "",
-    statusNikah: "",
   });
 
   // Dynamic filter options - akan diisi dari data
@@ -226,15 +224,21 @@ export default function AnalisisDataPage() {
     daerah: [] as string[],
     jenisKelamin: [] as string[],
     agama: [] as string[],
-    sukuBangsa: [] as string[],
     pendidikanTerakhir: [] as string[],
     pekerjaan: [] as string[],
-    kewarganegaraan: [] as string[],
-    statusNikah: [] as string[],
   });
 
   useEffect(() => {
+    setLoading(true);
     fetchAllDataDesa();
+    
+    // Auto-refresh data every 5 minutes to keep it updated
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing data...');
+      fetchAllDataDesa();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   useEffect(() => {
@@ -247,6 +251,33 @@ export default function AnalisisDataPage() {
     }
   }, [filteredData]);
 
+  // Reset prediction when filters change
+  useEffect(() => {
+    if (showPredictionResult) {
+      // Recalculate prediction when filtered data changes
+      setShowPredictionResult(false);
+      // Will need to click Konfirmasi again
+    }
+  }, [filteredData.length]);
+
+  // Auto-recalculate age groups every minute for real-time age updates
+  useEffect(() => {
+    const ageUpdateInterval = setInterval(() => {
+      if (filteredData.length > 0) {
+        console.log('⏰ Auto-updating age calculations...');
+        calculateAgeGroups();
+        // Also update prediction if shown
+        if (showPredictionResult && targetAge && selectedDate) {
+          // Force re-render to update prediction count
+          setShowPredictionResult(false);
+          setTimeout(() => setShowPredictionResult(true), 100);
+        }
+      }
+    }, 60 * 1000); // Every 1 minute
+
+    return () => clearInterval(ageUpdateInterval);
+  }, [filteredData, showPredictionResult, targetAge, selectedDate]);
+
   // Generate dynamic filter options from data
   useEffect(() => {
     if (allData.length > 0) {
@@ -254,11 +285,8 @@ export default function AnalisisDataPage() {
         daerah: [...new Set(allData.map(item => item.daerah).filter(Boolean))].sort() as string[],
         jenisKelamin: [...new Set(allData.map(item => item.jenisKelamin).filter(Boolean))].sort() as string[],
         agama: [...new Set(allData.map(item => item.agama).filter(Boolean))].sort() as string[],
-        sukuBangsa: [...new Set(allData.map(item => item.sukuBangsa).filter(Boolean))].sort() as string[],
         pendidikanTerakhir: [...new Set(allData.map(item => item.pendidikanTerakhir).filter(Boolean))].sort() as string[],
         pekerjaan: [...new Set(allData.map(item => item.pekerjaan).filter(Boolean))].sort() as string[],
-        kewarganegaraan: [...new Set(allData.map(item => item.kewarganegaraan).filter(Boolean))].sort() as string[],
-        statusNikah: [...new Set(allData.map(item => item.statusNikah).filter(Boolean))].sort() as string[],
       };
       setFilterOptions(options);
     }
@@ -280,29 +308,31 @@ export default function AnalisisDataPage() {
 
   const fetchAllDataDesa = async () => {
     try {
-      setLoading(true);
+      setIsRefreshing(true);
       const data = await getDataDesa();
       
       console.log('Data loaded from data-desa:', data.length, 'records');
       setAllData(data);
       setFilteredData(data);
+      setLastRefresh(new Date());
     } catch (error) {
       console.error("Error loading data-desa:", error);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  const calculateAge = (birthDate: string): number => {
+  const calculateAge = (birthDate: string, targetDate?: string): number => {
     if (!birthDate) return 0;
     
     try {
       const birth = new Date(birthDate);
-      const today = new Date();
-      let age = today.getFullYear() - birth.getFullYear();
-      const monthDiff = today.getMonth() - birth.getMonth();
+      const referenceDate = targetDate ? new Date(targetDate) : new Date();
+      let age = referenceDate.getFullYear() - birth.getFullYear();
+      const monthDiff = referenceDate.getMonth() - birth.getMonth();
       
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      if (monthDiff < 0 || (monthDiff === 0 && referenceDate.getDate() < birth.getDate())) {
         age--;
       }
       
@@ -353,13 +383,34 @@ export default function AnalisisDataPage() {
   const applyFilters = () => {
     let result = [...allData];
 
+    // Filter berdasarkan desa (karena desa tidak ada di DataDesaItem, kita skip atau filter by logic lain)
+    // Untuk sekarang kita skip filter desa karena semua data sudah dari satu desa
+    
+    // Apply other filters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
+      if (value && key !== 'desa') { // Skip desa filter
         result = result.filter(item => {
           const itemValue = item[key as keyof DataDesaItem];
-          return itemValue?.toString().toLowerCase() === value.toLowerCase();
+          if (!itemValue) return false;
+          
+          // Handle daerah special case - might have code prefix
+          if (key === 'daerah') {
+            const itemDaerah = itemValue.toString();
+            // Check if it matches directly or if it's part of the string
+            return itemDaerah === value || 
+                   itemDaerah.toLowerCase().includes(value.toLowerCase()) ||
+                   value.toLowerCase().includes(itemDaerah.toLowerCase());
+          }
+          
+          return itemValue.toString().toLowerCase() === value.toLowerCase();
         });
       }
+    });
+
+    console.log('🔍 Filter applied:', { 
+      filters, 
+      originalCount: allData.length, 
+      filteredCount: result.length 
     });
 
     setFilteredData(result);
@@ -367,30 +418,39 @@ export default function AnalisisDataPage() {
 
   const resetFilters = () => {
     setFilters({
+      desa: "dauh-puri-kaja",
       daerah: "",
       jenisKelamin: "",
       agama: "",
-      sukuBangsa: "",
       pendidikanTerakhir: "",
       pekerjaan: "",
-      kewarganegaraan: "",
-      statusNikah: "",
     });
   };
 
   const activeFiltersCount = Object.values(filters).filter(v => v !== "").length;
 
   const predictAgeCount = () => {
-    if (!targetAge) return 0;
+    if (!targetAge || !selectedDate) return 0;
     
     const targetAgeNum = parseInt(targetAge);
     if (isNaN(targetAgeNum)) return 0;
 
-    return filteredData.filter(person => {
+    // Calculate age at the selected date for each person in filtered data
+    const count = filteredData.filter(person => {
       if (!person.tanggalLahir) return false;
-      const age = calculateAge(person.tanggalLahir);
-      return age === targetAgeNum;
+      const ageAtDate = calculateAge(person.tanggalLahir, selectedDate);
+      return ageAtDate === targetAgeNum;
     }).length;
+
+    console.log('🎯 Prediction:', {
+      targetAge: targetAgeNum,
+      selectedDate,
+      filteredDataCount: filteredData.length,
+      matchingCount: count,
+      activeFilters: filters
+    });
+
+    return count;
   };
 
   const handleConfirmPrediction = () => {
@@ -564,39 +624,78 @@ export default function AnalisisDataPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-5">
+              {/* Auto-Refresh Indicator */}
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200/50 animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  {isRefreshing ? (
+                    <>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-blue-700">Memperbarui data...</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs font-medium text-gray-600">Auto-refresh aktif</span>
+                    </>
+                  )}
+                </div>
+                {lastRefresh && (
+                  <span className="text-xs text-gray-500">
+                    Update: {lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Filter Desa */}
+                <div className="group animate-fadeIn">
+                  <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    DESA
+                  </label>
+                  <select
+                    value={filters.desa}
+                    onChange={(e) => setFilters({ ...filters, desa: e.target.value })}
+                    className="w-full px-4 py-3.5 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-xl text-sm font-bold text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-400 shadow-sm cursor-pointer"
+                  >
+                    <option value="dauh-puri-kaja">Dauh Puri Kaja</option>
+                  </select>
+                </div>
+
                 {/* Daerah */}
                 <div className="group animate-fadeIn" style={{ animationDelay: '0.05s' }}>
                   <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                     DAERAH
                   </label>
                   <select
                     value={filters.daerah}
                     onChange={(e) => setFilters({ ...filters, daerah: e.target.value })}
-                    className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-300 shadow-sm appearance-none cursor-pointer"
+                    className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all hover:border-indigo-300 shadow-sm appearance-none cursor-pointer"
                     style={{ color: filters.daerah ? '#1f2937' : '#9ca3af' }}
                   >
-                    <option value="" className="text-gray-400">Pilih Daerah</option>
+                    <option value="" className="text-gray-400">Semua Daerah</option>
                     {filterOptions.daerah.map((option: string) => (
                       <option key={option} value={option} className="text-gray-700">{option}</option>
                     ))}
                   </select>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Jenis Kelamin */}
               <div className="group animate-fadeIn" style={{ animationDelay: '0.1s' }}>
                 <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                   JENIS KELAMIN
                 </label>
                 <select
                   value={filters.jenisKelamin}
                   onChange={(e) => setFilters({ ...filters, jenisKelamin: e.target.value })}
-                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all hover:border-green-300 shadow-sm cursor-pointer touch-manipulation"
-                  style={{ color: filters.jenisKelamin ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all hover:border-green-300 shadow-sm cursor-pointer"
+                  style={{ color: filters.jenisKelamin ? '#1f2937' : '#9ca3af' }}
                 >
-                  <option value="" className="text-gray-400">Pilih Jenis Kelamin</option>
+                  <option value="" className="text-gray-400">Semua Jenis Kelamin</option>
                   {filterOptions.jenisKelamin.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
@@ -612,48 +711,33 @@ export default function AnalisisDataPage() {
                 <select
                   value={filters.agama}
                   onChange={(e) => setFilters({ ...filters, agama: e.target.value })}
-                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm cursor-pointer touch-manipulation"
-                  style={{ color: filters.agama ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm cursor-pointer"
+                  style={{ color: filters.agama ? '#1f2937' : '#9ca3af' }}
                 >
-                  <option value="" className="text-gray-400">Pilih Agama</option>
+                  <option value="" className="text-gray-400">Semua Agama</option>
                   {filterOptions.agama.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
                 </select>
               </div>
-
-              {/* Suku Bangsa */}
-              <div className="group animate-fadeIn" style={{ animationDelay: '0.2s' }}>
-                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
-                  SUKU BANGSA
-                </label>
-                <select
-                  value={filters.sukuBangsa}
-                  onChange={(e) => setFilters({ ...filters, sukuBangsa: e.target.value })}
-                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-pink-300 shadow-sm cursor-pointer touch-manipulation"
-                  style={{ color: filters.sukuBangsa ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
-                >
-                  <option value="" className="text-gray-400">Pilih Suku Bangsa</option>
-                  {filterOptions.sukuBangsa.map((option: string) => (
-                    <option key={option} value={option} className="text-gray-700">{option}</option>
-                  ))}
-                </select>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Pendidikan */}
-              <div className="group animate-fadeIn" style={{ animationDelay: '0.25s' }}>
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.2s' }}>
                 <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
                   PENDIDIKAN
                 </label>
                 <select
                   value={filters.pendidikanTerakhir}
                   onChange={(e) => setFilters({ ...filters, pendidikanTerakhir: e.target.value })}
-                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all hover:border-green-300 shadow-sm cursor-pointer touch-manipulation"
-                  style={{ color: filters.pendidikanTerakhir ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all hover:border-yellow-300 shadow-sm cursor-pointer"
+                  style={{ color: filters.pendidikanTerakhir ? '#1f2937' : '#9ca3af' }}
                 >
-                  <option value="" className="text-gray-400">Pilih Pendidikan</option>
+                  <option value="" className="text-gray-400">Semua Pendidikan</option>
                   {filterOptions.pendidikanTerakhir.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
@@ -661,60 +745,23 @@ export default function AnalisisDataPage() {
               </div>
 
               {/* Pekerjaan */}
-              <div className="group animate-fadeIn" style={{ animationDelay: '0.3s' }}>
+              <div className="group animate-fadeIn" style={{ animationDelay: '0.25s' }}>
                 <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                   PEKERJAAN
                 </label>
                 <select
                   value={filters.pekerjaan}
                   onChange={(e) => setFilters({ ...filters, pekerjaan: e.target.value })}
-                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all hover:border-yellow-300 shadow-sm cursor-pointer touch-manipulation"
-                  style={{ color: filters.pekerjaan ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm cursor-pointer"
+                  style={{ color: filters.pekerjaan ? '#1f2937' : '#9ca3af' }}
                 >
-                  <option value="" className="text-gray-400">Pilih Pekerjaan</option>
+                  <option value="" className="text-gray-400">Semua Pekerjaan</option>
                   {filterOptions.pekerjaan.map((option: string) => (
                     <option key={option} value={option} className="text-gray-700">{option}</option>
                   ))}
                 </select>
               </div>
-
-              {/* Warga Negara */}
-              <div className="group animate-fadeIn" style={{ animationDelay: '0.35s' }}>
-                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                  WARGA NEGARA
-                </label>
-                <select
-                  value={filters.kewarganegaraan}
-                  onChange={(e) => setFilters({ ...filters, kewarganegaraan: e.target.value })}
-                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm cursor-pointer touch-manipulation"
-                  style={{ color: filters.kewarganegaraan ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
-                >
-                  <option value="" className="text-gray-400">Pilih Kewarganegaraan</option>
-                  {filterOptions.kewarganegaraan.map((option: string) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Status Pernikahan */}
-              <div className="group animate-fadeIn" style={{ animationDelay: '0.4s' }}>
-                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-                  STATUS PERNIKAHAN
-                </label>
-                <select
-                  value={filters.statusNikah}
-                  onChange={(e) => setFilters({ ...filters, statusNikah: e.target.value })}
-                  className="w-full px-4 py-4 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm md:text-base font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all hover:border-orange-300 shadow-sm cursor-pointer touch-manipulation"
-                  style={{ color: filters.statusNikah ? '#1f2937' : '#9ca3af', minHeight: '48px' }}
-                >
-                  <option value="" className="text-gray-400">Pilih Status Pernikahan</option>
-                  {filterOptions.statusNikah.map((option: string) => (
-                    <option key={option} value={option} className="text-gray-700">{option}</option>
-                  ))}
-                </select>
               </div>
             </div>
           </div>

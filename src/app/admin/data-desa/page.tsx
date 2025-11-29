@@ -366,6 +366,24 @@ export default function DataDesaPage() {
     return groups;
   }, {} as Record<string, DataDesa[]>)).filter(kk => kk !== 'Tanpa KK').length;
 
+  // Detect duplicate NIK
+  const duplicateNIK = dataWarga.reduce((acc, item) => {
+    if (item.nik && item.nik.trim() !== '') {
+      const nik = item.nik.trim();
+      if (!acc[nik]) {
+        acc[nik] = [];
+      }
+      acc[nik].push(item);
+    }
+    return acc;
+  }, {} as Record<string, DataDesa[]>);
+
+  const duplicates = Object.entries(duplicateNIK)
+    .filter(([_, items]) => items.length > 1)
+    .map(([nik, items]) => ({ nik, count: items.length, items }));
+
+  const totalDuplicates = duplicates.reduce((sum, dup) => sum + (dup.count - 1), 0);
+
   return (
     <>
       {/* Inject CSS styles for modern modal */}
@@ -482,6 +500,24 @@ export default function DataDesaPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Duplicate Data Information */}
+          {duplicates.length > 0 && (
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-orange-400 rounded-lg p-4 mb-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-800">
+                    Informasi: Ditemukan <span className="text-orange-600 font-bold">{totalDuplicates}</span> data duplikat berdasarkan NIK yang sama ({duplicates.length} NIK duplikat)
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-3">
               Data Desa Dauh Puri Kaja

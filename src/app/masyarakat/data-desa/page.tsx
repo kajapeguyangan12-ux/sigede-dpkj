@@ -25,13 +25,16 @@ interface KategoriOption {
 export default function DataDesaPage() {
   const [dataWarga, setDataWarga] = useState<DataDesaItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDesa, setSelectedDesa] = useState<string>("");
+  const [selectedVillage, setSelectedVillage] = useState<string>("dauh-puri-kaja");
+  const [selectedDesa, setSelectedDesa] = useState<string>("all");
   const [selectedKategori, setSelectedKategori] = useState<string>("");
+  const [showVillageDropdown, setShowVillageDropdown] = useState(false);
   const [showDesaDropdown, setShowDesaDropdown] = useState(false);
   const [showKategoriDropdown, setShowKategoriDropdown] = useState(false);
   const [daerahOptions, setDaerahOptions] = useState<DaerahOption[]>([]);
   const [canAccessAnalisis, setCanAccessAnalisis] = useState(false);
   
+  const villageDropdownRef = useRef<HTMLDivElement>(null);
   const desaDropdownRef = useRef<HTMLDivElement>(null);
   const kategoriDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -188,6 +191,9 @@ export default function DataDesaPage() {
   // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (villageDropdownRef.current && !villageDropdownRef.current.contains(event.target as Node)) {
+        setShowVillageDropdown(false);
+      }
       if (desaDropdownRef.current && !desaDropdownRef.current.contains(event.target as Node)) {
         setShowDesaDropdown(false);
       }
@@ -196,14 +202,14 @@ export default function DataDesaPage() {
       }
     };
 
-    if (showDesaDropdown || showKategoriDropdown) {
+    if (showVillageDropdown || showDesaDropdown || showKategoriDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showDesaDropdown, showKategoriDropdown]);
+  }, [showVillageDropdown, showDesaDropdown, showKategoriDropdown]);
 
   // Calculate basic statistics and chart data
   const totalPenduduk = dataWarga.length;
@@ -391,8 +397,17 @@ export default function DataDesaPage() {
     return kategori ? kategori.name : "Pilih Kategori";
   };
 
+  const villageOptions = [
+    { id: "dauh-puri-kaja", name: "Dauh Puri Kaja" }
+  ];
+
+  const getSelectedVillageName = () => {
+    const village = villageOptions.find(v => v.id === selectedVillage);
+    return village ? village.name : "Pilih Desa";
+  };
+
   return (
-    <main className="min-h-[100svh] bg-gradient-to-b from-blue-50 to-gray-100 text-gray-800">
+    <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 to-blue-50 text-gray-800">
       <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pb-24 sm:pb-28 pt-3 sm:pt-4 md:pt-5 lg:pt-6">
         <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -404,28 +419,86 @@ export default function DataDesaPage() {
         />
 
         {/* Filter Section */}
-        <div className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200 overflow-visible relative z-20">
-          <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 mb-4 sm:mb-5 lg:mb-6">Filter Kategori</h3>
+        <div className="mb-6 sm:mb-8 lg:mb-10 rounded-xl sm:rounded-2xl bg-white p-4 sm:p-5 md:p-6 shadow-md border border-gray-200 overflow-visible relative z-20">
+          <div className="flex items-center gap-2.5 mb-4 sm:mb-5">
+            <div className="p-2 rounded-lg bg-blue-500">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-gray-800">Filter Kategori</h3>
+              <p className="text-xs text-gray-500 hidden sm:block">Pilih kriteria untuk analisis data</p>
+            </div>
+          </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-5">
-            {/* Pilih Desa Dropdown */}
+          {/* Filter Desa Dropdown */}
+          <div className="mb-4">
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
+              Filter Desa
+            </label>
+            <div className="relative" ref={villageDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowVillageDropdown(!showVillageDropdown);
+                  setShowDesaDropdown(false);
+                  setShowKategoriDropdown(false);
+                }}
+                className="w-full px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg text-left text-sm sm:text-base font-medium text-blue-900 hover:bg-blue-100 transition-colors flex items-center justify-between"
+              >
+                <span>{getSelectedVillageName()}</span>
+                <svg className={`w-4 h-4 text-blue-600 transition-transform ${showVillageDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {showVillageDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl z-30 max-h-48 overflow-y-auto">
+                  <div className="py-1">
+                    {villageOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSelectedVillage(option.id);
+                          setShowVillageDropdown(false);
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm sm:text-base text-gray-700 hover:bg-blue-50 transition-colors"
+                      >
+                        {option.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Pilih Daerah Dropdown */}
             <div className="relative" ref={desaDropdownRef}>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
+                Pilih Daerah
+              </label>
               <button
                 type="button"
                 onClick={() => {
                   setShowDesaDropdown(!showDesaDropdown);
+                  setShowVillageDropdown(false);
                   setShowKategoriDropdown(false);
                 }}
-                className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 bg-gray-50 border border-gray-200 rounded-xl text-left text-sm sm:text-base lg:text-lg font-medium text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left text-sm sm:text-base font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-between"
               >
                 <span>{getSelectedDaerahName()}</span>
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 text-gray-500 transition-transform ${showDesaDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               
               {showDesaDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl z-30 max-h-48 sm:max-h-56 lg:max-h-64 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl z-30 max-h-48 overflow-y-auto">
                   <div className="py-1">
                     {daerahOptions.map((option) => (
                       <button
@@ -437,7 +510,7 @@ export default function DataDesaPage() {
                           setSelectedDesa(option.id);
                           setShowDesaDropdown(false);
                         }}
-                        className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 text-left text-sm sm:text-base lg:text-lg text-gray-700 hover:bg-gray-50 transition-colors block"
+                        className="w-full px-4 py-2.5 text-left text-sm sm:text-base text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         {option.name}
                       </button>
@@ -449,22 +522,26 @@ export default function DataDesaPage() {
 
             {/* Pilih Kategori Dropdown */}
             <div className="relative" ref={kategoriDropdownRef}>
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
+                Pilih Kategori
+              </label>
               <button
                 type="button"
                 onClick={() => {
                   setShowKategoriDropdown(!showKategoriDropdown);
+                  setShowVillageDropdown(false);
                   setShowDesaDropdown(false);
                 }}
-                className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 bg-gray-50 border border-gray-200 rounded-xl text-left text-sm sm:text-base lg:text-lg font-medium text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left text-sm sm:text-base font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center justify-between"
               >
                 <span>{getSelectedKategoriName()}</span>
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 text-gray-500 transition-transform ${showKategoriDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               
               {showKategoriDropdown && (
-                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl z-30 w-64 sm:w-72 lg:w-80 max-h-96 overflow-y-auto">
+                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl z-30 w-64 sm:w-72 max-h-80 overflow-y-auto">
                   <div className="py-1">
                     {kategoriOptions.map((option) => (
                       <button
@@ -476,15 +553,15 @@ export default function DataDesaPage() {
                           setSelectedKategori(option.id);
                           setShowKategoriDropdown(false);
                         }}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 text-left text-sm sm:text-base text-gray-700 hover:bg-gray-50 transition-colors block"
+                        className="w-full px-3 py-2.5 text-left text-sm sm:text-base text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         <div className="font-medium text-gray-900">{option.name}</div>
-                        <div className="text-xs sm:text-sm text-gray-500 mt-1 space-y-1">
-                          {option.items.slice(0, 3).map((item, idx) => (
+                        <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+                          {option.items.slice(0, 2).map((item, idx) => (
                             <div key={idx}>{item}</div>
                           ))}
-                          {option.items.length > 3 && (
-                            <div className="text-blue-500">+{option.items.length - 3} lainnya</div>
+                          {option.items.length > 2 && (
+                            <div className="text-blue-600">+{option.items.length - 2} lainnya</div>
                           )}
                         </div>
                       </button>
@@ -505,18 +582,32 @@ export default function DataDesaPage() {
           <div className="mb-6 sm:mb-8 lg:mb-10">
             <Link 
               href="/masyarakat/data-desa/analisis"
-              className="block w-full py-3 sm:py-4 lg:py-5 px-4 sm:px-6 lg:px-8 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl sm:rounded-2xl shadow-sm transition-colors text-center text-sm sm:text-base lg:text-lg"
+              className="block w-full py-3.5 sm:py-4 px-6 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all text-center text-sm sm:text-base flex items-center justify-center gap-2"
             >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
               Analisis Data
             </Link>
           </div>
         )}
 
         {/* Charts Section */}
-        <div className="space-y-6 sm:space-y-8 lg:space-y-10 relative z-0">
+        <div className="space-y-6 sm:space-y-8">
           {/* Bar Chart */}
-          <div className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
-            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 mb-4 sm:mb-5 lg:mb-6">Grafik Batang</h3>
+          <div className="rounded-xl sm:rounded-2xl bg-white p-4 sm:p-5 md:p-6 shadow-md border border-gray-200">
+            <div className="flex items-center gap-2.5 mb-4 sm:mb-5">
+              <div className="p-2 rounded-lg bg-blue-500">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-800">Grafik Batang</h3>
+                <p className="text-xs text-gray-500 hidden sm:block">Visualisasi data dalam bentuk bar chart</p>
+              </div>
+            </div>
+            
             {selectedDesa && selectedKategori && chartData ? (
               <DataChart
                 type="bar"
@@ -527,22 +618,35 @@ export default function DataDesaPage() {
                 title={`Data ${getSelectedKategoriName()}`}
               />
             ) : (
-              <div className="h-48 sm:h-56 lg:h-64 bg-gray-100 rounded-xl flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <svg className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 mx-auto mb-2 sm:mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <div className="h-48 sm:h-56 bg-gray-50 rounded-lg flex items-center justify-center border border-dashed border-gray-300">
+                <div className="text-center text-gray-500 px-4">
+                  <svg className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  <p className="text-sm sm:text-base lg:text-lg">Tentukan Desa dan Kategori untuk menampilkan grafik</p>
+                  <p className="text-sm font-medium text-gray-700 mb-1">Pilih Kategori untuk Menampilkan Grafik</p>
+                  <p className="text-xs text-gray-500">Gunakan filter di atas</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Donut Chart */}
-          <div className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
-            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 mb-4 sm:mb-5 lg:mb-6">Grafik Donut</h3>
+          <div className="rounded-xl sm:rounded-2xl bg-white p-4 sm:p-5 md:p-6 shadow-md border border-gray-200">
+            <div className="flex items-center gap-2.5 mb-4 sm:mb-5">
+              <div className="p-2 rounded-lg bg-purple-500">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-800">Grafik Donut</h3>
+                <p className="text-xs text-gray-500 hidden sm:block">Visualisasi distribusi data</p>
+              </div>
+            </div>
+            
             {selectedDesa && selectedKategori && chartData ? (
-              <div className="h-64 sm:h-72 lg:h-80">
+              <div className="h-64 sm:h-72">
                 <DataChart
                   type="doughnut"
                   data={{
@@ -554,13 +658,14 @@ export default function DataDesaPage() {
                 />
               </div>
             ) : (
-              <div className="h-48 sm:h-56 lg:h-64 bg-gray-100 rounded-xl flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <svg className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 mx-auto mb-2 sm:mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" />
-                    <circle cx="12" cy="12" r="6" />
+              <div className="h-48 sm:h-56 bg-gray-50 rounded-lg flex items-center justify-center border border-dashed border-gray-300">
+                <div className="text-center text-gray-500 px-4">
+                  <svg className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
                   </svg>
-                  <p className="text-sm sm:text-base lg:text-lg">Tentukan Desa dan Kategori untuk menampilkan grafik</p>
+                  <p className="text-sm font-medium text-gray-700 mb-1">Pilih Kategori untuk Menampilkan Grafik</p>
+                  <p className="text-xs text-gray-500">Gunakan filter di atas</p>
                 </div>
               </div>
             )}

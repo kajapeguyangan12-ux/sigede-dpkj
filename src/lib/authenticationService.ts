@@ -134,30 +134,41 @@ class AuthenticationService {
               console.log('✅ AUTH: Firebase Auth signed in with email successfully');
               break;
             } catch (emailAuthError: any) {
-              if (emailAuthError.code === 'auth/user-not-found' || emailAuthError.code === 'auth/wrong-password') {
-                console.log('🔄 AUTH: Email auth failed, trying anonymous fallback...');
-                await signInAnonymously(auth);
-                console.log('✅ AUTH: Firebase Auth signed in anonymously as fallback');
-                break;
+              if (emailAuthError.code === 'auth/user-not-found' || 
+                  emailAuthError.code === 'auth/wrong-password' ||
+                  emailAuthError.code === 'auth/invalid-credential') {
+                // Try anonymous fallback only once
+                if (authAttempts === 0) {
+                  console.log('🔄 AUTH: Email auth not configured, trying anonymous fallback...');
+                  try {
+                    await signInAnonymously(auth);
+                    console.log('✅ AUTH: Firebase Auth signed in anonymously as fallback');
+                    break;
+                  } catch (anonError) {
+                    console.log('⚠️ AUTH: Anonymous auth also failed, continuing with Firestore only');
+                    break; // Exit loop and continue with Firestore
+                  }
+                } else {
+                  break; // Already tried anonymous, exit loop
+                }
               } else {
                 throw emailAuthError;
               }
             }
           } catch (authError: any) {
             authAttempts++;
-            console.warn(`⚠️ AUTH: Firebase Auth attempt ${authAttempts} failed:`, authError.message);
             
             if (authAttempts < maxAuthAttempts) {
-              console.log('🔄 AUTH: Retrying Firebase Auth in 1 second...');
+              console.log(`⚠️ AUTH: Firebase Auth attempt ${authAttempts} failed (${authError.code}), retrying in 1 second...`);
               await new Promise(resolve => setTimeout(resolve, 1000));
             } else {
-              console.error('❌ AUTH: All Firebase Auth attempts failed!');
-              console.log('⚠️ AUTH: Continuing without Firebase Auth for Firestore access only');
+              console.log('ℹ️ AUTH: Firebase Auth unavailable, continuing with Firestore-only authentication');
+              break; // Exit loop gracefully
             }
           }
         }
       } else {
-        console.log('⚠️ AUTH: No email found, skipping Firebase Auth');
+        console.log('ℹ️ AUTH: No email found, using Firestore-only authentication');
       }
 
       let userDoc: FirestoreUser | null = null;

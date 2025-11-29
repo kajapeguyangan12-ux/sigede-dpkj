@@ -89,12 +89,12 @@ type MenuItem = {
 const MENU_ACCESS_CONFIG = {
   // Menus completely hidden for masyarakat (not shown at all)
   hiddenForMasyarakat: [
-    "IKM"  // IKM completely hidden for regular users as requested
+    // IKM removed from system
   ],
   
   // Menus restricted for regular masyarakat (warga_dpkj) 
   restrictedForMasyarakat: [
-    "IKM"  // Also add to restricted list for consistency
+    // IKM removed from system
   ],
   
   // Menus available for external residents (warga_luar_dpkj)
@@ -175,17 +175,6 @@ const allMenuItems: MenuItem[] = [
       <div className="relative">
         <UserCheck className="h-5 w-5" />
         <Users className="h-2.5 w-2.5 absolute -bottom-0.5 -right-0.5 text-white" />
-      </div>
-    ),
-  },
-  {
-    title: "IKM",
-    href: "/masyarakat/ikm",
-    gradient: "from-orange-500 to-orange-600",
-    icon: (
-      <div className="relative">
-        <Clipboard className="h-5 w-5" />
-        <Star className="h-2.5 w-2.5 absolute -top-0.5 -right-0.5 text-white" />
       </div>
     ),
   },
@@ -521,22 +510,15 @@ export default function MasyarakatHomePage(): JSX.Element {
         item => MENU_ACCESS_CONFIG.allowedForExternal.includes(item.title)
       );
     } else if (user?.role === "warga_dpkj") {
-      // Regular local residents - hide some menus but allow more than external
-      filteredMenus = allMenuItems.filter(
-        item => !MENU_ACCESS_CONFIG.hiddenForMasyarakat.includes(item.title)
-      );
+      // Regular local residents - show all available menus
+      filteredMenus = allMenuItems;
     } else if (user?.role === "kepala_dusun") {
       // Village head assistant - hide financial data
       filteredMenus = allMenuItems.filter(
         item => !MENU_ACCESS_CONFIG.restrictedForKepalaDusun.includes(item.title)
       );
-    } else if (!isFullAdmin) {
-      // Unknown/limited roles - hide IKM by default
-      filteredMenus = allMenuItems.filter(
-        item => !MENU_ACCESS_CONFIG.hiddenForMasyarakat.includes(item.title)
-      );
     } else {
-      // Full admin - show all menus
+      // All other roles including admin - show all menus
       filteredMenus = allMenuItems;
     }
     
