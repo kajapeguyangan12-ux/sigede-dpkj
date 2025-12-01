@@ -39,6 +39,7 @@ export default function WargaLokalRegisterPage() {
     username: '',
     nik: '',
     alamat: '',
+    daerah: '',
     tempatLahir: '',
     tanggalLahir: '',
     jenisKelamin: '',
@@ -120,6 +121,15 @@ export default function WargaLokalRegisterPage() {
         setNikVerified(true);
         setVerifiedData(matchedData);
         setNikMessage(`✅ NIK valid! Anda dapat melanjutkan registrasi.`);
+        
+        // Auto-fill daerah from matched data
+        if (matchedData.daerah) {
+          setFormData(prev => ({
+            ...prev,
+            daerah: matchedData.daerah || ''
+          }));
+          console.log('📍 Auto-filled daerah:', matchedData.daerah);
+        }
       } else {
         console.log('❌ NIK CHECK: NIK not found in data-desa');
         setNikVerified(false);
@@ -222,6 +232,7 @@ export default function WargaLokalRegisterPage() {
         displayName: formData.namaLengkap,
         nik: formData.nik,
         alamat: formData.alamat,
+        daerah: formData.daerah,
         tempatLahir: formData.tempatLahir,
         tanggalLahir: formData.tanggalLahir,
         jenisKelamin: formData.jenisKelamin,
@@ -482,6 +493,24 @@ export default function WargaLokalRegisterPage() {
                     placeholder="Alamat lengkap sesuai KTP"
                     required
                   />
+                </div>
+
+                {/* Daerah (Auto-filled from NIK verification) */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 mb-3">
+                    Daerah/Banjar <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="daerah"
+                    value={formData.daerah}
+                    disabled
+                    className="w-full px-6 py-4 bg-gray-100 border border-gray-200 rounded-2xl text-gray-600 cursor-not-allowed"
+                    placeholder="Otomatis terisi setelah cek NIK"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    * Daerah akan terisi otomatis setelah verifikasi NIK
+                  </p>
                 </div>
 
                 {/* Tempat Lahir */}

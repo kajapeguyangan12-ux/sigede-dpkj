@@ -620,6 +620,7 @@ class UserManagementService {
     displayName: string;
     nik: string;
     alamat: string;
+    daerah?: string;
     tempatLahir: string;
     tanggalLahir: string;
     jenisKelamin: string;
@@ -697,6 +698,7 @@ class UserManagementService {
         // Data lengkap dari form registrasi
         nik: userData.nik,
         alamat: userData.alamat,
+        daerah: userData.daerah || '',
         tempatLahir: userData.tempatLahir,
         tanggalLahir: userData.tanggalLahir,
         jenisKelamin: userData.jenisKelamin,

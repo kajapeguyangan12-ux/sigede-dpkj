@@ -324,9 +324,9 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
             </div>
           </section>
 
-          {/* Deskripsi */}
+          {/* Keperluan Surat */}
           <section className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
-            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-800 mb-4 sm:mb-5 lg:mb-6">Deskripsi</h3>
+            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-800 mb-4 sm:mb-5 lg:mb-6">Keperluan Surat</h3>
             
             <div>
               <textarea
@@ -335,7 +335,7 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
                 onChange={handleChange}
                 rows={5}
                 className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 border border-gray-300 rounded-xl text-sm sm:text-base lg:text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="Input Deskripsi"
+                placeholder="Masukkan keperluan surat Anda"
               />
             </div>
           </section>

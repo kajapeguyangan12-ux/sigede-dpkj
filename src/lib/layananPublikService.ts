@@ -304,13 +304,12 @@ export const getLayananByUser = async (userId: string): Promise<LayananPublik[]>
 export const getLayananById = async (id: string): Promise<LayananPublik | null> => {
   try {
     const docRef = doc(db, COLLECTION_LAYANAN, id);
-    const docSnap = await getDocs(query(collection(db, COLLECTION_LAYANAN), where("__name__", "==", id)));
+    const docSnap = await getDoc(docRef);
     
-    if (!docSnap.empty) {
-      const doc = docSnap.docs[0];
+    if (docSnap.exists()) {
       return {
-        id: doc.id,
-        ...doc.data()
+        id: docSnap.id,
+        ...docSnap.data()
       } as LayananPublik;
     }
     return null;

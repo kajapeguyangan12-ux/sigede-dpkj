@@ -294,6 +294,7 @@ export interface FirestoreUser {
   // Additional fields for masyarakat data
   nik?: string;               // NIK dari collection masyarakat
   alamat?: string;            // Alamat lengkap
+  daerah?: string;            // Daerah/Banjar
   noTelp?: string;            // Nomor telepon
   tanggalLahir?: string;      // Tanggal lahir (format: YYYY-MM-DD)
   tempatLahir?: string;       // Tempat lahir

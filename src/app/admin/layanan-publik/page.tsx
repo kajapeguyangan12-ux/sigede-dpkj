@@ -68,18 +68,32 @@ export default function LayananPublikAdminPage() {
       setLoading(true);
       const data = await getAllLayananPublik();
       
+      // Get data-desa to enrich layanan with daerah info
+      const dataDesaList = await getDataDesa();
+      
+      // Enrich layanan data with daerah from data-desa
+      const enrichedData = data.map(layanan => {
+        if (!layanan.daerah && layanan.nik) {
+          const userData = dataDesaList.find(d => d.nik === layanan.nik);
+          if (userData?.daerah) {
+            return { ...layanan, daerah: userData.daerah };
+          }
+        }
+        return layanan;
+      });
+      
       // Filter berdasarkan role
-      let filtered = data;
+      let filtered = enrichedData;
       
       // Kepala Dusun: hanya lihat layanan dari daerah mereka
       if (user?.role === 'kepala_dusun' && userDaerah) {
-        filtered = data.filter(layanan => layanan.daerah === userDaerah);
+        filtered = enrichedData.filter(layanan => layanan.daerah === userDaerah);
       }
       
       // Kepala Desa: lihat semua layanan yang sudah approved_kadus atau auto_approved
       // (tidak tergantung daerah, menunggu kadus approve saja)
       if (user?.role === 'kepala_desa') {
-        filtered = data.filter(layanan => 
+        filtered = enrichedData.filter(layanan => 
           layanan.status === 'approved_kadus' || 
           layanan.status === 'auto_approved'
         );
@@ -413,7 +427,9 @@ export default function LayananPublikAdminPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{layanan.namaLengkap}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-bold text-gray-900">{layanan.nik}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{layanan.daerah || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        {layanan.daerah ? layanan.daerah.replace(/_/g, ' ') : '-'}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                         {layanan.createdAt ? new Date(layanan.createdAt.seconds * 1000).toLocaleDateString('id-ID') : '-'}
                       </td>
@@ -623,6 +639,16 @@ export default function LayananPublikAdminPage() {
                   >
                     Tutup
                   </button>
+                  
+                  {/* Download Surat Button - Available for all except Taring Dukcapil */}
+                  {selectedLayanan.jenisLayanan !== 'Pelayanan Taring Dukcapil' && (
+                    <button
+                      onClick={() => window.open(`/admin/layanan-publik/cetak-surat?id=${selectedLayanan.id}`, '_blank')}
+                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold rounded-xl hover:shadow-lg transition-all"
+                    >
+                      📥 Download Surat
+                    </button>
+                  )}
                   
                   {/* Role-based Approve Buttons */}
                   {user?.role === 'admin_desa' && selectedLayanan.status === 'pending_admin' && (

@@ -48,6 +48,19 @@ export const createPengaduanNotification = async (data: {
   priority?: 'low' | 'medium' | 'high';
 }) => {
   try {
+    // Build metadata object, only including defined values
+    const metadata: {
+      kategoriPengaduan?: string;
+      currentStatus: string;
+    } = {
+      currentStatus: data.status,
+    };
+
+    // Only add optional fields if they are defined
+    if (data.kategori !== undefined) {
+      metadata.kategoriPengaduan = data.kategori;
+    }
+
     const notification: Omit<UniversalNotification, 'id'> = {
       userId: data.userId,
       type: 'pengaduan',
@@ -57,10 +70,7 @@ export const createPengaduanNotification = async (data: {
       status: 'unread',
       priority: data.priority || 'medium',
       actionRequired: false,
-      metadata: {
-        kategoriPengaduan: data.kategori,
-        currentStatus: data.status
-      },
+      metadata,
       createdAt: serverTimestamp() as Timestamp
     };
 
@@ -86,6 +96,27 @@ export const createLayananNotification = async (data: {
   priority?: 'low' | 'medium' | 'high';
 }) => {
   try {
+    // Build metadata object, only including defined values
+    const metadata: {
+      jenisLayanan?: string;
+      currentStatus: string;
+      buktiApproval?: string;
+      estimasiSelesai?: string;
+    } = {
+      currentStatus: data.status,
+    };
+
+    // Only add optional fields if they are defined
+    if (data.jenisLayanan !== undefined) {
+      metadata.jenisLayanan = data.jenisLayanan;
+    }
+    if (data.buktiApproval !== undefined) {
+      metadata.buktiApproval = data.buktiApproval;
+    }
+    if (data.estimasiSelesai !== undefined) {
+      metadata.estimasiSelesai = data.estimasiSelesai;
+    }
+
     const notification: Omit<UniversalNotification, 'id'> = {
       userId: data.userId,
       type: 'layanan_publik',
@@ -95,12 +126,7 @@ export const createLayananNotification = async (data: {
       status: 'unread',
       priority: data.priority || 'medium',
       actionRequired: data.status === 'approved_kades', // Action required when ready for pickup
-      metadata: {
-        jenisLayanan: data.jenisLayanan,
-        currentStatus: data.status,
-        buktiApproval: data.buktiApproval,
-        estimasiSelesai: data.estimasiSelesai
-      },
+      metadata,
       createdAt: serverTimestamp() as Timestamp
     };
 

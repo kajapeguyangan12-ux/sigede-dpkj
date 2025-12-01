@@ -35,7 +35,7 @@ const EyeSlashIcon = ({ className }: { className?: string }) => (
 
 // Use public assets so paths resolve at runtime and work with Turbopack
 const DesaLogo = "/logo/LOGO_DPKJ.png";
-const SipekaLogo = "/logo/LOGO_DPKJ.png";
+const SipekaLogo = "/logo/BDG1.png";
 
 export default function LoginMasyarakatPage() {
   const router = useRouter();
