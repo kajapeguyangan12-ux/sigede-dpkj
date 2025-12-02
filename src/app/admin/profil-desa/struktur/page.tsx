@@ -2,10 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from '../../../../contexts/AuthContext';
-import { handleAdminLogout } from '../../../../lib/logoutHelper';
 import AdminLayout from "../../components/AdminLayout";
-import AdminHeaderCard, { AdminHeaderSearchBar, AdminHeaderAccount } from "../../../components/AdminHeaderCard";
 import { 
   getStrukturPemerintahan, 
   saveStrukturPemerintahan, 
@@ -34,7 +31,6 @@ const TIPE_STRUKTUR_OPTIONS = [
 
 export default function StrukturPage() {
   const router = useRouter();
-  const { logout } = useAuth();
   const [tipeStruktur, setTipeStruktur] = useState<TipeStruktur>('pemerintahan-desa');
   const [anggotaList, setAnggotaList] = useState<AnggotaStruktur[]>([]);
   const [coverImage, setCoverImage] = useState<string>('');
@@ -63,10 +59,6 @@ export default function StrukturPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLogout = async () => {
-    await handleAdminLogout(() => logout('admin'));
   };
 
   const handleTambahAnggota = () => {
@@ -165,8 +157,8 @@ export default function StrukturPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
         </div>
       </AdminLayout>
     );
@@ -174,29 +166,65 @@ export default function StrukturPage() {
 
   return (
     <AdminLayout>
+      <style jsx global>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes cardEntrance {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .safe-area-padding {
+          padding-bottom: env(safe-area-inset-bottom);
+          padding-left: env(safe-area-inset-left);
+          padding-right: env(safe-area-inset-right);
+        }
+        * {
+          -webkit-tap-highlight-color: transparent;
+        }
+        input, textarea, select {
+          user-select: text;
+        }
+      `}</style>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
         {/* Header */}
-        <AdminHeaderCard title="Struktur Pemerintahan">
-          <AdminHeaderSearchBar placeholder="Cari anggota struktur..." />
-          <AdminHeaderAccount onLogout={handleLogout} />
-        </AdminHeaderCard>
+        <div 
+          className="mb-6 sm:mb-8 bg-gradient-to-r from-white to-gray-50 rounded-2xl sm:rounded-3xl border border-gray-200 shadow-lg p-5 sm:p-6 lg:p-8 mx-3 sm:mx-4 lg:mx-8 mt-4 sm:mt-6"
+          style={{
+            animation: 'slideUp 0.5s ease-out'
+          }}
+        >
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-md">
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-white sm:w-6 sm:h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">Struktur Pemerintahan</h1>
+              <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">Kelola data anggota struktur organisasi</p>
+            </div>
+          </div>
+        </div>
 
         {/* Content */}
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="space-y-8">
+        <div className="max-w-7xl mx-auto pb-8 px-3 sm:px-4 lg:px-8 safe-area-padding">
+          <div className="space-y-6 sm:space-y-8">
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-              <div className="space-y-1">
-                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                  Struktur Pemerintahan
-                </h1>
-                <p className="text-gray-600 text-lg">
-                  Kelola data anggota struktur organisasi pemerintahan desa
-                </p>
-              </div>
+            <div 
+              className="flex flex-col gap-4"
+              style={{
+                animation: 'fadeIn 0.5s ease-out 0.1s backwards'
+              }}
+            >
               <button
                 onClick={handleTambahAnggota}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="w-full sm:w-auto sm:self-end inline-flex items-center justify-center px-5 sm:px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-red-700 hover:to-rose-700 active:from-red-800 active:to-rose-800 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -206,30 +234,35 @@ export default function StrukturPage() {
             </div>
 
             {/* Navigation & Controls */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div 
+              className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-5 lg:p-6"
+              style={{
+                animation: 'cardEntrance 0.6s ease-out 0.2s backwards'
+              }}
+            >
               {/* Back Navigation */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <Link 
                   href="/admin/profil-desa" 
-                  className="flex items-center text-gray-600 hover:text-blue-600 transition-colors duration-200 group"
+                  className="flex items-center gap-2 text-sm sm:text-base text-gray-600 hover:text-red-600 active:text-red-700 transition-colors duration-200 group"
                 >
-                  <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
-                  Kembali ke Profil Desa
+                  <span className="font-medium">Kembali</span>
                 </Link>
               </div>
               
               {/* Dropdown Tipe Struktur */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-                <label className="text-sm font-semibold text-gray-700">
+              <div className="flex flex-col gap-3 mb-4 sm:mb-6">
+                <label className="text-xs sm:text-sm font-semibold text-gray-700">
                   Pilih Tipe Struktur:
                 </label>
                 <div className="relative">
                   <select
                     value={tipeStruktur}
                     onChange={(e) => setTipeStruktur(e.target.value as TipeStruktur)}
-                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 text-sm font-medium text-gray-700 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 min-w-[280px]"
+                    className="appearance-none w-full bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 text-sm font-medium text-gray-700 hover:border-red-400 active:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors duration-200"
                   >
                     {TIPE_STRUKTUR_OPTIONS.map(option => (
                       <option key={option.value} value={option.value}>
@@ -246,22 +279,20 @@ export default function StrukturPage() {
               </div>
 
               {/* Cover Image Section */}
-              <div className="border-t border-gray-200 pt-6">
-                <div className="flex flex-col space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900">Cover Image Halaman</h4>
-                      <p className="text-sm text-gray-600">Gambar cover yang akan ditampilkan di halaman publik</p>
-                    </div>
+              <div className="border-t border-gray-200 pt-4 sm:pt-6">
+                <div className="flex flex-col space-y-3 sm:space-y-4">
+                  <div>
+                    <h4 className="text-base sm:text-lg font-semibold text-gray-900">Cover Image Halaman</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1">Gambar cover untuk halaman publik</p>
                   </div>
                   
                   {/* Current Cover Image Preview */}
                   {coverImage && (
-                    <div className="relative inline-block">
+                    <div className="relative inline-block w-full sm:w-auto">
                       <img
                         src={coverImage}
                         alt="Cover Image Preview"
-                        className="max-w-md h-32 object-cover rounded-lg border border-gray-200 shadow-sm"
+                        className="w-full sm:max-w-md h-40 sm:h-48 object-cover rounded-xl border border-gray-200 shadow-sm"
                       />
                       <div className="absolute top-2 right-2">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -272,12 +303,12 @@ export default function StrukturPage() {
                   )}
                   
                   {/* Upload Cover Image */}
-                  <div className="flex items-center space-x-4">
-                    <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                    <label className="cursor-pointer inline-flex items-center justify-center px-4 sm:px-5 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm sm:text-base font-medium rounded-xl hover:from-purple-700 hover:to-purple-800 active:from-purple-800 active:to-purple-900 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl">
                       <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      {coverImage ? 'Ganti Cover Image' : 'Upload Cover Image'}
+                      {coverImage ? 'Ganti Cover' : 'Upload Cover'}
                       <input
                         type="file"
                         accept="image/*"
@@ -295,22 +326,27 @@ export default function StrukturPage() {
                   </div>
                   
                   <p className="text-xs text-gray-500">
-                    Gambar akan ditampilkan sebagai cover di halaman masyarakat. Disarankan menggunakan gambar dengan rasio landscape (16:9) untuk hasil terbaik.
+                    Disarankan rasio landscape (16:9). Format: JPG, PNG, GIF. Otomatis dikonversi ke WebP.
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Data List */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div 
+              className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+              style={{
+                animation: 'cardEntrance 0.6s ease-out 0.3s backwards'
+              }}
+            >
               {/* Header */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-gray-900">
+                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900">
                     {TIPE_STRUKTUR_OPTIONS.find(opt => opt.value === tipeStruktur)?.label}
                   </h3>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                     <span>{anggotaList.length} Anggota</span>
@@ -319,17 +355,17 @@ export default function StrukturPage() {
               </div>
               
               {anggotaList.length === 0 ? (
-                <div className="px-6 py-12 text-center">
-                  <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="px-4 sm:px-6 py-8 sm:py-12 text-center">
+                  <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+                    <svg className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">Belum ada anggota</h4>
-                  <p className="text-gray-500 mb-6">Mulai dengan menambahkan anggota struktur pemerintahan</p>
+                  <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-1 sm:mb-2">Belum ada anggota</h4>
+                  <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6 px-4">Mulai dengan menambahkan anggota struktur pemerintahan</p>
                   <button
                     onClick={handleTambahAnggota}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 active:bg-red-800 active:scale-[0.98] transition-all shadow-md"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -340,12 +376,12 @@ export default function StrukturPage() {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {anggotaList.map((anggota, index) => (
-                    <div key={anggota.id} className="px-6 py-5 hover:bg-gray-50 transition-colors duration-150">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4 flex-1">
+                    <div key={anggota.id} className="px-4 sm:px-6 py-4 sm:py-5 hover:bg-gray-50 active:bg-gray-100 transition-colors duration-150">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
                           {/* Order Badge */}
                           <div className="flex-shrink-0">
-                            <div className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-semibold">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-red-100 text-red-800 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold">
                               {anggota.urutan}
                             </div>
                           </div>
@@ -354,13 +390,13 @@ export default function StrukturPage() {
                           <div className="flex-shrink-0">
                             {anggota.foto ? (
                               <img
-                                className="h-14 w-14 rounded-full object-cover ring-2 ring-gray-200"
+                                className="h-12 w-12 sm:h-14 sm:w-14 rounded-full object-cover ring-2 ring-gray-200"
                                 src={anggota.foto}
                                 alt={anggota.nama}
                               />
                             ) : (
-                              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center ring-2 ring-gray-200">
-                                <svg className="h-7 w-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center ring-2 ring-gray-200">
+                                <svg className="h-6 w-6 sm:h-7 sm:w-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                               </div>
@@ -369,22 +405,20 @@ export default function StrukturPage() {
                           
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h4 className="text-lg font-semibold text-gray-900 truncate">{anggota.nama}</h4>
-                            </div>
-                            <p className="text-sm font-medium text-blue-600 mb-2">{anggota.jabatan}</p>
-                            <div className="flex flex-col space-y-1">
+                            <h4 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{anggota.nama}</h4>
+                            <p className="text-xs sm:text-sm font-medium text-red-600 mb-1 sm:mb-2">{anggota.jabatan}</p>
+                            <div className="flex flex-col space-y-0.5 sm:space-y-1">
                               {anggota.email && (
-                                <div className="flex items-center text-xs text-gray-500">
-                                  <svg className="w-3 h-3 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <div className="flex items-center text-xs text-gray-500 truncate">
+                                  <svg className="w-3 h-3 mr-1.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                                   </svg>
-                                  {anggota.email}
+                                  <span className="truncate">{anggota.email}</span>
                                 </div>
                               )}
                               {anggota.noTelp && (
                                 <div className="flex items-center text-xs text-gray-500">
-                                  <svg className="w-3 h-3 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <svg className="w-3 h-3 mr-1.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                   </svg>
                                   {anggota.noTelp}
@@ -394,49 +428,51 @@ export default function StrukturPage() {
                           </div>
                         </div>
                         
-                        {/* Actions */}
-                        <div className="flex items-center space-x-1">
+                        {/* Actions - Mobile Optimized */}
+                        <div className="flex items-center gap-2 sm:gap-1 justify-between sm:justify-end">
                           {/* Move buttons */}
-                          <button
-                            onClick={() => handleMoveUp(index)}
-                            disabled={index === 0}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
-                            title="Pindah ke atas"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleMoveDown(index)}
-                            disabled={index === anggotaList.length - 1}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
-                            title="Pindah ke bawah"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleMoveUp(index)}
+                              disabled={index === 0}
+                              className="p-2 text-gray-400 hover:text-gray-600 active:text-gray-700 hover:bg-gray-100 active:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+                              title="Pindah ke atas"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleMoveDown(index)}
+                              disabled={index === anggotaList.length - 1}
+                              className="p-2 text-gray-400 hover:text-gray-600 active:text-gray-700 hover:bg-gray-100 active:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+                              title="Pindah ke bawah"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
                           
                           {/* Action buttons */}
-                          <div className="flex items-center space-x-2 ml-4">
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleEditAnggota(anggota)}
-                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-all duration-150"
+                              className="inline-flex items-center px-3 py-2 text-xs sm:text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 active:bg-red-200 active:scale-[0.98] transition-all duration-150"
                             >
-                              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
-                              Edit
+                              <span className="hidden sm:inline">Edit</span>
                             </button>
                             <button
                               onClick={() => anggota.id && handleDeleteAnggota(anggota.id)}
-                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 hover:text-red-700 transition-all duration-150"
+                              className="inline-flex items-center px-3 py-2 text-xs sm:text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 active:bg-red-200 active:scale-[0.98] transition-all duration-150"
                             >
-                              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
-                              Hapus
+                              <span className="hidden sm:inline">Hapus</span>
                             </button>
                           </div>
                         </div>
@@ -525,24 +561,28 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto border border-white/20">
-        <h2 className="text-xl font-bold mb-6 text-gray-800 border-b border-gray-200/50 pb-3">
-          {anggota ? 'Edit Anggota' : 'Tambah Anggota Struktur Pemerintahan'}
-        </h2>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 z-50">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto border border-white/20">
+        <div className="safe-area-padding p-5 sm:p-6 lg:p-8">
+          <h2 className="text-xl sm:text-2xl font-bold mb-1 text-gray-800 border-b border-gray-200/50 pb-3">
+            {anggota ? 'Edit Anggota' : 'Tambah Anggota Struktur'}
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-600 mb-5 sm:mb-6">
+            Foto otomatis dikonversi ke format WebP untuk performa optimal.
+          </p>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           {/* Upload Foto */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Upload Foto Profil Anggota
             </label>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               {formData.foto && (
                 <img
                   src={formData.foto}
                   alt="Preview"
-                  className="w-16 h-16 rounded-full object-cover"
+                  className="w-16 h-16 rounded-full object-cover ring-2 ring-gray-200"
                 />
               )}
               <input
@@ -550,10 +590,10 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
                 accept="image/*"
                 onChange={handleFileChange}
                 disabled={uploading}
-                className="block w-full text-sm text-gray-600 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50/80 file:backdrop-blur-sm file:text-blue-700 hover:file:bg-blue-100/80 transition-all duration-200"
+                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 sm:file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 transition-all duration-200"
               />
             </div>
-            {uploading && <p className="text-sm text-gray-500">Mengupload foto...</p>}
+            {uploading && <p className="text-sm text-gray-500 mt-2">Mengupload foto...</p>}
           </div>
 
           {/* Nama Lengkap */}
@@ -565,7 +605,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               type="text"
               value={formData.nama}
               onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all duration-200 text-gray-900 text-sm sm:text-base"
               placeholder="Masukkan nama lengkap"
               required
             />
@@ -580,7 +620,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               type="text"
               value={formData.jabatan}
               onChange={(e) => setFormData({ ...formData, jabatan: e.target.value })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all duration-200 text-gray-900 text-sm sm:text-base"
               placeholder="Contoh: Kepala Desa, Sekretaris Desa"
               required
             />
@@ -595,7 +635,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all duration-200 text-gray-900 text-sm sm:text-base"
               placeholder="example@email.com"
             />
           </div>
@@ -609,7 +649,7 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               type="tel"
               value={formData.noTelp}
               onChange={(e) => setFormData({ ...formData, noTelp: e.target.value })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all duration-200 text-gray-900 text-sm sm:text-base"
               placeholder="08xxxxxxxxxx"
             />
           </div>
@@ -624,28 +664,29 @@ function FormAnggotaModal({ anggota, tipeStruktur, onClose, onSave }: FormAnggot
               min="1"
               value={formData.urutan}
               onChange={(e) => setFormData({ ...formData, urutan: parseInt(e.target.value) || 1 })}
-              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200 text-gray-900"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all duration-200 text-gray-900 text-sm sm:text-base"
             />
           </div>
 
           {/* Buttons */}
-          <div className="flex space-x-3 pt-6">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6">
             <button
               type="submit"
               disabled={uploading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="flex-1 px-5 sm:px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-green-600 hover:to-green-700 active:from-green-700 active:to-green-800 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               {uploading ? 'Menyimpan...' : 'Simpan'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 bg-white/80 backdrop-blur-sm text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50/80 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex-1 px-5 sm:px-6 py-3 bg-white text-gray-700 text-sm sm:text-base font-semibold rounded-xl border border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               Batal
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

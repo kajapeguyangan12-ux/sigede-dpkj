@@ -1,19 +1,23 @@
 "use client";
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { handleAdminLogout } from '../../../../lib/logoutHelper';
 import { getLayananById, LayananPublik } from "../../../../lib/layananPublikService";
 import { getDataDesa } from "../../../../lib/dataDesaService";
 import Image from 'next/image';
 
 function CetakSuratContent() {
+  const router = useRouter();
+  const { logout } = useAuth();
   const searchParams = useSearchParams();
   const layananId = searchParams.get('id');
   const [layanan, setLayanan] = useState<LayananPublik | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [nomorSurat, setNomorSurat] = useState('');
   const [loading, setLoading] = useState(true);
-  const [autoDownloaded, setAutoDownloaded] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,16 +28,13 @@ function CetakSuratContent() {
 
     const fetchData = async () => {
       try {
-        console.log("Fetching layanan with ID:", layananId);
         const layananData = await getLayananById(layananId);
-        console.log("Layanan data:", layananData);
         setLayanan(layananData);
 
         // Fetch user data from data-desa based on NIK
         if (layananData?.nik) {
           const allData = await getDataDesa();
           const user = allData.find(d => d.nik === layananData.nik);
-          console.log("User data:", user);
           setUserData(user);
         }
       } catch (error) {
@@ -46,32 +47,32 @@ function CetakSuratContent() {
     fetchData();
   }, [layananId]);
 
-  // Auto download when data is loaded
-  useEffect(() => {
-    if (!loading && layanan && !autoDownloaded) {
-      console.log("Auto-triggering print dialog");
-      
-      // Set document title for PDF filename
-      const fileName = `${layanan.jenisLayanan}-${userData?.namaLengkap || layanan.namaLengkap}`;
-      const originalTitle = document.title;
-      document.title = fileName;
-      
-      // Wait a bit for the page to fully render
-      setTimeout(() => {
-        window.print();
-        setAutoDownloaded(true);
-        
-        // Restore original title after print
-        setTimeout(() => {
-          document.title = originalTitle;
-          window.close();
-        }, 1000);
-      }, 500);
-    }
-  }, [loading, layanan, autoDownloaded, userData]);
-
   const handlePrint = () => {
+    // Set document title for PDF filename
+    const fileName = `${layanan?.jenisLayanan.replace(/\s+/g, '-')}-${userData?.namaLengkap || layanan?.namaLengkap}`;
+    const originalTitle = document.title;
+    document.title = fileName;
+    
     window.print();
+    
+    // Restore original title after print
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 500);
+  };
+
+  const handleDownloadPDF = () => {
+    // Set filename and trigger print dialog for "Save as PDF"
+    const fileName = `${layanan?.jenisLayanan.replace(/\s+/g, '-')}-${userData?.namaLengkap || layanan?.namaLengkap}`;
+    const originalTitle = document.title;
+    document.title = fileName;
+    
+    // Open print dialog - user can choose "Save as PDF"
+    window.print();
+    
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 500);
   };
 
   const formatDate = (timestamp: any) => {
@@ -141,40 +142,41 @@ function CetakSuratContent() {
     return judulMap[jenisLayanan] || "SURAT KETERANGAN";
   };
 
-  const getIsiSurat = (jenisLayanan: string, keperluan?: string, tanggalPermohonan?: string, daerah?: string) => {
+  const getIsiSurat = (jenisLayanan: string, keperluan?: string, tanggalPermohonan?: string, daerah?: string, nomorSuratKadus?: string) => {
     const keperluanText = keperluan || '..........................................................................';
     const tanggalText = tanggalPermohonan || '.......';
     // Format daerah: replace underscore dengan spasi, contoh: Wangaya_Kaja -> Wangaya Kaja
     const daerahText = daerah ? daerah.replace(/_/g, ' ') : '............';
+    const nomorKadusText = nomorSuratKadus || '.............................';
     
     const isiMap: { [key: string]: { paragraf1: string, paragraf2: string, paragraf3: string } } = {
       "Surat Kelakuan Baik": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ............................., Tanggal : ${tanggalText}, bahwa :`,
+        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ${nomorKadusText}, Tanggal : ${tanggalText}, bahwa :`,
         paragraf2: "Sepanjang pengetahuan kami orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berkelakuan baik, tidak pernah tersangkut dalam tindakan kriminal/kejahatan.",
         paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluanText}.`
       },
       "Surat Keterangan Belum Nikah/Kawin": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ............................., Tanggal : ${tanggalText}, bahwa :`,
+        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ${nomorKadusText}, Tanggal : ${tanggalText}, bahwa :`,
         paragraf2: "Sepanjang pengetahuan kami memang benar orang tersebut diatas belum pernah kawin/menikah sampai saat ini.",
         paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluanText}.`
       },
       "Surat Keterangan Belum Bekerja": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ............................., Tanggal : ${tanggalText}, bahwa :`,
+        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ${nomorKadusText}, Tanggal : ${tanggalText}, bahwa :`,
         paragraf2: "Sepanjang pengetahuan kami memang benar orang tersebut diatas belum bekerja dan tidak terikat kontrak kerja dengan instansi/perusahaan manapun sampai saat ini.",
         paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluanText}.`
       },
       "Surat Keterangan Kawin/Menikah": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ............................., Tanggal : ${tanggalText}, bahwa :`,
+        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ${nomorKadusText}, Tanggal : ${tanggalText}, bahwa :`,
         paragraf2: "Sepanjang pengetahuan kami memang benar orang tersebut diatas telah melangsungkan perkawinan dan berstatus sebagai suami/istri yang sah.",
         paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluanText}.`
       },
       "Surat Keterangan Kematian": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ............................., Tanggal : ${tanggalText}, bahwa :`,
+        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ${nomorKadusText}, Tanggal : ${tanggalText}, bahwa :`,
         paragraf2: "Telah meninggal dunia pada tanggal .............. di .............. karena ..............",
         paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluanText}.`
       },
       "Surat Keterangan Perjalanan": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ............................., Tanggal : ${tanggalText}, bahwa :`,
+        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerahText}, Nomor ${nomorKadusText}, Tanggal : ${tanggalText}, bahwa :`,
         paragraf2: "Orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan melakukan perjalanan ke .............. untuk keperluan ..............",
         paragraf3: "Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan sebagaimana mestinya."
       }
@@ -184,21 +186,24 @@ function CetakSuratContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto mb-3"></div>
+          <p className="text-base font-semibold text-gray-700">Memuat surat...</p>
+        </div>
       </div>
     );
   }
 
   if (!layanan || layanan.jenisLayanan === "Pelayanan Taring Dukcapil") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
           <h2 className="text-xl font-bold text-red-600">
             {!layanan ? "Data tidak ditemukan" : "Jenis layanan ini tidak memiliki template surat"}
           </h2>
-          <button onClick={() => window.close()} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">
-            Tutup
+          <button onClick={() => router.push('/admin/layanan-publik')} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            Kembali ke Layanan Publik
           </button>
         </div>
       </div>
@@ -207,7 +212,7 @@ function CetakSuratContent() {
 
   const tanggalPermohonan = layanan.createdAt ? formatDate(layanan.createdAt) : '';
   const daerahPemohon = userData?.daerah || layanan.daerah || '';
-  const isiSurat = getIsiSurat(layanan.jenisLayanan, layanan.keperluan, tanggalPermohonan, daerahPemohon);
+  const isiSurat = getIsiSurat(layanan.jenisLayanan, layanan.keperluan, tanggalPermohonan, daerahPemohon, layanan.nomorSuratKadus);
 
   return (
     <>
@@ -259,27 +264,50 @@ function CetakSuratContent() {
       `}</style>
 
       <div className="min-h-screen bg-gray-100 py-8">
-        {/* Print Button */}
-        <div className="no-print max-w-4xl mx-auto mb-4 flex gap-4">
-          <input
-            type="text"
-            placeholder="Masukkan Nomor Surat (contoh: 474.3/...../Denpasar)"
-            value={nomorSurat}
-            onChange={(e) => setNomorSurat(e.target.value)}
-            className="flex-1 px-4 py-2 border rounded-lg"
-          />
-          <button
-            onClick={handlePrint}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold"
-          >
-            🖨️ Cetak Surat
-          </button>
-          <button
-            onClick={() => window.close()}
-            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-bold"
-          >
-            Tutup
-          </button>
+        {/* Print Button - Prominent Header */}
+        <div className="no-print max-w-4xl mx-auto mb-6 bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">📄 Cetak Surat</h2>
+              <p className="text-gray-600 mt-1">Surat siap dicetak atau disimpan sebagai PDF</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handlePrint}
+                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-bold shadow-lg hover:shadow-xl transition-all text-lg flex items-center gap-2"
+              >
+                🖨️ Print Surat
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 font-bold shadow-lg hover:shadow-xl transition-all text-lg flex items-center gap-2"
+              >
+                💾 Save PDF
+              </button>
+              <button
+                onClick={() => window.close()}
+                className="px-6 py-4 bg-gray-600 text-white rounded-xl hover:bg-gray-700 font-bold shadow-lg transition-all"
+              >
+                ✕ Tutup
+              </button>
+            </div>
+          </div>
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+            <p className="text-sm text-blue-800">
+              <strong>💡 Tips:</strong> 
+              <span className="ml-2">Klik <strong>"Print Surat"</strong> untuk mencetak langsung, atau <strong>"Save PDF"</strong> untuk menyimpan sebagai arsip digital.</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-3 mt-4">
+            <label className="text-gray-700 font-semibold">Nomor Surat:</label>
+            <input
+              type="text"
+              placeholder="Masukkan Nomor Surat (contoh: 474.3/...../Denpasar)"
+              value={nomorSurat}
+              onChange={(e) => setNomorSurat(e.target.value)}
+              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-gray-900 placeholder-gray-400"
+            />
+          </div>
         </div>
 
         {/* Letter Content */}
@@ -397,10 +425,10 @@ function CetakSuratContent() {
 export default function CetakSuratPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-semibold">Memuat data surat...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto"></div>
+          <p className="mt-3 text-gray-700 font-semibold">Memuat surat...</p>
         </div>
       </div>
     }>

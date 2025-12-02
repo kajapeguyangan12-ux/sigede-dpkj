@@ -14,7 +14,6 @@ import {
   getLayananStats,
   approveByAdmin,
   approveByKadus,
-  approveByKades,
   markAsCompleted
 } from "../../../lib/layananPublikService";
 

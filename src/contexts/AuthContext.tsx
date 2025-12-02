@@ -179,6 +179,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       console.log('🚪 AUTH CONTEXT: Logout attempt for userType:', userType);
       setIsLoggingOut(true);
+      setLoading(true);
       
       // Clear session check interval
       if (sessionCheckInterval) {
@@ -186,14 +187,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSessionCheckInterval(null);
       }
       
-      // Clear auth service first (includes session termination)
-      await authService.logout();
-      
-      // Clear state
+      // Clear state immediately to prevent any UI updates
       setUser(null);
       
       // Use utility to clear all auth data thoroughly
       clearAllAuthData();
+      
+      // Clear auth service (includes session termination) - do this AFTER clearing state
+      try {
+        await authService.logout();
+      } catch (logoutError) {
+        console.warn('Auth service logout error (non-critical):', logoutError);
+        // Continue anyway since we already cleared everything
+      }
       
       console.log('✅ AUTH CONTEXT: Logout successful');
       

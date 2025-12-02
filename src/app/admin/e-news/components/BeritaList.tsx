@@ -112,28 +112,65 @@ function BeritaFormModal({ open, onClose, onSubmit, editingItem }: { open: boole
     return () => URL.revokeObjectURL(objectUrl);
   }, [image]);
 
+  // Lock scroll when modal is open
+  useEffect(() => {
+    if (open) {
+      // Prevent scrolling on body
+      document.body.style.overflow = 'hidden';
+      // For iOS Safari
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${window.scrollY}px`;
+    } else {
+      // Restore scrolling
+      const scrollY = document.body.style.top;
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+    };
+  }, [open]);
+
   if (!open) return null;
   return (
     <Portal>
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-10 max-h-[90vh] overflow-y-auto animate-scaleIn">
+      <div 
+        className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md animate-fadeIn"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 md:p-10 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-scaleIn"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
-            {editingItem ? 'Edit Berita' : 'Formulir Buat Berita'}
-          </h2>
-          <button 
-            onClick={onClose} 
-            className="p-2.5 rounded-full bg-gray-100/80 hover:bg-gray-200/80 transition-colors"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
+          <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
+              {editingItem ? 'Edit Berita' : 'Buat Berita'}
+            </h2>
+            <button 
+              onClick={onClose}
+              type="button"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 p-2 sm:p-2.5 rounded-full bg-gray-100 hover:bg-red-100 transition-all flex-shrink-0 z-10 group shadow-md hover:shadow-lg"
+            >
+              <svg width="18" height="18" className="sm:w-5 sm:h-5 text-gray-600 group-hover:text-red-600 transition-colors" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
 
-        <form
+          <form
           onSubmit={e => {
             e.preventDefault();
             onSubmit({ title, description, eventDate, image });
@@ -143,41 +180,41 @@ function BeritaFormModal({ open, onClose, onSubmit, editingItem }: { open: boole
             setImage(null);
             setPreview(null);
           }}
-          className="space-y-6"
+          className="space-y-4 sm:space-y-5 md:space-y-6"
         >
           {/* Judul */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Judul Berita</label>
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">Judul Berita</label>
             <input
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="Masukkan judul berita..."
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm text-gray-900 placeholder:text-gray-500"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm text-sm sm:text-base text-gray-900 placeholder:text-gray-500"
               required
             />
           </div>
 
           {/* Tanggal Kegiatan */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Tanggal Kegiatan</label>
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">Tanggal Kegiatan</label>
             <input
               type="date"
               value={eventDate}
               onChange={e => setEventDate(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm text-sm sm:text-base text-gray-900"
               required
             />
           </div>
 
           {/* Deskripsi */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+            <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">Deskripsi</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Masukkan deskripsi berita..."
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm min-h-[120px] resize-none text-gray-900 placeholder:text-gray-500"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl border border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white/50 backdrop-blur-sm min-h-[100px] sm:min-h-[120px] resize-none text-sm sm:text-base text-gray-900 placeholder:text-gray-500"
               required
             />
           </div>
@@ -311,7 +348,7 @@ function BeritaFormModal({ open, onClose, onSubmit, editingItem }: { open: boole
             </button>
           </div>
         </form>
-      </div>
+        </div>
       </div>
     </Portal>
   );
@@ -514,22 +551,22 @@ export default function BeritaList() {
 
   return (
     <>
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+      <div className="space-y-4 sm:space-y-6 md:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
               Berita Desa
             </h2>
-            <p className="text-gray-500 text-sm mt-1">Kelola semua berita dan informasi penting desa</p>
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5 sm:mt-1">Kelola semua berita dan informasi penting desa</p>
           </div>
           <button
-            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold"
+            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95 font-semibold text-sm sm:text-base flex-shrink-0"
             onClick={() => {
               setEditingItem(null);
               setShowModal(true);
             }}
           >
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg width="18" height="18" className="sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M12 5v14M5 12h14"/>
             </svg>
             <span>Buat Berita</span>
@@ -568,17 +605,17 @@ export default function BeritaList() {
           </button>
         </div>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-3 sm:gap-4 md:gap-6">
           {items.map((item) => (
-            <div key={item.id} className="group bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-lg hover:shadow-xl p-6 transition-all duration-300 hover:-translate-y-1 hover:bg-white/90">
-              <div className="flex gap-6 items-start">
+            <div key={item.id} className="group bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg hover:shadow-xl p-3 sm:p-4 md:p-6 transition-all hover:bg-white/90">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-start">
                 {/* Image */}
-                <div className="relative w-32 h-32 bg-gradient-to-br from-red-100 to-pink-100 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
+                <div className="relative w-full sm:w-24 md:w-32 h-40 sm:h-24 md:h-32 bg-gradient-to-br from-red-100 to-pink-100 rounded-lg sm:rounded-xl overflow-hidden flex-shrink-0 shadow-md">
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.title} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300" />
+                    <img src={item.imageUrl} alt={item.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center">
-                      <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" className="text-red-300 mb-1">
+                      <svg width="28" height="28" className="sm:w-8 sm:h-8 text-red-300 mb-1" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                         <rect x="3" y="3" width="18" height="18" rx="2"/>
                         <circle cx="8.5" cy="8.5" r="1.5"/>
                         <path d="M21 15l-5-5L5 21"/>
@@ -587,17 +624,17 @@ export default function BeritaList() {
                     </div>
                   )}
                   {/* Badge */}
-                  <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
+                  <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full shadow-lg">
                     BERITA
                   </div>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-xl text-gray-900 mb-2 line-clamp-1 group-hover:text-red-600 transition-colors">
+                  <h3 className="font-bold text-base sm:text-lg md:text-xl text-gray-900 mb-1.5 sm:mb-2 line-clamp-2 sm:line-clamp-1 group-hover:text-red-600 transition-colors">
                     {item.title}
                   </h3>
-                  <div className="flex flex-col gap-1.5 text-xs text-gray-500 mb-3">
+                  <div className="flex flex-col gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-gray-500 mb-2 sm:mb-3">
                     {/* Tanggal Kegiatan */}
                     {item.eventDate && (
                       <div className="flex items-center gap-2">
@@ -637,31 +674,31 @@ export default function BeritaList() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col gap-2">
+                <div className="flex sm:flex-col gap-2 w-full sm:w-auto">
                   <button 
                     onClick={() => {
                       setEditingItem(item);
                       setShowModal(true);
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white flex items-center gap-2 transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
+                    className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white flex items-center justify-center gap-1.5 sm:gap-2 transition-all font-semibold shadow-md hover:shadow-lg active:scale-95 text-xs sm:text-sm"
                   >
-                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg width="14" height="14" className="sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path d="M12 20h9"/>
                       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
                     </svg>
-                    Edit
+                    <span>Edit</span>
                   </button>
                   <button 
                     onClick={() => handleDelete(item.id)} 
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white flex items-center gap-2 transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
+                    className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white flex items-center justify-center gap-1.5 sm:gap-2 transition-all font-semibold shadow-md hover:shadow-lg active:scale-95 text-xs sm:text-sm"
                   >
-                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg width="14" height="14" className="sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path d="M3 6h18"/>
                       <path d="M8 6v14h8V6"/>
                       <path d="M10 10v6"/>
                       <path d="M14 10v6"/>
                     </svg>
-                    Hapus
+                    <span>Hapus</span>
                   </button>
                 </div>
               </div>

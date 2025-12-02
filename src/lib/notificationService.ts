@@ -297,31 +297,24 @@ export const generateLayananMessage = (status: string, jenisLayanan?: string, bu
   const layanan = jenisLayanan || 'dokumen';
   
   switch (status) {
-    case 'pending_admin':
+    case 'pending_kadus':
       return {
         title: 'Permohonan Berhasil Dikirim',
-        message: `Permohonan ${layanan} Anda telah berhasil diterima dan sedang menunggu verifikasi dari Admin Desa. Estimasi waktu verifikasi 1-3 hari kerja.`,
-        priority: 'medium'
-      };
-    
-    case 'approved_admin':
-      return {
-        title: 'Disetujui Admin Desa',
-        message: `Permohonan ${layanan} Anda telah diverifikasi dan disetujui oleh Admin Desa. Saat ini sedang menunggu persetujuan dari Kepala Dusun.`,
+        message: `Permohonan ${layanan} Anda telah berhasil diterima dan sedang menunggu persetujuan dari Kepala Dusun. Estimasi waktu persetujuan 1-3 hari kerja.`,
         priority: 'medium'
       };
     
     case 'approved_kadus':
       return {
         title: 'Disetujui Kepala Dusun',
-        message: `Permohonan ${layanan} Anda telah disetujui oleh Kepala Dusun. Tahap selanjutnya menunggu persetujuan final dari Kepala Desa.`,
+        message: `Permohonan ${layanan} Anda telah disetujui oleh Kepala Dusun. Saat ini sedang menunggu persetujuan dari Admin Desa.`,
         priority: 'medium'
       };
     
-    case 'approved_kades':
+    case 'approved_admin':
       return {
         title: 'Dokumen Siap Diambil!',
-        message: `Selamat! Permohonan ${layanan} Anda telah disetujui oleh Kepala Desa dan dokumen siap untuk diambil. ${buktiApproval ? `Kode bukti: ${buktiApproval}. ` : ''}Silakan datang ke Kantor Kepala Desa dengan membawa identitas dan kode bukti ini dalam waktu 7 hari.`,
+        message: `Selamat! Permohonan ${layanan} Anda telah disetujui oleh Admin Desa dan dokumen siap untuk diambil. ${buktiApproval ? `Kode bukti: ${buktiApproval}. ` : ''}Silakan datang ke Kantor Desa dengan membawa identitas dan kode bukti ini dalam waktu 7 hari.`,
         priority: 'high'
       };
     

@@ -419,18 +419,6 @@ export default function EUMKMPage() {
         </section>
       </div>
 
-      {/* Floating Action Button - Buat Toko (Only for non-external users) */}
-      {user?.role !== 'warga_luar_dpkj' && (
-        <Link href="/masyarakat/e-umkm/create">
-          <button className="fixed right-4 sm:right-6 bottom-20 sm:bottom-24 z-50 flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 active:scale-95 group">
-            <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="font-bold text-sm sm:text-base">Buat Toko</span>
-          </button>
-        </Link>
-      )}
-
       {/* Navigation Bar */}
       <BottomNavigation />
     </main>

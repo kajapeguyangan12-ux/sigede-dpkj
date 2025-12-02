@@ -192,7 +192,7 @@ export default function AdminEUMKMPage() {
                 </div>
               </div>
               <h3 className="text-3xl font-bold mb-1">{stats.total}</h3>
-              <p className="text-sm text-blue-100 font-medium">Total UMKM</p>
+              <p className="text-sm text-white font-medium">Total UMKM</p>
             </div>
 
             <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-300">
@@ -204,7 +204,7 @@ export default function AdminEUMKMPage() {
                 </div>
               </div>
               <h3 className="text-3xl font-bold mb-1">{stats.aktif}</h3>
-              <p className="text-sm text-green-100 font-medium">UMKM Aktif</p>
+              <p className="text-sm text-white font-medium">UMKM Aktif</p>
             </div>
 
             <div className="bg-gradient-to-br from-yellow-500 to-amber-600 rounded-3xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-300">
@@ -216,7 +216,7 @@ export default function AdminEUMKMPage() {
                 </div>
               </div>
               <h3 className="text-3xl font-bold mb-1">{stats.pending}</h3>
-              <p className="text-sm text-yellow-100 font-medium">Menunggu Verifikasi</p>
+              <p className="text-sm text-white font-medium">Menunggu Verifikasi</p>
             </div>
 
             <div className="bg-gradient-to-br from-gray-500 to-slate-600 rounded-3xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-300">
@@ -228,7 +228,7 @@ export default function AdminEUMKMPage() {
                 </div>
               </div>
               <h3 className="text-3xl font-bold mb-1">{stats.tidak_aktif}</h3>
-              <p className="text-sm text-gray-100 font-medium">Tidak Aktif</p>
+              <p className="text-sm text-white font-medium">Tidak Aktif</p>
             </div>
           </div>
 
@@ -246,7 +246,7 @@ export default function AdminEUMKMPage() {
                   <input
                     type="text"
                     placeholder="Cari UMKM atau pemilik..."
-                    className="block w-full pl-12 pr-4 py-3 rounded-2xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm"
+                    className="block w-full pl-12 pr-4 py-3 rounded-2xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm text-gray-900 placeholder:text-gray-500"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -256,7 +256,7 @@ export default function AdminEUMKMPage() {
               {/* Kategori Filter */}
               <div>
                 <select
-                  className="block w-full px-4 py-3 rounded-2xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm font-medium"
+                  className="block w-full px-4 py-3 rounded-2xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm font-medium text-gray-900"
                   value={selectedKategori}
                   onChange={(e) => setSelectedKategori(e.target.value)}
                 >
@@ -270,7 +270,7 @@ export default function AdminEUMKMPage() {
               {/* Sort */}
               <div>
                 <select
-                  className="block w-full px-4 py-3 rounded-2xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm font-medium"
+                  className="block w-full px-4 py-3 rounded-2xl border-0 bg-gray-50 ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all text-sm font-medium text-gray-900"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortType)}
                 >

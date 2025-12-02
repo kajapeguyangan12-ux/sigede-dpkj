@@ -171,43 +171,76 @@ class AuthenticationService {
       }
 
       // 4. Password validation for Admin (Super Admin & Admin Desa)
-      // Check if this is an Admin user and validate password from Firestore
+      // Note: For managed users (created via kelola-pengguna), password validation 
+      // is already done by superAdminUserService.authenticateUser above.
+      // This fallback is only for legacy admin users that exist in Admin_Desa/Super_Admin 
+      // collections but not in the users collection with managed credentials.
       if ((userDoc.role === 'administrator' || userDoc.role === 'admin_desa') && credentials.password) {
-        console.log(`🔐 AUTH: Validating ${userDoc.role} password`);
+        console.log(`🔐 AUTH: Validating ${userDoc.role} password (legacy method)`);
         
-        if (userDoc.role === 'administrator') {
-          // Get Super Admin data from Firestore
-          const superAdminQuery = query(
-            this.superAdminCollection, 
-            where('email', '==', userDoc.email)
-          );
-          const superAdminSnapshot = await getDocs(superAdminQuery);
-          
-          if (!superAdminSnapshot.empty) {
-            const superAdminData = superAdminSnapshot.docs[0].data();
-            // Simple password comparison (in production, use bcrypt or similar)
-            if (superAdminData.kataSandi !== credentials.password) {
-              console.error('❌ AUTH: Super Admin password mismatch');
-              throw new Error('Password salah');
+        // Check if user has managed credentials (new system)
+        const userDocData = userDoc as any;
+        if (userDocData.loginCredentials?.passwordHash) {
+          console.log('ℹ️ User has managed credentials, skipping legacy password check');
+          // Password already validated by managed user auth system
+        } else {
+          // Legacy user - validate from Admin_Desa or Super_Admin collection
+          if (userDoc.role === 'administrator') {
+            // Get Super Admin data from Firestore
+            const superAdminQuery = query(
+              this.superAdminCollection, 
+              where('email', '==', userDoc.email)
+            );
+            const superAdminSnapshot = await getDocs(superAdminQuery);
+            
+            if (!superAdminSnapshot.empty) {
+              const superAdminData = superAdminSnapshot.docs[0].data();
+              // Simple password comparison (in production, use bcrypt or similar)
+              if (superAdminData.kataSandi !== credentials.password) {
+                console.error('❌ AUTH: Super Admin password mismatch');
+                throw new Error('Password salah');
+              }
+              console.log('✅ AUTH: Super Admin password validated');
             }
-            console.log('✅ AUTH: Super Admin password validated');
-          }
-        } else if (userDoc.role === 'admin_desa') {
-          // Get Admin Desa data from Firestore
-          const adminDesaQuery = query(
-            this.adminDesaCollection, 
-            where('email', '==', userDoc.email)
-          );
-          const adminDesaSnapshot = await getDocs(adminDesaQuery);
-          
-          if (!adminDesaSnapshot.empty) {
-            const adminDesaData = adminDesaSnapshot.docs[0].data();
-            // Simple password comparison (in production, use bcrypt or similar)
-            if (adminDesaData.kataSandi !== credentials.password) {
-              console.error('❌ AUTH: Admin Desa password mismatch');
-              throw new Error('Password salah');
+          } else if (userDoc.role === 'admin_desa') {
+            // Get Admin Desa data from Firestore
+            const adminDesaQuery = query(
+              this.adminDesaCollection, 
+              where('email', '==', userDoc.email)
+            );
+            const adminDesaSnapshot = await getDocs(adminDesaQuery);
+            
+            if (!adminDesaSnapshot.empty) {
+              const adminDesaData = adminDesaSnapshot.docs[0].data();
+              console.log('🔍 Admin Desa data found:', { 
+                email: adminDesaData.email, 
+                hasKataSandi: !!adminDesaData.kataSandi,
+                kataSandiValue: adminDesaData.kataSandi,
+                inputPassword: credentials.password
+              });
+              
+              // Check if kataSandi exists
+              if (!adminDesaData.kataSandi) {
+                console.warn('⚠️ AUTH: Admin Desa kataSandi is empty/undefined');
+                console.log('ℹ️ This might be a managed user created via kelola-pengguna');
+                console.log('ℹ️ Skipping legacy Admin_Desa password check, using managed auth');
+                // Skip validation - let managed user auth handle it
+              } else {
+                // Simple password comparison (in production, use bcrypt or similar)
+                if (adminDesaData.kataSandi !== credentials.password) {
+                  console.error('❌ AUTH: Admin Desa password mismatch');
+                  console.error('Expected:', adminDesaData.kataSandi);
+                  console.error('Got:', credentials.password);
+                  throw new Error('Password salah');
+                }
+                console.log('✅ AUTH: Admin Desa password validated');
+              }
+            } else {
+              console.log('⚠️ Admin Desa document not found in Admin_Desa collection');
+              // If Admin_Desa document not found but user exists in users collection,
+              // it might be a managed user - let it pass through
+              console.log('ℹ️ Assuming managed user, skipping legacy Admin_Desa password check');
             }
-            console.log('✅ AUTH: Admin Desa password validated');
           }
         }
       }

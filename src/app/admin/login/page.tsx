@@ -19,9 +19,17 @@ export default function AdminLogin() {
   React.useEffect(() => {
     console.log('🔍 Admin Login: Component mounted');
     
-    // Clear any logout/redirect flags
+    // Clear any logout/redirect flags IMMEDIATELY
     sessionStorage.removeItem('auth_redirecting');
     sessionStorage.removeItem('admin_logout_in_progress');
+    
+    // If user just logged out, clear everything to prevent any error flash
+    const isLoggedOut = sessionStorage.getItem('just_logged_out');
+    if (isLoggedOut) {
+      localStorage.clear();
+      sessionStorage.clear();
+      console.log('✅ Cleared session after logout');
+    }
     
     // Layout will handle redirect if already authenticated
     // No need to check here
@@ -45,6 +53,15 @@ export default function AdminLogin() {
 
     try {
       console.log('🔐 ADMIN LOGIN: Attempting login with identifier:', identifier);
+      
+      // If there's an existing session, clear it first to allow switching accounts
+      if (user) {
+        console.log('🔄 Existing session detected, clearing session...');
+        localStorage.clear();
+        sessionStorage.clear();
+        // Wait a bit for state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
       
       // Create abort controller for timeout
       const abortController = new AbortController();
@@ -133,25 +150,25 @@ export default function AdminLogin() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-red-100 to-white">
-      <div className="bg-white shadow-lg rounded-lg flex w-full max-w-3xl overflow-hidden">
-        {/* Left Side */}
-        <div className="w-1/2 bg-gradient-to-br from-red-400 to-red-200 flex flex-col items-center justify-center p-8">
-          <img src="/logo/LOGO_DPKJ.png" alt="Logo DPKJ" className="w-40 mb-4 object-contain" />
-          <h2 className="text-xl font-bold text-white mb-2">Dauh Puri Kaja</h2>
-          <p className="text-white text-lg font-semibold">Selamat Datang Di Aplikasi SIGEDE</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-red-100 to-white p-3 sm:p-4">
+      <div className="bg-white shadow-lg rounded-xl sm:rounded-2xl flex flex-col md:flex-row w-full max-w-3xl overflow-hidden">
+        {/* Left Side - Mobile Optimized */}
+        <div className="w-full md:w-1/2 bg-gradient-to-br from-red-400 to-red-200 flex flex-col items-center justify-center p-6 sm:p-8">
+          <img src="/logo/LOGO_DPKJ.png" alt="Logo DPKJ" className="w-24 sm:w-32 md:w-40 mb-3 sm:mb-4 object-contain" />
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Dauh Puri Kaja</h2>
+          <p className="text-white text-sm sm:text-base md:text-lg font-semibold text-center">Selamat Datang Di Aplikasi SIGEDE</p>
         </div>
-        {/* Right Side */}
-        <div className="w-1/2 flex flex-col justify-center items-center p-8">
-          <img src="/logo/Logo_BGD1.png" alt="Logo BGD" className="w-32 sm:w-40 mb-6 object-contain" />
-          <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+        {/* Right Side - Mobile Optimized */}
+        <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 sm:p-8">
+          <img src="/logo/Logo_BGD1.png" alt="Logo BGD" className="w-24 sm:w-32 md:w-40 mb-4 sm:mb-6 object-contain" />
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 text-center">
             Silakan Login Untuk Masuk Ke Sistem SI GEDE
           </h1>
-          <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
+          <form className="w-full flex flex-col gap-3 sm:gap-4" onSubmit={handleSubmit}>
             <input
               type="text"
               placeholder="Masukkan ID User / Email / Username"
-              className="px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400 bg-white text-gray-800 placeholder-gray-500 placeholder-opacity-100"
+              className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 bg-white text-sm sm:text-base text-gray-800 placeholder-gray-500 placeholder-opacity-100 transition-all"
               value={identifier}
               onChange={e => setIdentifier(e.target.value)}
               disabled={isSubmitting || loading}
@@ -159,29 +176,29 @@ export default function AdminLogin() {
             <input
               type="password"
               placeholder="Masukkan Password"
-              className="px-4 py-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400 bg-white text-gray-800 placeholder-gray-500 placeholder-opacity-100"
+              className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 bg-white text-sm sm:text-base text-gray-800 placeholder-gray-500 placeholder-opacity-100 transition-all"
               value={password}
               onChange={e => setPassword(e.target.value)}
               disabled={isSubmitting || loading}
             />
             {error && (
-              <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md border border-red-200">
+              <div className="text-red-600 text-xs sm:text-sm text-center bg-red-50 p-2.5 sm:p-3 rounded-lg border border-red-200">
                 {error}
               </div>
             )}
             {user && !isAdmin && (
-              <div className="text-blue-600 text-sm text-center bg-blue-50 p-3 rounded-md border border-blue-200">
+              <div className="text-blue-600 text-xs sm:text-sm text-center bg-blue-50 p-2.5 sm:p-3 rounded-lg border border-blue-200">
                 Anda login sebagai: {user.displayName} ({user.role})
               </div>
             )}
             <button
               type="submit"
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 rounded-md transition-colors relative"
+              className="bg-green-600 hover:bg-green-700 active:scale-95 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2.5 sm:py-3 rounded-lg sm:rounded-xl transition-all relative text-sm sm:text-base"
               disabled={isSubmitting || loading}
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -194,7 +211,7 @@ export default function AdminLogin() {
             <div className="text-center">
               <a 
                 href="/masyarakat/login" 
-                className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
               >
                 Bukan Admin? Login sebagai Masyarakat
               </a>

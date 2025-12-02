@@ -81,20 +81,18 @@ export default function LayananPublikPage() {
 
   const getStatusLabel = (status: LayananPublik['status']) => {
     switch (status) {
-      case 'pending_admin':
-        return 'Menunggu Approval Admin Desa';
-      case 'approved_admin':
-        return 'Disetujui Admin - Menunggu Kepala Dusun';
+      case 'pending_kadus':
+        return 'Menunggu Persetujuan Kepala Dusun';
       case 'approved_kadus':
-        return 'Disetujui Kadus - Menunggu Kepala Desa';
-      case 'approved_kades':
-        return 'Disetujui Kades - Sedang Diproses';
+        return 'Disetujui Kadus - Menunggu Admin Desa';
+      case 'approved_admin':
+        return 'Disetujui Admin Desa - Surat Siap Diambil';
       case 'completed':
-        return 'Selesai - Silakan Ambil di Kantor Desa';
+        return 'Selesai - Dokumen Telah Diambil';
       case 'ditolak':
         return 'Ditolak';
       case 'auto_approved':
-        return 'Auto Approved';
+        return 'Disetujui Otomatis';
       default:
         return status;
     }
@@ -102,13 +100,11 @@ export default function LayananPublikPage() {
 
   const getStatusColor = (status: LayananPublik['status']) => {
     switch (status) {
-      case 'pending_admin':
+      case 'pending_kadus':
         return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'approved_admin':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'approved_kadus':
-        return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-      case 'approved_kades':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'approved_admin':
         return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'completed':
         return 'bg-green-100 text-green-700 border-green-200';
@@ -412,23 +408,23 @@ export default function LayananPublikPage() {
                           <div className="mt-3 space-y-2">
                             <div className="text-xs font-medium text-gray-700">Progress Approval:</div>
                             <div className="flex items-center space-x-2">
-                              <div className={`w-3 h-3 rounded-full ${['pending_admin', 'approved_admin', 'approved_kadus', 'approved_kades', 'completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                              <span className="text-xs text-gray-600">Admin Desa</span>
-                              <div className="flex-1 h-0.5 bg-gray-300">
-                                <div className={`h-full ${['approved_admin', 'approved_kadus', 'approved_kades', 'completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                              </div>
-                              <div className={`w-3 h-3 rounded-full ${['approved_kadus', 'approved_kades', 'completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <div className={`w-3 h-3 rounded-full ${['pending_kadus', 'approved_kadus', 'approved_admin', 'completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                               <span className="text-xs text-gray-600">Kepala Dusun</span>
                               <div className="flex-1 h-0.5 bg-gray-300">
-                                <div className={`h-full ${['approved_kades', 'completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                <div className={`h-full ${['approved_kadus', 'approved_admin', 'completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              </div>
+                              <div className={`w-3 h-3 rounded-full ${['approved_admin', 'completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs text-gray-600">Admin Desa</span>
+                              <div className="flex-1 h-0.5 bg-gray-300">
+                                <div className={`h-full ${['completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                               </div>
                               <div className={`w-3 h-3 rounded-full ${['completed'].includes(submission.status) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                              <span className="text-xs text-gray-600">Kepala Desa</span>
+                              <span className="text-xs text-gray-600">Selesai</span>
                             </div>
                           </div>
 
                           {/* Bukti Approval untuk status completed */}
-                          {submission.status === 'approved_kades' && submission.buktiApproval && (
+                          {submission.status === 'approved_admin' && submission.buktiApproval && (
                             <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                               <div className="flex items-center gap-2 mb-2">
                                 <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">

@@ -90,38 +90,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // This component only handles UI layout (sidebar, navigation, etc.)
 
   // Handle logout
-  const handleLogout = async () => {
+  const handleLogout = () => {
     try {
       console.log('🚪 Admin Layout: Logout initiated');
       
-      // Set flag FIRST to prevent auth check from running
+      // Clear all data IMMEDIATELY and SYNCHRONOUSLY
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Set flags to prevent any auth checks and indicate fresh logout
       sessionStorage.setItem('admin_logout_in_progress', 'true');
+      sessionStorage.setItem('just_logged_out', 'true');
       
-      // Clear all auth data immediately
-      localStorage.clear();
-      sessionStorage.clear();
-      sessionStorage.setItem('admin_logout_in_progress', 'true'); // Keep this flag
+      // Force IMMEDIATE redirect before any async operations
+      // This prevents any error messages from showing
+      window.location.replace('/admin/login');
       
-      try {
-        await logout('admin');
-      } catch (error) {
-        console.error('Context logout failed, but continuing with manual logout');
-      }
-      
-      // Clean up
-      sessionStorage.removeItem('admin_logout_in_progress');
-      
-      // Force immediate redirect
-      console.log('✅ Admin Layout: Forcing redirect to login');
-      window.location.href = '/admin/login';
     } catch (error) {
+      // Even on error, force redirect immediately
       console.error('Admin Layout: Logout error:', error);
-      // Clear everything on error
       localStorage.clear();
       sessionStorage.clear();
-      
-      // Force redirect even on error
-      window.location.href = '/admin/login';
+      sessionStorage.setItem('just_logged_out', 'true');
+      window.location.replace('/admin/login');
     }
   };
 
@@ -146,11 +137,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   // Filter menu items based on user role
-  const menuItems = allMenuItems.filter(item => {
-    if (item.key === null) return true; // Always show Home and Settings
-    if (!user?.role) return false; // No role, hide all permission-based items
-    return hasPermission(user.role as UserRole, item.key as any, 'read');
-  });
+  const menuItems = React.useMemo(() => {
+    // Special filter for kepala_dusun: only show Home, Layanan Publik, and Pengaduan
+    if (user?.role === 'kepala_dusun') {
+      return allMenuItems.filter(item => 
+        item.path === '/admin/home' || 
+        item.path === '/admin/layanan-publik' || 
+        item.path === '/admin/pengaduan'
+      );
+    }
+    
+    // For other roles, use permission-based filtering
+    return allMenuItems.filter(item => {
+      if (item.key === null) return true; // Always show Home and Settings
+      if (!user?.role) return false; // No role, hide all permission-based items
+      return hasPermission(user.role as UserRole, item.key as any, 'read');
+    });
+  }, [user?.role]);
   
   // Find active index by matching pathname (check longer paths first for exact match)
   const activeIndex = menuItems.findIndex(item => {
@@ -355,6 +358,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
           </div>
+          {/* Logout Button - Mobile */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleLogout();
+            }}
+            type="button"
+            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-lg font-semibold text-sm transition-colors duration-300 shadow-md"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Logout</span>
+          </button>
         </div>
         
         {/* Mobile Menu Scroll */}
@@ -384,15 +402,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {children}
           </div>
         </main>
-
-        {/* Floating Action Button */}
-        <div className="fixed bottom-8 right-8 z-50 md:hidden">
-          <button className="w-14 h-14 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg flex items-center justify-center text-white hover:shadow-xl transition-shadow duration-300">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
-        </div>
       </div>
     </AdminProvider>
   );

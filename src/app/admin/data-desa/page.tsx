@@ -1,18 +1,69 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from '../../../contexts/AuthContext';
 import { useCurrentUser } from '../../masyarakat/lib/useCurrentUser';
-import { handleAdminLogout } from '../../../lib/logoutHelper';
 import AdminLayout from "../components/AdminLayout";
-import AdminHeaderCard, {
-  AdminHeaderSearchBar,
-  AdminHeaderAccount,
-} from "../../components/AdminHeaderCard";
+import { Users, Plus, Upload, Grid, List, Search, Trash2, Edit, Eye, X, TrendingUp, UserCheck, Home } from 'lucide-react';
 import { addDataDesa, updateDataDesa, deleteDataDesa, subscribeToDataDesa, DataDesaItem } from "../../../lib/dataDesaService";
 import UploadExcel from "./components/UploadExcelNew";
 import KKCard from "./components/KKCard";
 import AnimatedCounter from "./components/AnimatedCounter";
+
+// Custom animations and mobile optimizations
+const customStyles = `
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes cardEntrance {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* iOS safe area support */
+  .safe-area-padding {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Touch optimizations */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, a {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input, textarea, select {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+`
 
 // CSS untuk modal modern
 const modernModalStyles = `
@@ -165,7 +216,6 @@ interface DataDesa {
 
 export default function DataDesaPage() {
   const router = useRouter();
-  const { logout } = useAuth();
   const { user: currentUser, loading: userLoading } = useCurrentUser();
   const [dataWarga, setDataWarga] = useState<DataDesa[]>([]);
   const [loading, setLoading] = useState(false); // Only for data operations
@@ -216,14 +266,6 @@ export default function DataDesaPage() {
     shdk: ""
   });
 
-  const handleLogout = async () => {
-    try {
-      await logout('admin');
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
   useEffect(() => {
     const unsubscribe = subscribeToDataDesa((data) => {
       const formattedData = data.map(item => ({
@@ -263,6 +305,32 @@ export default function DataDesaPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validasi format tanggal lahir DD/MM/YYYY
+    if (formData.tanggalLahir) {
+      const dateRegex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/;
+      if (!dateRegex.test(formData.tanggalLahir)) {
+        alert("Format tanggal lahir tidak valid! Gunakan format DD/MM/YYYY (contoh: 15/08/1990)");
+        return;
+      }
+      
+      // Validasi tanggal yang valid
+      const [day, month, year] = formData.tanggalLahir.split('/').map(Number);
+      const date = new Date(year, month - 1, day);
+      
+      if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+        alert("Tanggal lahir tidak valid! Periksa kembali tanggal yang Anda masukkan.");
+        return;
+      }
+      
+      // Validasi tahun (tidak boleh lebih dari tahun sekarang dan minimal 1900)
+      const currentYear = new Date().getFullYear();
+      if (year > currentYear || year < 1900) {
+        alert(`Tahun lahir harus antara 1900 dan ${currentYear}`);
+        return;
+      }
+    }
+    
     setLoading(true);
     
     try {
@@ -386,12 +454,13 @@ export default function DataDesaPage() {
 
   return (
     <>
-      {/* Inject CSS styles for modern modal */}
+      {/* Inject CSS styles */}
+      <style>{customStyles}</style>
       <style dangerouslySetInnerHTML={{ __html: modernModalStyles }} />
       
       {/* Loading Screen */}
       {userLoading && (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-gray-600 font-medium">Memuat data pengguna...</p>
@@ -402,466 +471,346 @@ export default function DataDesaPage() {
       {/* Main Content */}
       {!userLoading && (
         <AdminLayout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        {/* Enhanced Header */}
-        <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 relative z-40 overflow-hidden max-w-7xl mx-auto mt-6">
-          {/* Floating Background Elements */}
-          <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-blue-400/10 to-sky-400/10 rounded-full blur-xl animate-pulse"></div>
-          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-sky-400/10 to-cyan-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-cyan-400/5 to-blue-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
-
-          {/* Enhanced AdminHeaderCard with better styling */}
-          <div className="w-full bg-gradient-to-r from-white via-blue-50/30 to-sky-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
-            {/* Enhanced Title Section */}
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-sky-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/25 transform hover:scale-105 transition-all duration-300">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
-                </svg>
-              </div>
-              <div>
-                <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-blue-800 to-sky-800 bg-clip-text text-transparent mb-2">
-                  Data Desa
-                </h1>
-                <p className="text-slate-600 font-medium text-lg">
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 p-3 sm:p-4 md:p-6 safe-area-padding">
+            <div className="max-w-7xl mx-auto">
+              {/* Custom Header */}
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-sky-600 rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8"
+                style={{ animation: 'slideUp 0.5s ease-out' }}
+              >
+                <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+                  <div className="bg-white/20 backdrop-blur-sm p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                    <Users className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+                  </div>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
+                    Data Desa
+                  </h1>
+                </div>
+                <p className="text-sm sm:text-base text-white/90 ml-0 sm:ml-14">
                   Kelola data kependudukan dan informasi warga desa
                 </p>
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="flex items-center gap-2 text-sm text-purple-600 font-semibold">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                    <AnimatedCounter value={totalKepalaKeluarga} duration={2500} delay={50} /> Kepala Keluarga
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-orange-600 font-semibold">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                    <AnimatedCounter value={totalKK} duration={2500} delay={50} /> Total KK
-                  </div>
-                </div>
               </div>
-            </div>
-            
-            {/* Enhanced Controls Section */}
-            <div className="flex items-center gap-6 relative z-10">
-              {/* Enhanced Search Bar */}
-              <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-blue-400 hover:shadow-lg transition-all duration-300 group">
-                <input
-                  type="text"
-                  placeholder="Cari data warga..."
-                  className="flex-1 bg-transparent text-gray-700 text-base font-medium focus:outline-none placeholder-gray-500"
-                />
-                <svg
-                  className="ml-3 text-gray-400 group-hover:text-blue-500 transition-colors duration-300"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </div>
-              
-              {/* Enhanced Account Section */}
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-blue-50 hover:to-blue-100 transition-all duration-300 cursor-pointer shadow-md">
-                  <svg
-                    width="24"
-                    height="24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    className="text-gray-600"
-                  >
-                    <path d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 01-7.5-7.5h2A5.5 5.5 0 0110 10z"/>
-                  </svg>
+
+              {/* Statistics Cards */}
+              <div 
+                className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6"
+                style={{ animation: 'fadeIn 0.5s ease-out 0.1s backwards' }}
+              >
+                <div className="bg-gradient-to-br from-blue-500 to-sky-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-white shadow-lg">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <Users className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                    <div className="bg-white/20 rounded-lg px-2 py-1">
+                      <span className="text-xs sm:text-sm font-semibold">Total</span>
+                    </div>
+                  </div>
+                  <p className="text-xs sm:text-sm opacity-90 mb-1">Total Warga</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold"><AnimatedCounter value={filteredData.length} duration={2000} delay={50} /></p>
                 </div>
                 
-                <button
-                  onClick={handleLogout}
-                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    className="text-red-600 group-hover:text-red-700"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Duplicate Data Information */}
-          {duplicates.length > 0 && (
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-orange-400 rounded-lg p-4 mb-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-800">
-                    Informasi: Ditemukan <span className="text-orange-600 font-bold">{totalDuplicates}</span> data duplikat berdasarkan NIK yang sama ({duplicates.length} NIK duplikat)
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">
-              Data Desa Dauh Puri Kaja
-            </h1>
-            <p className="text-lg text-gray-700 font-medium">
-              Kelola data kependudukan dan informasi warga desa
-            </p>
-          </div>
-
-          {/* Search and Filter */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 shadow-sm">
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-              <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
-                <div className="flex-1 relative">
-                  <svg
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder="Cari berdasarkan nama atau NIK..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-500 bg-white"
-                  />
-                </div>
-                <div className="relative">
-                  <select
-                    value={filterBanjar}
-                    onChange={(e) => setFilterBanjar(e.target.value)}
-                    className="px-6 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none cursor-pointer transition-all min-w-[160px] text-gray-900 font-medium"
-                  >
-                    <option value="all" className="text-gray-900 bg-white">Semua Daerah</option>
-                    {uniqueDaerah.map((daerah) => (
-                      <option key={daerah} value={daerah} className="text-gray-900 bg-white">
-                        {daerah}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Custom dropdown arrow */}
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-white shadow-lg">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <UserCheck className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                    <div className="bg-white/20 rounded-lg px-2 py-1">
+                      <span className="text-xs sm:text-sm font-semibold">KK</span>
+                    </div>
                   </div>
+                  <p className="text-xs sm:text-sm opacity-90 mb-1">Kepala Keluarga</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold"><AnimatedCounter value={totalKepalaKeluarga} duration={2000} delay={50} /></p>
                 </div>
-              </div>
-              <div className="flex gap-3">
-                {/* View Mode Toggle */}
-                <div className="flex bg-gray-100 p-1 rounded-lg">
-                  <button
-                    onClick={() => setViewMode('cards')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                      viewMode === 'cards'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <svg className="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    Kartu KK
-                  </button>
-                  <button
-                    onClick={() => setViewMode('table')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                      viewMode === 'table'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <svg className="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 002 2m0 0v10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2" />
-                    </svg>
-                    Tabel
-                  </button>
-                </div>
-
-                <button 
-                  onClick={() => setShowUploadModal(true)}
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                >
-                  <svg
-                    className="w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                  Upload Excel
-                </button>
                 
-                <button 
-                  onClick={() => setShowModal(true)}
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
-                >
-                  <svg
-                    className="w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                    />
-                  </svg>
-                  Tambah Data Warga
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '0.1s'}}>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center transform hover:rotate-12 transition-transform duration-300">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Total Penduduk</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    <AnimatedCounter value={filteredData.length} duration={2000} delay={100} />
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center transform hover:rotate-12 transition-transform duration-300">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Laki-laki</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    <AnimatedCounter 
-                      value={filteredData.filter(item => item.jenisKelamin === 'Laki-laki').length} 
-                      duration={2200} 
-                      delay={200} 
-                    />
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '0.3s'}}>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center transform hover:rotate-12 transition-transform duration-300">
-                  <svg className="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Perempuan</p>
-                  <p className="text-2xl font-bold text-pink-600">
-                    <AnimatedCounter 
-                      value={filteredData.filter(item => item.jenisKelamin === 'Perempuan').length} 
-                      duration={2400} 
-                      delay={300} 
-                    />
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center transform hover:rotate-12 transition-transform duration-300">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Kepala Keluarga</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    <AnimatedCounter 
-                      value={filteredData.filter(item => item.shdk?.toLowerCase().includes('kepala')).length} 
-                      duration={2600} 
-                      delay={400} 
-                    />
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: '0.5s'}}>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center transform hover:rotate-12 transition-transform duration-300">
-                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z M3 7l9 6 9-6" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Total KK</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    <AnimatedCounter 
-                      value={totalKK} 
-                      duration={2800} 
-                      delay={500} 
-                    />
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Pagination Info */}
-          {totalItems > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-900 font-semibold">
-                  Menampilkan {startIndex + 1} - {Math.min(endIndex, totalItems)} dari {totalItems} data
-                </span>
-                <span className="text-gray-700 font-medium">
-                  Halaman {currentPage} dari {totalPages}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Data Display */}
-          {viewMode === 'cards' ? (
-            // Card View for KK
-            paginatedData.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
+                <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-white shadow-lg">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <Home className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                    <div className="bg-white/20 rounded-lg px-2 py-1">
+                      <span className="text-xs sm:text-sm font-semibold">KK</span>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Belum ada data penduduk</h3>
-                  <p className="text-gray-700 mb-4 font-medium">Mulai dengan menambahkan data penduduk pertama atau gunakan fitur upload Excel.</p>
+                  <p className="text-xs sm:text-sm opacity-90 mb-1">Total KK</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold"><AnimatedCounter value={totalKK} duration={2000} delay={50} /></p>
+                </div>
+                
+                <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-white shadow-lg">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                    <div className="bg-white/20 rounded-lg px-2 py-1">
+                      <span className="text-xs sm:text-sm font-semibold">NIK</span>
+                    </div>
+                  </div>
+                  <p className="text-xs sm:text-sm opacity-90 mb-1">Duplikat NIK</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold">{totalDuplicates}</p>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-6">
-                {Object.entries(groupedByKK).map(([noKK, keluargaMembers]) => (
-                  <KKCard key={noKK} noKK={noKK} members={keluargaMembers} />
-                ))}
-              </div>
-            )
-          ) : (
-            // Table View
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900">Data Penduduk</h3>
-              </div>
-              
-              {paginatedData.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+
+              {/* Action Bar */}
+              <div 
+                className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 mb-4 sm:mb-6"
+                style={{ animation: 'cardEntrance 0.6s ease-out 0.2s backwards' }}
+              >
+                <div className="flex flex-col gap-3 sm:gap-4">
+                  {/* Search and Filter Row */}
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Cari nama atau NIK..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+                      />
+                    </div>
+                    <select
+                      value={filterBanjar}
+                      onChange={(e) => setFilterBanjar(e.target.value)}
+                      className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors font-medium text-sm sm:text-base text-gray-900 bg-white min-w-[160px]"
+                    >
+                      <option value="all">Semua Daerah</option>
+                      {uniqueDaerah.map((daerah) => (
+                        <option key={daerah} value={daerah}>
+                          {daerah}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Action Buttons Row */}
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <button 
+                      onClick={() => {
+                        resetForm();
+                        setShowModal(true);
+                      }}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-sky-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-blue-600 hover:to-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    >
+                      <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                      Tambah Data
+                    </button>
+                    <button 
+                      onClick={() => setShowUploadModal(true)}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-green-600 hover:to-emerald-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    >
+                      <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+                      Upload Excel
+                    </button>
+                    
+                    {/* View Mode Toggle */}
+                    <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
+                      <button
+                        onClick={() => setViewMode('cards')}
+                        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          viewMode === 'cards'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <Grid className="w-4 h-4" />
+                        <span className="hidden sm:inline">Cards</span>
+                      </button>
+                      <button
+                        onClick={() => setViewMode('table')}
+                        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          viewMode === 'table'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <List className="w-4 h-4" />
+                        <span className="hidden sm:inline">Table</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Belum ada data penduduk</h3>
-                <p className="text-gray-700 mb-4 font-medium">Mulai dengan menambahkan data penduduk pertama atau gunakan fitur upload Excel.</p>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">No KK</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Nama Lengkap</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">NIK</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Jenis Kelamin</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Pekerjaan</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Status Nikah</th>
-                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {paginatedData.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm text-gray-900 font-bold font-mono">{item.noKK}</td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="font-bold text-gray-900">{item.namaLengkap}</div>
-                            <div className="text-sm text-gray-600 font-medium">{item.tempatLahir}, {item.tanggalLahir}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-bold font-mono">{item.nik}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                            item.jenisKelamin === 'Laki-laki' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
-                          }`}>
-                            {item.jenisKelamin}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-semibold">{item.pekerjaan}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-semibold">{item.statusNikah}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleEdit(item)}
-                              className="text-blue-600 hover:text-blue-800 p-1"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+
+              {/* Content Area - Cards or Table View */}
+              {viewMode === 'cards' ? (
+                <>
+                  {/* Duplicate Data Information */}
+                  {duplicates.length > 0 && (
+                    <div 
+                      className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-orange-400 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 shadow-sm"
+                      style={{ animation: 'cardEntrance 0.6s ease-out 0.3s backwards' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs sm:text-sm font-semibold text-gray-800">
+                            Informasi: Ditemukan <span className="text-orange-600 font-bold">{totalDuplicates}</span> data duplikat berdasarkan NIK yang sama ({duplicates.length} NIK duplikat)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cards View - Per KK */}
+                  {paginatedData.length === 0 ? (
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                      <div className="text-center py-12">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Belum ada data penduduk</h3>
+                        <p className="text-gray-700 mb-4 font-medium">
+                          Mulai dengan menambahkan data penduduk pertama
+                          {currentUser && (currentUser.role === 'administrator' || currentUser.role === 'super_admin') && ' atau gunakan fitur upload Excel'}.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {Object.entries(groupedByKK).map(([noKK, keluargaMembers]) => (
+                        <KKCard key={noKK} noKK={noKK} members={keluargaMembers} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                // Table View - Display per NIK (Individual Cards)
+                <>
+                      {paginatedData.length === 0 ? (
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                          <div className="text-center py-12">
+                            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                               </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item.id)}
-                              className="text-red-600 hover:text-red-800 p-1"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Belum ada data penduduk</h3>
+                            <p className="text-gray-700 mb-4 font-medium">
+                              Mulai dengan menambahkan data penduduk pertama
+                              {currentUser && (currentUser.role === 'administrator' || currentUser.role === 'super_admin') && ' atau gunakan fitur upload Excel'}.
+                            </p>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            </div>
-          )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                          {paginatedData.map((warga) => (
+                            <div 
+                              key={warga.id} 
+                              className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
+                            >
+                              {/* Card Header */}
+                              <div className="bg-gradient-to-r from-blue-500 to-sky-600 p-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      {warga.shdk?.toLowerCase().includes('kepala') && (
+                                        <div className="bg-white/20 backdrop-blur-sm p-1.5 rounded-lg">
+                                          <UserCheck className="h-4 w-4 text-white" />
+                                        </div>
+                                      )}
+                                      <h3 className="text-lg font-bold text-white line-clamp-2">{warga.namaLengkap}</h3>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-white/90 text-sm">
+                                      <span className="font-mono font-semibold">{warga.nik}</span>
+                                    </div>
+                                  </div>
+                                  <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                    warga.jenisKelamin === 'Laki-laki' 
+                                      ? 'bg-blue-100 text-blue-800' 
+                                      : 'bg-pink-100 text-pink-800'
+                                  }`}>
+                                    {warga.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Card Body */}
+                              <div className="p-4 space-y-3">
+                                {/* No KK */}
+                                <div className="flex items-start gap-2">
+                                  <Home className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 mb-0.5">No. Kartu Keluarga</p>
+                                    <p className="text-sm font-bold text-gray-900 font-mono">{warga.noKK}</p>
+                                  </div>
+                                </div>
+
+                                {/* TTL */}
+                                <div className="flex items-start gap-2">
+                                  <svg className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 mb-0.5">Tempat, Tanggal Lahir</p>
+                                    <p className="text-sm font-semibold text-gray-900">{warga.tempatLahir}, {warga.tanggalLahir}</p>
+                                  </div>
+                                </div>
+
+                                {/* SHDK */}
+                                <div className="flex items-start gap-2">
+                                  <Users className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 mb-0.5">Status Hubungan</p>
+                                    <p className="text-sm font-semibold text-gray-900">{warga.shdk}</p>
+                                  </div>
+                                </div>
+
+                                {/* Pekerjaan */}
+                                <div className="flex items-start gap-2">
+                                  <svg className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                  </svg>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 mb-0.5">Pekerjaan</p>
+                                    <p className="text-sm font-semibold text-gray-900">{warga.pekerjaan}</p>
+                                  </div>
+                                </div>
+
+                                {/* Alamat */}
+                                <div className="flex items-start gap-2">
+                                  <svg className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 mb-0.5">Alamat</p>
+                                    <p className="text-sm font-semibold text-gray-900 line-clamp-2">{warga.alamat}</p>
+                                  </div>
+                                </div>
+
+                                {/* Daerah */}
+                                {warga.daerah && (
+                                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 rounded-lg">
+                                    <svg className="h-3.5 w-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                    </svg>
+                                    <span className="text-xs font-semibold text-blue-700">{warga.daerah}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Card Footer - Actions */}
+                              <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleEdit(warga)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Edit Data"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(warga.id)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Hapus Data"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span>Hapus</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                  </>
+                )}
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
@@ -930,9 +879,8 @@ export default function DataDesaPage() {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Upload Excel Component - single instance, preserve state */}
+            {/* Upload Excel Component - single instance, preserve state */}
         {(showUploadModal || isUploadMinimized) && (
           <UploadExcel 
             isMinimizedFromParent={isUploadMinimized}
@@ -1114,11 +1062,107 @@ export default function DataDesaPage() {
                       Tanggal Lahir
                     </label>
                     <input
-                      type="date"
+                      type="text"
                       value={formData.tanggalLahir}
-                      onChange={(e) => setFormData(prev => ({...prev, tanggalLahir: e.target.value}))}
+                      onChange={(e) => {
+                        // Allow only numbers and slashes
+                        let value = e.target.value.replace(/[^0-9/]/g, '');
+                        
+                        // Parse current parts
+                        const parts = value.split('/');
+                        let day = parts[0] || '';
+                        let month = parts[1] || '';
+                        let year = parts[2] || '';
+                        
+                        // Function to get max days in a month
+                        const getMaxDaysInMonth = (m: number, y: number) => {
+                          if (m === 2) {
+                            // February - check leap year
+                            if (y && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) {
+                              return 29; // Leap year
+                            }
+                            return 28; // Non-leap year
+                          } else if ([4, 6, 9, 11].includes(m)) {
+                            return 30; // April, June, September, November
+                          }
+                          return 31; // January, March, May, July, August, October, December
+                        };
+                        
+                        // Validate and correct month (01-12)
+                        if (month) {
+                          const monthNum = parseInt(month);
+                          if (monthNum > 12) {
+                            month = '12';
+                          } else if (monthNum === 0 && month.length === 2) {
+                            month = '01';
+                          }
+                        }
+                        
+                        // Validate and correct day based on month
+                        if (day) {
+                          let dayNum = parseInt(day);
+                          const monthNum = parseInt(month) || 1;
+                          const yearNum = parseInt(year) || new Date().getFullYear();
+                          const maxDays = getMaxDaysInMonth(monthNum, yearNum);
+                          
+                          if (dayNum > maxDays) {
+                            day = maxDays.toString().padStart(2, '0');
+                          } else if (dayNum === 0 && day.length === 2) {
+                            day = '01';
+                          }
+                        }
+                        
+                        // Reconstruct value
+                        const newParts = [day, month, year].filter((p, i) => {
+                          // Keep part if it's not empty or if we're still building the date
+                          if (i === 0) return true; // Always keep day
+                          if (i === 1) return parts.length > 1; // Keep month if user typed /
+                          if (i === 2) return parts.length > 2; // Keep year if user typed second /
+                          return false;
+                        });
+                        
+                        value = newParts.join('/');
+                        
+                        // Auto-add slashes after day (2 digits) and month (2 digits)
+                        const cleanValue = value.replace(/\//g, '');
+                        if (cleanValue.length >= 2 && value.split('/').length === 1) {
+                          value = cleanValue.substring(0, 2) + '/' + cleanValue.substring(2);
+                        }
+                        if (cleanValue.length >= 4 && value.split('/').length === 2) {
+                          const p = value.split('/');
+                          value = p[0] + '/' + p[1].substring(0, 2) + '/' + p[1].substring(2);
+                        }
+                        
+                        // Limit to DD/MM/YYYY format (10 characters)
+                        if (value.length <= 10) {
+                          setFormData(prev => ({...prev, tanggalLahir: value}));
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        // Allow backspace to delete slashes
+                        if (e.key === 'Backspace') {
+                          const cursorPos = e.currentTarget.selectionStart || 0;
+                          const value = e.currentTarget.value;
+                          
+                          // If cursor is right after a slash, remove the slash
+                          if (cursorPos > 0 && value[cursorPos - 1] === '/') {
+                            e.preventDefault();
+                            const newValue = value.substring(0, cursorPos - 1) + value.substring(cursorPos);
+                            setFormData(prev => ({...prev, tanggalLahir: newValue}));
+                            // Set cursor position after the deletion
+                            setTimeout(() => {
+                              e.currentTarget.setSelectionRange(cursorPos - 1, cursorPos - 1);
+                            }, 0);
+                          }
+                        }
+                      }}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
+                      placeholder="DD/MM/YYYY"
+                      maxLength={10}
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Format: DD/MM/YYYY (contoh: 15/08/1990). Hari otomatis disesuaikan dengan bulan.
+                    </p>
                   </div>
 
                   <div>
@@ -1215,7 +1259,8 @@ export default function DataDesaPage() {
           </div>
         )}
       </div>
-      </AdminLayout>
+    </div>
+        </AdminLayout>
       )}
     </>
   );

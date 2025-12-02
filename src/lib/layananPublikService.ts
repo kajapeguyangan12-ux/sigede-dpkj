@@ -47,11 +47,12 @@ export interface LayananPublik {
   saksiDua?: string;
   dokumenPendukung?: string[];
   catatanTambahan?: string;
-  status: 'pending_admin' | 'approved_admin' | 'pending_kadus' | 'approved_kadus' | 'pending_kades' | 'approved_kades' | 'completed' | 'ditolak' | 'auto_approved';
+  status: 'pending_kadus' | 'approved_kadus' | 'approved_admin' | 'completed' | 'ditolak' | 'auto_approved';
   alasanTolak?: string;
   catatanAdmin?: string;
   catatanKadus?: string;
   catatanKades?: string;
+  nomorSuratKadus?: string; // Nomor surat pengantar kepala dusun
   approvedByAdmin?: boolean;
   approvedByKadus?: boolean;
   approvedByKades?: boolean;
@@ -78,7 +79,7 @@ export interface NotifikasiLayanan {
   jenisLayanan: string;
   judul: string;
   pesan: string;
-  status: 'pending_admin' | 'approved_admin' | 'pending_kadus' | 'approved_kadus' | 'pending_kades' | 'approved_kades' | 'completed' | 'ditolak' | 'auto_approved';
+  status: 'pending_kadus' | 'approved_kadus' | 'approved_admin' | 'completed' | 'ditolak' | 'auto_approved';
   isRead: boolean;
   createdAt: Timestamp;
 }
@@ -91,18 +92,18 @@ export const addLayananPublik = async (data: Omit<LayananPublik, "id" | "created
   try {
     const docRef = await addDoc(collection(db, COLLECTION_LAYANAN), {
       ...data,
-      status: 'pending_admin',
+      status: 'pending_kadus', // Status awal: menunggu approval kepala dusun
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
     // Create notification for initial submission
-    const notificationData = generateLayananMessage('pending_admin', data.jenisLayanan);
+    const notificationData = generateLayananMessage('pending_kadus', data.jenisLayanan);
     
     await createLayananNotification({
       userId: data.userId,
       layananId: docRef.id,
-      status: 'pending_admin',
+      status: 'pending_kadus',
       title: notificationData.title,
       message: notificationData.message,
       jenisLayanan: data.jenisLayanan,
@@ -475,12 +476,9 @@ export const getLayananStats = async () => {
     
     const stats = {
       total: allLayanan.length,
-      pending_admin: allLayanan.filter(l => l.status === 'pending_admin').length,
-      approved_admin: allLayanan.filter(l => l.status === 'approved_admin').length,
       pending_kadus: allLayanan.filter(l => l.status === 'pending_kadus').length,
       approved_kadus: allLayanan.filter(l => l.status === 'approved_kadus').length,
-      pending_kades: allLayanan.filter(l => l.status === 'pending_kades').length,
-      approved_kades: allLayanan.filter(l => l.status === 'approved_kades').length,
+      approved_admin: allLayanan.filter(l => l.status === 'approved_admin').length,
       completed: allLayanan.filter(l => l.status === 'completed').length,
       ditolak: allLayanan.filter(l => l.status === 'ditolak').length,
       auto_approved: allLayanan.filter(l => l.status === 'auto_approved').length,
@@ -521,8 +519,30 @@ export const approveByAdmin = async (id: string, adminData: { catatanAdmin?: str
       ...adminData,
       approvedByAdmin: true,
       adminApprovalDate: serverTimestamp(),
-      approvedAdminAt: serverTimestamp() // Timestamp untuk auto-approve checker
+      approvedAdminAt: serverTimestamp(), // Timestamp untuk auto-approve checker
+      buktiApproval: `LAYANAN-${Date.now()}`, // Generate bukti approval
+      estimasiSelesai: new Timestamp(Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), 0) // 7 hari dari sekarang
     });
+    
+    // Send notification to masyarakat
+    const docRef = doc(db, COLLECTION_LAYANAN, id);
+    const layananDoc = await getDoc(docRef);
+    if (layananDoc.exists()) {
+      const layananData = { id: layananDoc.id, ...layananDoc.data() } as LayananPublik;
+      
+      // Create notification for masyarakat
+      await createLayananNotification({
+        userId: layananData.userId,
+        layananId: id,
+        status: 'approved_admin',
+        title: '✅ Dokumen Siap Diambil!',
+        message: `Permohonan ${layananData.jenisLayanan} Anda telah disetujui oleh Admin Desa. Silakan datang ke Kantor Desa untuk mengambil dokumen.`,
+        jenisLayanan: layananData.jenisLayanan,
+        priority: 'high',
+        buktiApproval: `LAYANAN-${Date.now()}`
+      });
+    }
+    
     return true;
   } catch (error) {
     console.error("Error approving by admin:", error);
@@ -530,32 +550,35 @@ export const approveByAdmin = async (id: string, adminData: { catatanAdmin?: str
   }
 };
 
-export const approveByKadus = async (id: string, kadusData: { catatanKadus?: string }) => {
+export const approveByKadus = async (id: string, kadusData: { catatanKadus?: string; nomorSuratKadus?: string }) => {
   try {
     await updateStatusLayanan(id, 'approved_kadus', {
       ...kadusData,
       approvedByKadus: true,
       kadusApprovalDate: serverTimestamp()
     });
+    
+    // Send notification to masyarakat
+    const docRef = doc(db, COLLECTION_LAYANAN, id);
+    const layananDoc = await getDoc(docRef);
+    if (layananDoc.exists()) {
+      const layananData = { id: layananDoc.id, ...layananDoc.data() } as LayananPublik;
+      
+      // Create notification for masyarakat
+      await createLayananNotification({
+        userId: layananData.userId,
+        layananId: id,
+        status: 'approved_kadus',
+        title: '✅ Disetujui Kepala Dusun',
+        message: `Permohonan ${layananData.jenisLayanan} Anda telah disetujui oleh Kepala Dusun. Saat ini sedang menunggu persetujuan dari Admin Desa.`,
+        jenisLayanan: layananData.jenisLayanan,
+        priority: 'medium'
+      });
+    }
+    
     return true;
   } catch (error) {
     console.error("Error approving by kadus:", error);
-    throw error;
-  }
-};
-
-export const approveByKades = async (id: string, kadesData: { catatanKades?: string }) => {
-  try {
-    await updateStatusLayanan(id, 'approved_kades', {
-      ...kadesData,
-      approvedByKades: true,
-      kadesApprovalDate: serverTimestamp(),
-      buktiApproval: `LAYANAN-${Date.now()}`, // Generate bukti approval
-      estimasiSelesai: new Timestamp(Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), 0) // 7 hari dari sekarang
-    });
-    return true;
-  } catch (error) {
-    console.error("Error approving by kades:", error);
     throw error;
   }
 };
@@ -576,14 +599,8 @@ export const autoApprove = async (id: string, currentStatus: string) => {
   try {
     let nextStatus = '';
     switch (currentStatus) {
-      case 'pending_admin':
-        nextStatus = 'approved_admin';
-        break;
       case 'pending_kadus':
         nextStatus = 'approved_kadus';
-        break;
-      case 'pending_kades':
-        nextStatus = 'approved_kades';
         break;
       default:
         throw new Error('Invalid status for auto-approval');
@@ -605,8 +622,7 @@ export const checkAndAutoApprove = async () => {
     const threeDaysAgo = new Timestamp(Math.floor(Date.now() / 1000) - (3 * 24 * 60 * 60), 0);
     
     const toAutoApprove = allLayanan.filter(layanan => {
-      const pendingStatuses = ['pending_admin', 'pending_kadus', 'pending_kades'];
-      return pendingStatuses.includes(layanan.status) && 
+      return layanan.status === 'pending_kadus' && 
              layanan.createdAt.seconds <= threeDaysAgo.seconds;
     });
 

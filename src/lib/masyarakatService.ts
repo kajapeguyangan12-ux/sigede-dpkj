@@ -152,6 +152,43 @@ export const getMasyarakatById = async (id: string): Promise<MasyarakatData | nu
   }
 };
 
+// Get masyarakat data by NIK
+export const getMasyarakatByNIK = async (nik: string): Promise<MasyarakatData | null> => {
+  try {
+    const q = query(collection(db, 'masyarakat'), where('nik', '==', nik));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const docSnap = querySnapshot.docs[0];
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      nama: data.nama || '',
+      email: data.email || '',
+      nik: data.nik || '',
+      noTelepon: data.noTelepon || '',
+      alamat: data.alamat || '',
+      tempatLahir: data.tempatLahir || '',
+      tanggalLahir: data.tanggalLahir || '',
+      jenisKelamin: data.jenisKelamin || '',
+      agama: data.agama || '',
+      pekerjaan: data.pekerjaan || '',
+      kecamatan: data.kecamatan || '',
+      desa: data.desa || '',
+      rt: data.rt || '',
+      rw: data.rw || '',
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt
+    };
+  } catch (error) {
+    console.error('Error fetching masyarakat by NIK:', error);
+    throw error;
+  }
+};
+
 // Update masyarakat data
 export const updateMasyarakatData = async (id: string, data: Partial<MasyarakatData>): Promise<void> => {
   try {

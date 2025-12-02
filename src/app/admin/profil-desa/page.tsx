@@ -1,10 +1,81 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from '../../../contexts/AuthContext';
-import { handleAdminLogout } from '../../../lib/logoutHelper';
 import AdminLayout from "../components/AdminLayout";
-import AdminHeaderCard, { AdminHeaderSearchBar, AdminHeaderAccount } from "../../components/AdminHeaderCard";
+import { AdminHeaderSearchBar } from "../../components/AdminHeaderCard";
+
+const styles = `
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes cardEntrance {
+    from {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-slideUp {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+
+  .animate-card-entrance {
+    animation: cardEntrance 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  /* Glass effect optimized for mobile */
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* Prevent text selection on touch */
+  .no-select {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* iOS safe area */
+  @supports (padding: max(0px)) {
+    .safe-area-padding {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+  }
+`;
 
 const menu = [
 	{
@@ -12,145 +83,145 @@ const menu = [
 		icon: "🗺️",
 		color: "from-blue-500 to-cyan-500",
 		path: "/admin/profil-desa/wilayah",
-		description: "Kelola informasi geografis dan wilayah desa"
+		description: "Kelola informasi geografis"
 	},
 	{
 		label: "Sejarah Desa",
 		icon: "📚",
 		color: "from-orange-500 to-red-500",
 		path: "/admin/profil-desa/sejarah",
-		description: "Atur cerita sejarah dan perkembangan desa"
+		description: "Atur cerita sejarah desa"
 	},
 	{
 		label: "Visi & Misi",
 		icon: "🎯",
 		color: "from-purple-500 to-pink-500",
 		path: "/admin/profil-desa/visi-misi",
-		description: "Kelola visi, misi, dan tujuan desa"
+		description: "Kelola visi dan misi desa"
 	},
 	{
 		label: "Struktur Pemerintahan",
 		icon: "🏛️",
 		color: "from-green-500 to-emerald-500",
 		path: "/admin/profil-desa/struktur",
-		description: "Atur struktur organisasi pemerintah desa"
+		description: "Struktur organisasi desa"
 	},
 	{
 		label: "Lembaga Kemasyarakatan",
 		icon: "👥",
 		color: "from-indigo-500 to-blue-500",
 		path: "/admin/profil-desa/lembaga",
-		description: "Kelola data lembaga dan organisasi masyarakat"
+		description: "Data lembaga masyarakat"
 	},
 ];
 
 export default function ProfilDesaAdminPage() {
 	const router = useRouter();
-	const { logout } = useAuth();
-
-	const handleLogout = async () => {
-    await handleAdminLogout(() => logout('admin'));
-  };
 
 	return (
 		<AdminLayout>
-			{/* Modern Background with Glass Morphism */}
-			<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-				{/* Background Pattern */}
-				<div className="absolute inset-0 opacity-50">
-					<div className="absolute inset-0" style={{
-						backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.03'%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+			<style>{styles}</style>
+			
+			{/* Mobile-First Background */}
+			<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/40 relative">
+				
+				{/* Simplified Background - Desktop Only */}
+				<div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
+					<div className="absolute inset-0 opacity-30" style={{
+						backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.05'%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
 					}}></div>
 				</div>
-				
-				{/* Floating Orbs */}
-				<div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-blue-400/20 to-cyan-400/20 rounded-full blur-xl animate-floating"></div>
-				<div className="absolute bottom-32 right-20 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-xl animate-floating-delayed"></div>
-				<div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-gradient-to-r from-green-400/20 to-emerald-400/20 rounded-full blur-xl animate-pulse"></div>
 
-				<div className="relative max-w-7xl mx-auto p-6">
-					{/* Modern Header Card */}
-					<div className="glass-effect rounded-3xl shadow-xl p-8 mb-10 animate-slideUp">
-						<AdminHeaderCard title="Profil Desa">
-							<AdminHeaderSearchBar />
-							<AdminHeaderAccount onLogout={handleLogout} />
-						</AdminHeaderCard>
+				<div className="relative max-w-7xl mx-auto safe-area-padding px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6">
+					
+					{/* Compact Header for Mobile */}
+					<div className="glass-effect rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-md sm:shadow-lg border border-white/60 p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 lg:mb-8 animate-slideUp">
+						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+							{/* Title Section */}
+							<div className="flex items-center gap-3">
+								<div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+									<svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+										<path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+									</svg>
+								</div>
+								<div>
+									<h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
+										Profil Desa
+									</h1>
+									<p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+										Kelola informasi desa
+									</p>
+								</div>
+							</div>
+
+							{/* Action Buttons */}
+							<div className="flex items-center gap-2 sm:gap-3">
+								<AdminHeaderSearchBar />
+							</div>
+						</div>
 					</div>
 
-					{/* Hero Section */}
-					<div className="text-center mb-12 animate-fadeIn">
-						<h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 bg-clip-text text-transparent mb-4">
-							Kelola Profil Desa
-						</h1>
-						<p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-							Atur dan kelola informasi lengkap tentang desa Anda dengan mudah dan terstruktur
-						</p>
-					</div>
-
-					{/* Modern Menu Grid */}
-					<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+					{/* Menu Grid */}
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
 						{menu.map((item, index) => (
 							<button
 								key={item.label}
 								onClick={() => router.push(item.path)}
-								className="group relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl border border-white/30 p-8 transition-all duration-500 hover:-translate-y-3 hover:bg-white/90 overflow-hidden animate-card-entrance"
+								className="no-select group relative bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md sm:hover:shadow-lg active:shadow-sm border border-gray-200/50 p-4 sm:p-5 lg:p-6 transition-all duration-200 active:scale-[0.98] sm:hover:scale-[1.02] overflow-hidden animate-card-entrance"
 								style={{
-									animationDelay: `${index * 150}ms`,
-									animationFillMode: 'both'
+									animationDelay: `${index * 80}ms`,
+									WebkitTapHighlightColor: 'transparent'
 								}}
 							>
-								{/* Background Gradient Overlay */}
-								<div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500 rounded-3xl`}></div>
+								{/* Gradient Overlay on Hover */}
+								<div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 sm:group-hover:opacity-[0.03] transition-opacity duration-300 rounded-xl sm:rounded-2xl`}></div>
 								
-								{/* Icon Container */}
-								<div className="relative z-10 flex flex-col items-center">
-									<div className={`bg-gradient-to-br ${item.color} rounded-2xl p-6 mb-6 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-500 relative overflow-hidden`}>
-										{/* Icon Background Pattern */}
-										<div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-										<div className="text-5xl relative z-10">{item.icon}</div>
+								{/* Content */}
+								<div className="relative z-10 flex flex-col items-center text-center">
+									
+									{/* Icon */}
+									<div className={`bg-gradient-to-br ${item.color} rounded-lg sm:rounded-xl p-3 sm:p-4 mb-3 shadow-sm sm:group-hover:shadow-md sm:group-hover:scale-105 transition-all duration-200`}>
+										<div className="text-2xl sm:text-3xl lg:text-4xl">{item.icon}</div>
 									</div>
 									
-									{/* Label */}
-									<h3 className="font-bold text-xl text-gray-800 text-center group-hover:text-gray-900 transition-colors duration-300 mb-2">
+									{/* Title */}
+									<h3 className="font-bold text-sm sm:text-base lg:text-lg text-gray-800 mb-1 sm:mb-1.5 px-1">
 										{item.label}
 									</h3>
 									
 									{/* Description */}
-									<p className="text-sm text-gray-500 text-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+									<p className="text-xs sm:text-sm text-gray-500 leading-snug px-2">
 										{item.description}
 									</p>
 									
-									{/* Arrow Indicator */}
-									<div className="mt-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-										<div className={`bg-gradient-to-r ${item.color} p-2 rounded-full`}>
-											<svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+									{/* Action Arrow */}
+									<div className="mt-2.5 sm:mt-3">
+										<div className={`bg-gradient-to-r ${item.color} p-1 sm:p-1.5 rounded-full transition-transform sm:group-hover:translate-x-1 duration-200`}>
+											<svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+												<path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
 											</svg>
 										</div>
 									</div>
 								</div>
 
-								{/* Shine Effect */}
-								<div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-									<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-								</div>
+								{/* Ripple Effect Placeholder for Touch Feedback */}
+								<div className="absolute inset-0 bg-gray-100/30 opacity-0 active:opacity-100 transition-opacity duration-100 rounded-xl sm:rounded-2xl pointer-events-none md:hidden"></div>
 							</button>
 						))}
 					</div>
 
-					{/* Bottom Info Card */}
-					<div className="mt-16 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 backdrop-blur-sm rounded-3xl border border-blue-200/30 p-8 text-center">
-						<div className="flex items-center justify-center mb-4">
-							<div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full p-3">
-								<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+					{/* Compact Info Card */}
+					<div className="mt-6 sm:mt-8 lg:mt-12 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-blue-200/20 p-4 sm:p-5 lg:p-6 text-center">
+						<div className="flex items-center justify-center mb-2.5 sm:mb-3">
+							<div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full p-2">
+								<svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+									<path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
 							</div>
 						</div>
-						<h3 className="text-xl font-bold text-gray-800 mb-2">Informasi Penting</h3>
-						<p className="text-gray-600 max-w-3xl mx-auto">
-							Pastikan semua informasi profil desa selalu diperbarui untuk memberikan data yang akurat kepada masyarakat. 
-							Setiap perubahan akan langsung terlihat di situs web publik.
+						<h3 className="text-base sm:text-lg font-bold text-gray-800 mb-1.5 sm:mb-2">Informasi Penting</h3>
+						<p className="text-xs sm:text-sm text-gray-600 max-w-2xl mx-auto leading-relaxed">
+							Pastikan informasi profil desa selalu diperbarui untuk memberikan data akurat kepada masyarakat.
 						</p>
 					</div>
 				</div>

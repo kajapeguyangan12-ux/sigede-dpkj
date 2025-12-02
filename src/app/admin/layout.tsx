@@ -43,23 +43,10 @@ export default function AdminLayout({
     // Mark that we've checked auth to prevent repeated checks
     setHasCheckedAuth(true);
 
-    // If on login page and already authenticated with admin access, redirect to home
-    if (isLoginPage && isAuthenticated && canAccessAdmin) {
-      console.log('✅ Already authenticated with admin access, redirecting to admin/home');
-      setIsRedirecting(true);
-      setTimeout(() => {
-        router.replace('/admin/home');
-      }, 100);
-      return;
-    }
-
-    // If on login page and authenticated but no admin access, redirect to masyarakat
-    if (isLoginPage && isAuthenticated && !canAccessAdmin) {
-      console.log('✅ Authenticated as masyarakat, redirecting to masyarakat/home');
-      setIsRedirecting(true);
-      setTimeout(() => {
-        router.replace('/masyarakat/home');
-      }, 100);
+    // Allow login page to be accessed even if authenticated
+    // This allows switching accounts without manual logout
+    if (isLoginPage) {
+      console.log('📝 On login page, allowing access');
       return;
     }
 

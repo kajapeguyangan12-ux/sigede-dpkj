@@ -111,6 +111,25 @@ export default function AdminPengaduanPage() {
   const [alasanTolak, setAlasanTolak] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Lock body scroll when modal opens - iOS compatible
+  useEffect(() => {
+    if (showDetailModal || showStatusModal) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [showDetailModal, showStatusModal]);
+
   useEffect(() => {
     fetchUserDaerah();
     fetchLaporan();
@@ -308,191 +327,132 @@ export default function AdminPengaduanPage() {
   return (
     <AdminLayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        {/* Enhanced Header */}
-        <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 relative z-40 overflow-hidden max-w-7xl mx-auto mt-6">
-          {/* Floating Background Elements */}
-          <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-orange-400/10 to-red-400/10 rounded-full blur-xl animate-pulse"></div>
-          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-red-400/10 to-pink-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-pink-400/5 to-orange-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
+        {/* Hero Section with Header - Mobile Optimized */}
+        <div className="relative bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 overflow-hidden">
+          {/* Background patterns */}
+          <div className="absolute inset-0 bg-[url('/pattern-white.svg')] opacity-10"></div>
+          <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 sm:w-80 h-48 sm:h-80 bg-white/10 rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+            {/* Title Section - Compact Mobile */}
+            <div className="flex flex-col gap-3 sm:gap-4 relative z-10">
+              <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white/20 backdrop-blur-lg rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl flex-shrink-0">
+                  <svg className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="font-bold text-xl sm:text-2xl md:text-3xl text-white mb-1">
+                    Pengaduan Masyarakat
+                  </h1>
+                  <p className="text-white/90 text-xs sm:text-sm md:text-base">
+                    Kelola dan tanggapi pengaduan dari warga
+                  </p>
+                </div>
+              </div>
 
-          {/* Enhanced AdminHeaderCard with better styling */}
-          <div className="w-full bg-gradient-to-r from-white via-orange-50/30 to-red-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
-            {/* Enhanced Title Section */}
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center shadow-xl shadow-orange-500/25 transform hover:scale-105 transition-all duration-300">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-orange-800 to-red-800 bg-clip-text text-transparent mb-2">
-                  Pengaduan Masyarakat
-                </h1>
-                <p className="text-slate-600 font-medium text-lg">
-                  Kelola dan tanggapi pengaduan dari warga
-                </p>
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="flex items-center gap-2 text-sm text-orange-600 font-semibold">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                    Pengaduan Aktif
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-red-600 font-semibold">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                    Sistem Online
-                  </div>
-                  {/* Badge Daerah untuk Admin Desa dan Kepala Dusun */}
-                  {(currentUser?.role === 'admin_desa' || currentUser?.role === 'kepala_dusun') && userDaerah && (
-                    <div className="flex items-center gap-2 text-sm text-purple-600 font-semibold">
-                      📍 Daerah: {userDaerah}
-                    </div>
-                  )}
-                  {/* Badge info untuk Kepala Desa */}
-                  {currentUser?.role === 'kepala_desa' && (
-                    <div className="flex items-center gap-2 text-sm text-blue-600 font-semibold">
-                      👁️ Semua Daerah
-                    </div>
-                  )}
+              {/* Badges - Compact */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <div className="w-1.5 h-1.5 bg-orange-300 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-semibold text-white">Pengaduan Aktif</span>
                 </div>
-              </div>
-            </div>
-            
-            {/* Enhanced Controls Section */}
-            <div className="flex items-center gap-6 relative z-10">
-              {/* Enhanced Search Bar */}
-              <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-orange-400 hover:shadow-lg transition-all duration-300 group">
-                <input
-                  type="text"
-                  placeholder="Cari pengaduan..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent text-gray-700 text-base font-medium focus:outline-none placeholder-gray-500"
-                />
-                <svg
-                  className="ml-3 text-gray-400 group-hover:text-orange-500 transition-colors duration-300"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </div>
-              
-              {/* Enhanced Account Section */}
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-orange-50 hover:to-orange-100 transition-all duration-300 cursor-pointer shadow-md">
-                  <svg
-                    width="24"
-                    height="24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    className="text-gray-600"
-                  >
-                    <path d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 01-7.5-7.5h2A5.5 5.5 0 0110 10z"/>
-                  </svg>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <div className="w-1.5 h-1.5 bg-green-300 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-semibold text-white">Sistem Online</span>
                 </div>
-                
-                <button
-                  onClick={() => {}}
-                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    className="text-red-600 group-hover:text-red-700"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </button>
+                {(currentUser?.role === 'admin_desa' || currentUser?.role === 'kepala_dusun') && userDaerah && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <span className="text-xs font-semibold text-white">📍 {userDaerah}</span>
+                  </div>
+                )}
+                {currentUser?.role === 'kepala_desa' && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <span className="text-xs font-semibold text-white">👁️ Semua Daerah</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="space-y-6">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-5 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-all hover:scale-105">
-            <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="space-y-4 sm:space-y-6">
+        {/* Statistics Cards - Mobile Optimized */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6 md:mb-8">
+          <div className="bg-gradient-to-br from-gray-50 to-white p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-1">Total</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-1">Total</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stats.total}</p>
               </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-gray-500 to-gray-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
             </div>
           </div>
 
-              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-5 rounded-2xl shadow-lg border border-yellow-200 hover:shadow-xl transition-all hover:scale-105">
-                <div className="flex items-center justify-between">
+              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl shadow-lg border border-yellow-200 hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-yellow-700 mb-1">Menunggu</p>
-                    <p className="text-3xl font-bold text-yellow-900">{stats.menunggu}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-yellow-700 mb-1">Menunggu</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-yellow-900">{stats.menunggu}</p>
                   </div>
-                  <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <span className="text-3xl">⏳</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span className="text-2xl sm:text-3xl">⏳</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-2xl shadow-lg border border-blue-200 hover:shadow-xl transition-all hover:scale-105">
-                <div className="flex items-center justify-between">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl shadow-lg border border-blue-200 hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-blue-700 mb-1">Diproses</p>
-                    <p className="text-3xl font-bold text-blue-900">{stats.diproses}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-blue-700 mb-1">Diproses</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-900">{stats.diproses}</p>
                   </div>
-                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <span className="text-3xl">🔄</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span className="text-2xl sm:text-3xl">🔄</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-2xl shadow-lg border border-green-200 hover:shadow-xl transition-all hover:scale-105">
-                <div className="flex items-center justify-between">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl shadow-lg border border-green-200 hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-green-700 mb-1">Selesai</p>
-                    <p className="text-3xl font-bold text-green-900">{stats.selesai}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-green-700 mb-1">Selesai</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-green-900">{stats.selesai}</p>
                   </div>
-                  <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <span className="text-3xl">✔️</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span className="text-2xl sm:text-3xl">✔️</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-red-50 to-rose-50 p-5 rounded-2xl shadow-lg border border-red-200 hover:shadow-xl transition-all hover:scale-105">
-                <div className="flex items-center justify-between">
+              <div className="bg-gradient-to-br from-red-50 to-rose-50 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl shadow-lg border border-red-200 hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-red-700 mb-1">Ditolak</p>
-                    <p className="text-3xl font-bold text-red-900">{stats.ditolak}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-red-700 mb-1">Ditolak</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-red-900">{stats.ditolak}</p>
                   </div>
-                  <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-rose-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <span className="text-3xl">❌</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-red-500 to-rose-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span className="text-2xl sm:text-3xl">❌</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Search and Filter Section */}
-          <div className="px-8 py-6 bg-white border-t border-gray-200">
-            <div className="flex items-center gap-4 mb-6">
+          {/* Search and Filter Section - Mobile Optimized */}
+          <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 bg-white border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
               {/* Search Bar */}
               <div className="flex-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                  <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
@@ -501,14 +461,14 @@ export default function AdminPengaduanPage() {
                   placeholder="Cari pengaduan, nama pelapor, kategori..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all font-medium text-gray-700 placeholder-gray-400"
+                  className="w-full pl-10 sm:pl-12 pr-10 sm:pr-4 py-2.5 sm:py-3 md:py-3.5 bg-gray-50 border-2 border-gray-200 rounded-lg sm:rounded-xl md:rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all font-medium text-sm sm:text-base text-gray-700 placeholder-gray-400"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
+                    className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -519,15 +479,15 @@ export default function AdminPengaduanPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortType)}
-                className="px-5 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 transition-all"
+                className="px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 md:py-3.5 bg-gray-50 border-2 border-gray-200 rounded-lg sm:rounded-xl md:rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-semibold text-sm sm:text-base text-gray-700 cursor-pointer hover:bg-gray-100 transition-all"
               >
                 <option value="newest">🕐 Terbaru</option>
                 <option value="oldest">🕑 Terlama</option>
               </select>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            {/* Filter Tabs - Mobile Optimized */}
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {[
                 { id: 'all', label: 'Semua', count: stats.total },
                 { id: 'menunggu', label: 'Menunggu', count: stats.menunggu },
@@ -539,14 +499,14 @@ export default function AdminPengaduanPage() {
                 <button
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id as FilterType)}
-                  className={`px-6 py-3 rounded-2xl text-sm font-bold whitespace-nowrap transition-all duration-300 ${
+                  className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl md:rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-300 active:scale-95 ${
                     activeFilter === filter.id
                       ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/50 scale-105'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:shadow-md'
                   }`}
                 >
                   {filter.label}
-                  <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  <span className={`ml-1.5 sm:ml-2 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-bold ${
                     activeFilter === filter.id
                       ? 'bg-white/30 text-white'
                       : 'bg-gray-200 text-gray-700'
@@ -559,23 +519,23 @@ export default function AdminPengaduanPage() {
           </div>
         </div>
 
-        {/* Laporan List */}
+        {/* Laporan List - Mobile Optimized */}
         {filteredLaporan.length === 0 && !loading ? (
-          <div className="text-center py-20">
-            <div className="bg-white rounded-3xl shadow-xl p-12 max-w-md mx-auto">
-              <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-12 h-12 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center py-12 sm:py-16 md:py-20 px-3 sm:px-4">
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-6 sm:p-8 md:p-12 max-w-md mx-auto">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-orange-100 to-red-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-5 md:mb-6">
+                <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">Tidak Ada Pengaduan</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 mb-2 sm:mb-3">Tidak Ada Pengaduan</h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-5 md:mb-6">
                 {searchQuery ? 'Tidak ada pengaduan yang sesuai dengan pencarian Anda' : 'Belum ada pengaduan dari masyarakat'}
               </p>
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl hover:shadow-lg transition-all"
+                  className="px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm sm:text-base rounded-lg sm:rounded-xl hover:shadow-lg transition-all active:scale-95"
                 >
                   Reset Pencarian
                 </button>
@@ -583,21 +543,21 @@ export default function AdminPengaduanPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:gap-6 px-3 sm:px-4 md:px-0">
             {filteredLaporan.map((laporan) => {
               const statusConfig = STATUS_CONFIG[laporan.status];
               
               return (
                 <div
                   key={laporan.id}
-                  className="bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 group"
+                  className="bg-white rounded-xl sm:rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 group"
                 >
-                  <div className="p-6">
-                    <div className="flex items-start gap-6">
-                      {/* Image */}
-                      <div className="flex-shrink-0">
+                  <div className="p-3 sm:p-4 md:p-6">
+                    <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 md:gap-6">
+                      {/* Image - Mobile Optimized */}
+                      <div className="w-full sm:w-auto flex-shrink-0">
                         {laporan.fotoUrl ? (
-                          <div className="relative w-40 h-40 rounded-2xl overflow-hidden shadow-lg">
+                          <div className="relative w-full h-48 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg">
                             <img
                               src={laporan.fotoUrl}
                               alt={laporan.judul}
@@ -605,36 +565,36 @@ export default function AdminPengaduanPage() {
                             />
                           </div>
                         ) : (
-                          <div className="w-40 h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center">
-                            <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="w-full h-48 sm:w-32 sm:h-32 md:w-40 md:h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl sm:rounded-2xl flex items-center justify-center">
+                            <svg className="w-12 h-12 sm:w-10 sm:h-10 md:w-16 md:h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                           </div>
                         )}
                       </div>
 
-                      {/* Content */}
+                      {/* Content - Mobile Optimized */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex flex-col gap-2 sm:gap-3 mb-2 sm:mb-3">
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">
+                            <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">
                               {laporan.judul}
                             </h3>
-                            <div className="flex flex-wrap items-center gap-3">
-                              <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 rounded-full text-sm font-bold">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                              <span className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 rounded-full text-xs sm:text-sm font-bold">
+                                <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                 </svg>
                                 {laporan.kategori}
                               </span>
-                              <span className={`inline-flex items-center gap-2 px-4 py-1.5 ${statusConfig.bgColor} ${statusConfig.textColor} rounded-full text-sm font-bold`}>
+                              <span className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 ${statusConfig.bgColor} ${statusConfig.textColor} rounded-full text-xs sm:text-sm font-bold`}>
                                 <span>{statusConfig.icon}</span>
                                 {statusConfig.label}
                               </span>
                               
                               {/* Workflow Status Indicator */}
                               {currentUser?.role === 'admin_desa' && laporan.status === 'menunggu' && (
-                                <span className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 rounded-full text-xs font-bold border border-amber-200">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 rounded-full text-xs font-bold border border-amber-200">
                                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
@@ -643,7 +603,7 @@ export default function AdminPengaduanPage() {
                               )}
                               
                               {currentUser?.role === 'kepala_dusun' && laporan.status === 'menunggu' && (
-                                <span className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600 rounded-full text-xs font-bold border border-gray-200">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600 rounded-full text-xs font-bold border border-gray-200">
                                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                   </svg>
@@ -654,7 +614,7 @@ export default function AdminPengaduanPage() {
                           </div>
                         </div>
 
-                        <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-2">
+                        <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-3 sm:mb-4 line-clamp-2">
                           {laporan.isi}
                         </p>
 
@@ -710,13 +670,13 @@ export default function AdminPengaduanPage() {
                           </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
+                        {/* Action Buttons - Mobile Optimized */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100">
                           <button
                             onClick={() => openDetailModal(laporan)}
-                            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2"
+                            className="w-full sm:flex-1 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm sm:text-base rounded-lg sm:rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
@@ -728,9 +688,9 @@ export default function AdminPengaduanPage() {
                             <button
                               onClick={() => laporan.id && handleApproveByAdmin(laporan.id)}
                               disabled={submitting}
-                              className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                              className="w-full sm:flex-1 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm sm:text-base rounded-lg sm:rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
                               {submitting ? 'Processing...' : 'Approve Admin'}
@@ -742,9 +702,9 @@ export default function AdminPengaduanPage() {
                             <button
                               onClick={() => laporan.id && handleApproveByKadus(laporan.id)}
                               disabled={submitting}
-                              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                              className="w-full sm:flex-1 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm sm:text-base rounded-lg sm:rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
                               {submitting ? 'Processing...' : 'Approve Kadus'}
@@ -757,9 +717,9 @@ export default function AdminPengaduanPage() {
                               <button
                                 onClick={() => laporan.id && handleApproveByKades(laporan.id)}
                                 disabled={submitting}
-                                className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full sm:flex-1 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold text-sm sm:text-base rounded-lg sm:rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
                               >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
                                 {submitting ? 'Processing...' : 'Approve Kades'}
@@ -772,9 +732,9 @@ export default function AdminPengaduanPage() {
 
                           <button
                             onClick={() => openStatusModal(laporan)}
-                            className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2"
+                            className="w-full sm:flex-1 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold text-sm sm:text-base rounded-lg sm:rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             Ubah Status
@@ -789,69 +749,75 @@ export default function AdminPengaduanPage() {
           </div>
         )}
 
-        {/* Detail Modal */}
+        {/* Detail Modal - Mobile Optimized */}
         {showDetailModal && selectedLaporan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-slideUp">
-              {/* Modal Header */}
-              <div className="relative p-8 bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 text-white">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+            onClick={() => setShowDetailModal(false)}
+          >
+            <div 
+              className="bg-white rounded-none sm:rounded-2xl md:rounded-3xl shadow-2xl w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[90vh] overflow-hidden animate-slideUp"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Mobile Optimized */}
+              <div className="relative p-4 sm:p-6 md:p-8 bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 text-white">
                 <div className="absolute inset-0 bg-black/10"></div>
-                <div className="relative flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-lg rounded-3xl flex items-center justify-center shadow-xl">
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white/20 backdrop-blur-lg rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-xl flex-shrink-0">
+                      <svg className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <div>
-                      <h2 className="text-3xl font-bold mb-1">Detail Pengaduan</h2>
-                      <p className="text-orange-100 font-medium">Informasi lengkap pengaduan masyarakat</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-2xl md:text-3xl font-bold mb-0.5 sm:mb-1">Detail Pengaduan</h2>
+                      <p className="text-xs sm:text-sm text-orange-100 font-medium truncate">Informasi lengkap pengaduan masyarakat</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowDetailModal(false)}
-                    className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-xl transition-all"
+                    className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-lg sm:rounded-xl transition-all flex-shrink-0"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
               </div>
 
-              {/* Modal Body */}
-              <div className="p-8 overflow-y-auto max-h-[calc(90vh-200px)]">
-                <div className="space-y-6">
+              {/* Modal Body - Mobile Optimized */}
+              <div className="p-3 sm:p-5 md:p-8 overflow-y-auto max-h-[calc(100vh-120px)] sm:max-h-[calc(90vh-200px)]">
+                <div className="space-y-3 sm:space-y-4 md:space-y-6">
                   {/* Status Badge */}
-                  <div className="flex items-center gap-4">
-                    <span className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${STATUS_CONFIG[selectedLaporan.status].color} text-white rounded-2xl text-base font-bold shadow-lg`}>
-                      <span className="text-2xl">{STATUS_CONFIG[selectedLaporan.status].icon}</span>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <span className={`inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r ${STATUS_CONFIG[selectedLaporan.status].color} text-white rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold shadow-lg`}>
+                      <span className="text-lg sm:text-xl md:text-2xl">{STATUS_CONFIG[selectedLaporan.status].icon}</span>
                       Status: {STATUS_CONFIG[selectedLaporan.status].label}
                     </span>
                   </div>
 
                   {/* Title */}
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{selectedLaporan.judul}</h3>
-                    <span className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 rounded-xl text-sm font-bold">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2">{selectedLaporan.judul}</h3>
+                    <span className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold">
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
                       {selectedLaporan.kategori}
                     </span>
                   </div>
 
-                  {/* Photos */}
+                  {/* Photos - Mobile Optimized */}
                   {selectedLaporan.fotoUrl && (
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-2">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         Foto Pengaduan
                       </h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-square">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                        <div className="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-lg aspect-square">
                           <img
                             src={selectedLaporan.fotoUrl}
                             alt="Foto pengaduan"
@@ -863,118 +829,118 @@ export default function AdminPengaduanPage() {
                     </div>
                   )}
 
-                  {/* Description */}
+                  {/* Description - Mobile Optimized */}
                   <div>
-                    <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                       </svg>
                       Isi Pengaduan
                     </h4>
-                    <p className="text-gray-700 leading-relaxed bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-sm sm:text-base text-gray-700 leading-relaxed bg-gray-50 p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl">
                       {selectedLaporan.isi}
                     </p>
                   </div>
 
-                  {/* Reporter Info */}
+                  {/* Reporter Info - Mobile Optimized */}
                   <div>
-                    <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       Informasi Pelapor
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <p className="text-sm text-gray-500 font-semibold mb-1">Nama Lengkap</p>
-                        <p className="text-base font-bold text-gray-900">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg sm:rounded-xl">
+                        <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">Nama Lengkap</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900">
                           {selectedLaporan.namaLengkap || selectedLaporan.userName || 'Tidak tersedia'}
                         </p>
                         {!selectedLaporan.namaLengkap && (
                           <p className="text-xs text-orange-600 mt-1">* Menggunakan username sebagai fallback</p>
                         )}
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <p className="text-sm text-gray-500 font-semibold mb-1">NIK</p>
-                        <p className="text-base font-bold text-gray-900">
+                      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg sm:rounded-xl">
+                        <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">NIK</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900">
                           {selectedLaporan.nik || 'Tidak tersedia'}
                         </p>
                         {!selectedLaporan.nik && (
                           <p className="text-xs text-gray-500 mt-1">* Data NIK tidak diisi</p>
                         )}
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <p className="text-sm text-gray-500 font-semibold mb-1">No. Telepon</p>
-                        <p className="text-base font-bold text-gray-900">
+                      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg sm:rounded-xl">
+                        <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">No. Telepon</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900">
                           {selectedLaporan.noTelepon || 'Tidak tersedia'}
                         </p>
                         {!selectedLaporan.noTelepon && (
                           <p className="text-xs text-gray-500 mt-1">* Data telepon tidak diisi</p>
                         )}
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <p className="text-sm text-gray-500 font-semibold mb-1">Email</p>
-                        <p className="text-base font-bold text-gray-900">
+                      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg sm:rounded-xl">
+                        <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">Email</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900">
                           {selectedLaporan.email || 'Tidak tersedia'}
                         </p>
                         {!selectedLaporan.email && (
                           <p className="text-xs text-gray-500 mt-1">* Data email tidak diisi</p>
                         )}
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-xl col-span-2">
-                        <p className="text-sm text-gray-500 font-semibold mb-1">Alamat</p>
-                        <p className="text-base font-bold text-gray-900">
+                      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg sm:rounded-xl col-span-1 sm:col-span-2">
+                        <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">Alamat</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900">
                           {selectedLaporan.alamat || 'Tidak tersedia'}
                         </p>
                         {!selectedLaporan.alamat && (
                           <p className="text-xs text-gray-500 mt-1">* Data alamat tidak diisi</p>
                         )}
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <p className="text-sm text-gray-500 font-semibold mb-1">User ID</p>
-                        <p className="text-base font-bold text-gray-900">{selectedLaporan.userId || '-'}</p>
+                      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg sm:rounded-xl">
+                        <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">User ID</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900">{selectedLaporan.userId || '-'}</p>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <p className="text-sm text-gray-500 font-semibold mb-1">Username</p>
-                        <p className="text-base font-bold text-gray-900">{selectedLaporan.userName || '-'}</p>
+                      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg sm:rounded-xl">
+                        <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">Username</p>
+                        <p className="text-sm sm:text-base font-bold text-gray-900">{selectedLaporan.userName || '-'}</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Admin Notes */}
+                  {/* Admin Notes - Mobile Optimized */}
                   {selectedLaporan.tanggapan && (
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-2">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         Catatan Admin
                       </h4>
-                      <p className="text-gray-700 leading-relaxed bg-blue-50 p-6 rounded-2xl border-2 border-blue-200">
+                      <p className="text-sm sm:text-base text-gray-700 leading-relaxed bg-blue-50 p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl border-2 border-blue-200">
                         {selectedLaporan.tanggapan}
                       </p>
                     </div>
                   )}
 
-                  {/* Timestamps */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl">
-                      <p className="text-sm text-gray-500 font-semibold mb-1">Tanggal Laporan</p>
-                      <p className="text-base font-bold text-gray-900">{formatDate(selectedLaporan.createdAt)}</p>
+                  {/* Timestamps - Mobile Optimized */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-4 rounded-lg sm:rounded-xl">
+                      <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">Tanggal Laporan</p>
+                      <p className="text-sm sm:text-base font-bold text-gray-900">{formatDate(selectedLaporan.createdAt)}</p>
                     </div>
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl">
-                      <p className="text-sm text-gray-500 font-semibold mb-1">Terakhir Diupdate</p>
-                      <p className="text-base font-bold text-gray-900">{formatDate(selectedLaporan.updatedAt)}</p>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-4 rounded-lg sm:rounded-xl">
+                      <p className="text-xs sm:text-sm text-gray-500 font-semibold mb-1">Terakhir Diupdate</p>
+                      <p className="text-sm sm:text-base font-bold text-gray-900">{formatDate(selectedLaporan.updatedAt)}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="px-8 py-6 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-3">
+              {/* Modal Footer - Mobile Optimized */}
+              <div className="px-3 sm:px-5 md:px-8 py-3 sm:py-4 md:py-6 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
                 <button
                   onClick={() => setShowDetailModal(false)}
-                  className="px-6 py-3 bg-white text-gray-700 font-bold rounded-xl border-2 border-gray-300 hover:bg-gray-50 hover:shadow-lg transition-all"
+                  className="w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 bg-white text-gray-700 font-bold text-sm sm:text-base rounded-lg sm:rounded-xl border-2 border-gray-300 hover:bg-gray-50 hover:shadow-lg active:scale-95 transition-all"
                 >
                   Tutup
                 </button>
@@ -983,7 +949,7 @@ export default function AdminPengaduanPage() {
                     setShowDetailModal(false);
                     openStatusModal(selectedLaporan);
                   }}
-                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all"
+                  className="w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold text-sm sm:text-base rounded-lg sm:rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
                 >
                   Ubah Status
                 </button>
@@ -992,12 +958,18 @@ export default function AdminPengaduanPage() {
           </div>
         )}
 
-        {/* Status Update Modal */}
+        {/* Status Update Modal - Mobile Optimized */}
         {showStatusModal && selectedLaporan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden animate-slideUp">
-              {/* Modal Header */}
-              <div className="relative p-6 bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 text-white">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+            onClick={() => setShowStatusModal(false)}
+          >
+            <div 
+              className="bg-white rounded-none sm:rounded-2xl md:rounded-3xl shadow-2xl w-full h-full sm:h-auto sm:max-w-2xl overflow-hidden animate-slideUp"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Mobile Optimized */}
+              <div className="relative p-4 sm:p-5 md:p-6 bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 text-white">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="relative flex items-center justify-between">
                   <div className="flex items-center gap-3">

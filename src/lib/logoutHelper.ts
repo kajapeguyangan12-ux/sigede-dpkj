@@ -7,32 +7,25 @@ export async function handleAdminLogout(logoutFunction: () => Promise<void>): Pr
   try {
     console.log('🚪 Starting admin logout process');
     
-    // Set flag to prevent auth checks during logout
-    sessionStorage.setItem('admin_logout_in_progress', 'true');
-    
-    // Call the logout function from AuthContext
-    await logoutFunction();
-    
-    // Clear all localStorage data
+    // Clear all data IMMEDIATELY and SYNCHRONOUSLY first
     localStorage.clear();
+    sessionStorage.clear();
     
-    // Keep the flag temporarily
+    // Set flags to prevent auth checks during logout and indicate fresh logout
     sessionStorage.setItem('admin_logout_in_progress', 'true');
+    sessionStorage.setItem('just_logged_out', 'true');
     
-    // Clean up the flag
-    sessionStorage.removeItem('admin_logout_in_progress');
-    
-    console.log('✅ Logout successful, redirecting to login');
-    
-    // Force redirect to login page (replace to prevent back button)
+    // Force IMMEDIATE redirect to prevent any error display
+    // Do this BEFORE any async operations
     window.location.replace('/admin/login');
     
   } catch (error) {
     console.error('❌ Logout error:', error);
     
-    // Even on error, force cleanup and redirect
+    // Even on error, force immediate cleanup and redirect
     localStorage.clear();
     sessionStorage.clear();
+    sessionStorage.setItem('just_logged_out', 'true');
     
     // Force redirect
     window.location.replace('/admin/login');

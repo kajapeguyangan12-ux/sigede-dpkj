@@ -7,7 +7,9 @@ import {
   Pencil, 
   Trash2, 
   Camera,
-  X 
+  X,
+  Building2,
+  ArrowLeft
 } from 'lucide-react'
 import { 
   getLembagaKemasyarakatan, 
@@ -17,6 +19,74 @@ import {
   saveLembagaCoverImage,
   uploadLembagaImage 
 } from '../../../../lib/profilDesaService'
+
+// Custom animations and mobile optimizations
+const customStyles = `
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes cardEntrance {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .animate-card-entrance {
+    animation: cardEntrance 0.6s ease-out;
+  }
+
+  /* iOS safe area support */
+  .safe-area-padding {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Touch optimizations */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, a {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input, textarea {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+`
 
 interface AnggotaLembaga {
   id?: string;
@@ -178,49 +248,64 @@ export default function AdminLembagaPage() {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
+      <style>{customStyles}</style>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 p-3 sm:p-4 md:p-6 safe-area-padding">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Kelola Lembaga Kemasyarakatan
-                </h1>
-                <p className="text-gray-600 mt-2">
-                  Kelola anggota lembaga kemasyarakatan desa
-                </p>
+          {/* Back Button */}
+          <button
+            onClick={() => window.location.href = '/admin/profil-desa'}
+            className="mb-4 sm:mb-6 flex items-center gap-2 text-red-700 hover:text-red-800 font-medium transition-colors group animate-fade-in"
+          >
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm sm:text-base">Kembali ke Profil Desa</span>
+          </button>
+
+          {/* Custom Header */}
+          <div className="bg-gradient-to-r from-red-500 to-rose-600 rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8 animate-slide-up">
+            <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+              <div className="bg-white/20 backdrop-blur-sm p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <button
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium"
-              >
-                <Plus className="h-5 w-5" />
-                Tambah Anggota
-              </button>
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
+                Kelola Lembaga Kemasyarakatan
+              </h1>
             </div>
+            <p className="text-red-50 text-xs sm:text-sm md:text-base ml-0 sm:ml-14 md:ml-16">
+              Kelola anggota lembaga kemasyarakatan desa
+            </p>
+          </div>
+
+          {/* Add Button */}
+          <div className="mb-4 sm:mb-6 animate-fade-in">
+            <button
+              onClick={() => setShowModal(true)}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-3.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl sm:rounded-2xl hover:from-red-700 hover:to-rose-700 transition-all duration-300 font-medium text-sm sm:text-base shadow-lg hover:shadow-xl active:scale-[0.98]"
+            >
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>Tambah Anggota</span>
+            </button>
           </div>
 
           {/* Cover Image Section */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl border border-red-100 p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-card-entrance">
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800 mb-3 sm:mb-4 md:mb-5">
               Gambar Cover Lembaga Kemasyarakatan
             </h3>
             
             {coverImage && (
-              <div className="mb-4">
+              <div className="mb-4 sm:mb-5">
                 <img
                   src={coverImage}
                   alt="Cover Lembaga Kemasyarakatan"
-                  className="w-full max-w-md h-48 object-cover rounded-xl shadow-lg"
+                  className="w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover rounded-xl sm:rounded-2xl shadow-lg"
                 />
               </div>
             )}
 
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors cursor-pointer">
-                <Camera className="h-5 w-5" />
-                {coverImage ? 'Ganti Cover' : 'Upload Cover'}
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+              <label className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl sm:rounded-2xl hover:from-red-700 hover:to-rose-700 transition-all duration-300 cursor-pointer text-sm sm:text-base font-medium shadow-lg hover:shadow-xl active:scale-[0.98]">
+                <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>{coverImage ? 'Ganti Cover' : 'Upload Cover'}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -228,35 +313,41 @@ export default function AdminLembagaPage() {
                   className="hidden"
                 />
               </label>
-              {isLoading && <span className="text-blue-600">Uploading...</span>}
+              {isLoading && (
+                <span className="text-red-600 text-xs sm:text-sm font-medium animate-pulse">
+                  Mengupload...
+                </span>
+              )}
             </div>
           </div>
 
           {/* Members List */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-800 mb-6">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl border border-red-100 p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-card-entrance">
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800 mb-4 sm:mb-5 md:mb-6">
               Daftar Anggota Lembaga Kemasyarakatan ({dataAnggota.length})
             </h3>
 
             {dataAnggota.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-gray-400 text-lg">
+              <div className="text-center py-8 sm:py-10 md:py-12">
+                <Building2 className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 text-gray-300 mx-auto mb-3 sm:mb-4" />
+                <div className="text-gray-400 text-sm sm:text-base md:text-lg font-medium">
                   Belum ada anggota lembaga kemasyarakatan
                 </div>
-                <p className="text-gray-500 mt-2">
+                <p className="text-gray-500 text-xs sm:text-sm mt-2">
                   Tambahkan anggota pertama dengan tombol di atas
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
                 {dataAnggota.map((anggota, index) => (
                   <div
                     key={anggota.id || index}
-                    className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl transition-all duration-300"
+                    className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-red-100 p-4 sm:p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold overflow-hidden">
+                    {/* Header with actions */}
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-bold text-lg sm:text-xl overflow-hidden flex-shrink-0 shadow-md">
                           {anggota.foto ? (
                             <img 
                               src={anggota.foto} 
@@ -267,33 +358,37 @@ export default function AdminLembagaPage() {
                             anggota.nama.charAt(0).toUpperCase()
                           )}
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-800">{anggota.nama}</h4>
-                          <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">
+                            {anggota.nama}
+                          </h4>
+                          <span className="inline-block px-2 sm:px-2.5 py-0.5 sm:py-1 bg-red-100 text-red-800 rounded-lg text-xs sm:text-sm font-medium mt-1">
                             {anggota.jabatan}
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 ml-2 flex-shrink-0">
                         <button
                           onClick={() => handleEdit(anggota)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 active:bg-red-100 rounded-lg transition-colors"
+                          title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(anggota.id!)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 active:bg-red-100 rounded-lg transition-colors"
+                          title="Hapus"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <p>📧 {anggota.email}</p>
+                    <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600">
+                      <p className="truncate">📧 {anggota.email}</p>
                       <p>📱 {anggota.noTelepon}</p>
-                      <p>🔢 Urutan: {anggota.urutanTampil}</p>
+                      <p className="text-red-600 font-medium">🔢 Urutan: {anggota.urutanTampil}</p>
                     </div>
                   </div>
                 ))}
@@ -304,84 +399,109 @@ export default function AdminLembagaPage() {
 
         {/* Modal Form */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 w-full max-w-md p-6 my-8 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-gray-800">
-                  {editingAnggota ? 'Edit Anggota' : 'Tambah Anggota'}
-                </h3>
-                <button
-                  onClick={handleCloseModal}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-fade-in">
+            <div className="bg-white/95 backdrop-blur-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-red-100 w-full sm:max-w-lg max-h-[90vh] overflow-y-auto safe-area-padding animate-slide-up">
+              <div className="sticky top-0 bg-gradient-to-r from-red-500 to-rose-600 px-4 sm:px-6 py-4 sm:py-5 rounded-t-3xl z-10">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg sm:text-xl font-semibold text-white">
+                    {editingAnggota ? 'Edit Anggota' : 'Tambah Anggota'}
+                  </h3>
+                  <button
+                    onClick={handleCloseModal}
+                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-colors active:scale-95"
+                  >
+                    <X className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+                </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Nama Lengkap
                   </label>
                   <input
                     type="text"
                     value={formData.nama}
                     onChange={(e) => setFormData(prev => ({ ...prev, nama: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
+                    placeholder="Masukkan nama lengkap"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Jabatan
                   </label>
                   <input
                     type="text"
                     value={formData.jabatan}
                     onChange={(e) => setFormData(prev => ({ ...prev, jabatan: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
+                    placeholder="Masukkan jabatan"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Email
                   </label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
+                    placeholder="contoh@email.com"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     No. Telepon
                   </label>
                   <input
                     type="tel"
                     value={formData.noTelepon}
                     onChange={(e) => setFormData(prev => ({ ...prev, noTelepon: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
+                    placeholder="08xxxxxxxxxx"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Foto Anggota
                   </label>
+                  
+                  {formData.foto && !uploadingPhoto ? (
+                    <div className="mb-3 relative">
+                      <img
+                        src={formData.foto}
+                        alt="Preview"
+                        className="w-full h-48 sm:h-56 md:h-64 object-cover rounded-xl border-2 border-red-200 shadow-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, foto: '' }))}
+                        className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg active:scale-95"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null}
+
                   <button
                     type="button"
                     onClick={() => document.getElementById('anggotaFotoInput')?.click()}
-                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                    disabled={uploadingPhoto}
+                    className="w-full px-4 py-3 sm:py-3.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base font-medium shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Camera className="h-5 w-5" />
-                    {formData.foto ? 'Ganti Foto' : 'Pilih Foto'}
+                    <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span>{uploadingPhoto ? 'Mengupload...' : (formData.foto ? 'Ganti Foto' : 'Pilih Foto')}</span>
                   </button>
                   <input
                     id="anggotaFotoInput"
@@ -390,22 +510,10 @@ export default function AdminLembagaPage() {
                     onChange={handleFotoChange}
                     className="hidden"
                   />
-                  {uploadingPhoto && (
-                    <p className="text-sm text-blue-600 mt-2">Mengupload foto...</p>
-                  )}
-                  {formData.foto && !uploadingPhoto && (
-                    <div className="mt-3 relative">
-                      <img
-                        src={formData.foto}
-                        alt="Preview"
-                        className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
-                      />
-                    </div>
-                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Urutan Tampil
                   </label>
                   <input
@@ -413,23 +521,24 @@ export default function AdminLembagaPage() {
                     min="1"
                     value={formData.urutanTampil || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, urutanTampil: parseInt(e.target.value) || 1 }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900 text-sm sm:text-base"
+                    placeholder="1"
                     required
                   />
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-2 sm:pt-4">
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="flex-1 px-4 py-3 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                    className="w-full sm:flex-1 px-4 py-2.5 sm:py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:bg-gray-300 transition-colors text-sm sm:text-base font-medium"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    disabled={isLoading}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    disabled={isLoading || uploadingPhoto}
+                    className="w-full sm:flex-1 px-4 py-2.5 sm:py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-medium shadow-lg hover:shadow-xl active:scale-[0.98]"
                   >
                     {isLoading ? 'Menyimpan...' : 'Simpan'}
                   </button>

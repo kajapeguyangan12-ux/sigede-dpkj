@@ -1,14 +1,9 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from '../../../contexts/AuthContext';
-import { handleAdminLogout } from '../../../lib/logoutHelper';
 import { addDetailedAPB, subscribeToDetailedAPB, deleteDetailedAPB, DetailedAPBData } from "../../../lib/keuanganService";
 import AdminLayout from "../components/AdminLayout";
-import AdminHeaderCard, {
-  AdminHeaderSearchBar,
-  AdminHeaderAccount,
-} from "../../components/AdminHeaderCard";
+import { Wallet, Plus, Trash2, Eye, X, TrendingUp, TrendingDown, Calendar, DollarSign } from 'lucide-react';
 
 interface FinancialItem {
   id: string;
@@ -19,9 +14,64 @@ interface FinancialItem {
   description?: string;
 }
 
+// Custom animations and mobile optimizations
+const customStyles = `
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes cardEntrance {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* iOS safe area support */
+  .safe-area-padding {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Touch optimizations */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, a {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input, textarea, select {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+`
+
 export default function KeuanganPage() {
   const router = useRouter();
-  const { logout } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
   const [formData, setFormData] = useState({ 
@@ -169,10 +219,6 @@ export default function KeuanganPage() {
       { id: 'penerimaan_pembiayaan', label: 'Penerimaan Pembiayaan', placeholder: 'Data Pembiayaan' },
       { id: 'pengeluaran_pembiayaan', label: 'Pengeluaran Pembiayaan', placeholder: 'Data Pengeluaran' },
     ]
-  };
-
-  const handleLogout = async () => {
-    await handleAdminLogout(() => logout('admin'));
   };
 
   const handleAddData = (e: React.FormEvent) => {
@@ -344,120 +390,87 @@ export default function KeuanganPage() {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        {/* Enhanced Header */}
-        <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 relative z-40 overflow-hidden max-w-7xl mx-auto mt-6">
-          {/* Floating Background Elements */}
-          <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-green-400/10 to-emerald-400/10 rounded-full blur-xl animate-pulse"></div>
-          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-teal-400/5 to-cyan-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
-
-          {/* Enhanced AdminHeaderCard with better styling */}
-          <div className="w-full bg-gradient-to-r from-white via-green-50/30 to-emerald-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
-            {/* Enhanced Title Section */}
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl shadow-green-500/25 transform hover:scale-105 transition-all duration-300">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/>
-                </svg>
+      <style>{customStyles}</style>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-3 sm:p-4 md:p-6 safe-area-padding">
+        <div className="max-w-7xl mx-auto">
+          {/* Custom Header */}
+          <div 
+            className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8"
+            style={{ animation: 'slideUp 0.5s ease-out' }}
+          >
+            <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+              <div className="bg-white/20 backdrop-blur-sm p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                <Wallet className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <div>
-                <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-green-800 to-emerald-800 bg-clip-text text-transparent mb-2">
-                  Manajemen Keuangan
-                </h1>
-                <p className="text-slate-600 font-medium text-lg">
-                  Kelola data keuangan desa
-                </p>
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="flex items-center gap-2 text-sm text-green-600 font-semibold">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    Data Keuangan
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-emerald-600 font-semibold">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    Laporan Aktif
-                  </div>
-                </div>
-              </div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
+                Manajemen Keuangan Desa
+              </h1>
             </div>
-            
-            {/* Enhanced Controls Section */}
-            <div className="flex items-center gap-6 relative z-10">
-              {/* Enhanced Search Bar */}
-              <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-green-400 hover:shadow-lg transition-all duration-300 group">
-                <input
-                  type="text"
-                  placeholder="Cari data keuangan..."
-                  className="flex-1 bg-transparent text-gray-700 text-base font-medium focus:outline-none placeholder-gray-500"
-                />
-                <svg
-                  className="ml-3 text-gray-400 group-hover:text-green-500 transition-colors duration-300"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </div>
-              
-              {/* Enhanced Account Section */}
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-green-50 hover:to-green-100 transition-all duration-300 cursor-pointer shadow-md">
-                  <svg
-                    width="24"
-                    height="24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    className="text-gray-600"
-                  >
-                    <path d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 01-7.5-7.5h2A5.5 5.5 0 0110 10z"/>
-                  </svg>
-                </div>
-                
-                <button
-                  onClick={handleLogout}
-                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    className="text-red-600 group-hover:text-red-700"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Manajemen Keuangan Desa
-            </h1>
-            <p className="text-gray-600">
-              Kelola data keuangan desa dengan mudah dan terorganisir
+            <p className="text-sm sm:text-base text-white/90 ml-0 sm:ml-14">
+              Kelola data keuangan dan APB Desa
             </p>
           </div>
 
-          {/* Search Bar dan Filter */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 shadow-sm">
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-              <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full">
+          {/* Statistics Cards */}
+          <div 
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6"
+            style={{ animation: 'fadeIn 0.5s ease-out 0.1s backwards' }}
+          >
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                <div className="bg-white/20 rounded-lg px-2 py-1">
+                  <span className="text-xs sm:text-sm font-semibold">Total</span>
+                </div>
+              </div>
+              <p className="text-xs sm:text-sm opacity-90 mb-1">Total Data</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold">{apbData.length}</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <Calendar className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                <div className="bg-white/20 rounded-lg px-2 py-1">
+                  <span className="text-xs sm:text-sm font-semibold">Tahun</span>
+                </div>
+              </div>
+              <p className="text-xs sm:text-sm opacity-90 mb-1">Tahun Tersedia</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold">{availableYears.length}</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                <div className="bg-white/20 rounded-lg px-2 py-1">
+                  <span className="text-xs sm:text-sm font-semibold">APB</span>
+                </div>
+              </div>
+              <p className="text-xs sm:text-sm opacity-90 mb-1">Anggaran</p>
+              <p className="text-base sm:text-lg md:text-xl font-bold truncate">Rp {apbData.reduce((sum, item) => sum + item.anggaran, 0).toLocaleString('id-ID')}</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <TrendingDown className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                <div className="bg-white/20 rounded-lg px-2 py-1">
+                  <span className="text-xs sm:text-sm font-semibold">Real</span>
+                </div>
+              </div>
+              <p className="text-xs sm:text-sm opacity-90 mb-1">Realisasi</p>
+              <p className="text-base sm:text-lg md:text-xl font-bold truncate">Rp {apbData.reduce((sum, item) => sum + item.realisasi, 0).toLocaleString('id-ID')}</p>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div 
+            className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-3 sm:p-4 md:p-6 mb-4 sm:mb-6"
+            style={{ animation: 'cardEntrance 0.6s ease-out 0.2s backwards' }}
+          >
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <div className="flex-1 relative">
                   <svg
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -471,16 +484,16 @@ export default function KeuanganPage() {
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder="Cari data keuangan..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-gray-900"
                   />
                 </div>
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className="px-6 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none cursor-pointer transition-all min-w-[160px]"
+                  className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors font-medium text-sm sm:text-base text-gray-900 bg-white min-w-[160px]"
                 >
                   <option value="all">Semua Tahun</option>
                   {availableYears.map((year) => (
@@ -492,21 +505,9 @@ export default function KeuanganPage() {
               </div>
               <button 
                 onClick={() => setShowCategoryModal(true)}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-green-600 hover:to-emerald-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                 Tambah Data Keuangan
               </button>
             </div>
@@ -514,27 +515,18 @@ export default function KeuanganPage() {
 
           {/* Area untuk menampilkan ketika data kosong */}
           {Object.keys(apbByYear).length === 0 && (
-            <div className="text-center bg-white rounded-xl border border-gray-200 p-12 shadow-sm">
+            <div 
+              className="text-center bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-sm"
+              style={{ animation: 'cardEntrance 0.6s ease-out 0.3s backwards' }}
+            >
               <div className="max-w-md mx-auto">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg
-                    className="w-10 h-10 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <Wallet className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
                   Belum Ada Data APB Desa
                 </h3>
-                <p className="text-gray-600 mb-4">
+                <p className="text-sm sm:text-base text-gray-600 mb-4">
                   Belum ada data keuangan yang tersimpan. Mulai dengan menambahkan data APB Desa.
                 </p>
               </div>
@@ -543,7 +535,7 @@ export default function KeuanganPage() {
 
           {/* Area untuk menampilkan data yang sudah ada - Card per tahun */}
           {Object.keys(filteredApbByYear).length > 0 && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {Object.entries(filteredApbByYear)
                 .sort(([a], [b]) => parseInt(b) - parseInt(a))
                 .map(([year, yearData]) => {
@@ -552,29 +544,30 @@ export default function KeuanganPage() {
                   const totalItems = yearData.length;
                   
                   return (
-                    <div key={year} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
-                      <div className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
+                    <div 
+                      key={year} 
+                      className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300"
+                      style={{ animation: 'cardEntrance 0.6s ease-out' }}
+                    >
+                      <div className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                          <div className="flex items-center gap-3 sm:gap-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                              <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                             </div>
-                            <div>
-                              <h3 className="text-xl font-bold text-gray-900">Anggaran Tahun {year}</h3>
-                              <p className="text-sm text-gray-600">{totalItems} item data keuangan</p>
+                            <div className="min-w-0">
+                              <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Anggaran Tahun {year}</h3>
+                              <p className="text-xs sm:text-sm text-gray-600">{totalItems} item data keuangan</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 sm:gap-3">
                             <button
                               onClick={() => handleDeleteAllYearData(parseInt(year))}
-                              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium flex items-center gap-2"
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 active:scale-[0.98] transition-all font-medium text-xs sm:text-sm"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                              Hapus Semua
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              <span className="hidden sm:inline">Hapus Semua</span>
+                              <span className="sm:hidden">Hapus</span>
                             </button>
                             <button
                               onClick={() => {
@@ -582,47 +575,45 @@ export default function KeuanganPage() {
                                 setDetailModalYear(parseInt(year));
                                 setShowDetailModal(true);
                               }}
-                              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 active:scale-[0.98] transition-all font-medium text-xs sm:text-sm"
                             >
-                              Lihat Detail
+                              <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              <span className="hidden sm:inline">Lihat Detail</span>
+                              <span className="sm:hidden">Detail</span>
                             </button>
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                                </svg>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                          <div className="bg-green-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-200">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <TrendingUp className="w-4 h-4 text-green-600" />
                               </div>
-                              <div>
-                                <p className="text-sm font-medium text-green-700">Total Anggaran</p>
-                                <p className="text-lg font-bold text-green-800">Rp {totalAnggaran.toLocaleString('id-ID')}</p>
+                              <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-medium text-green-700">Total Anggaran</p>
+                                <p className="text-base sm:text-lg font-bold text-green-800 truncate">Rp {totalAnggaran.toLocaleString('id-ID')}</p>
                               </div>
                             </div>
                           </div>
                           
-                          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                </svg>
+                          <div className="bg-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-blue-200">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <TrendingDown className="w-4 h-4 text-blue-600" />
                               </div>
-                              <div>
-                                <p className="text-sm font-medium text-blue-700">Total Realisasi</p>
-                                <p className="text-lg font-bold text-blue-800">Rp {totalRealisasi.toLocaleString('id-ID')}</p>
+                              <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-medium text-blue-700">Total Realisasi</p>
+                                <p className="text-base sm:text-lg font-bold text-blue-800 truncate">Rp {totalRealisasi.toLocaleString('id-ID')}</p>
                               </div>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Selisih:</span>
-                            <span className={`font-medium ${totalRealisasi >= totalAnggaran ? 'text-green-600' : 'text-red-600'}`}>
+                        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
+                          <div className="flex items-center justify-between text-xs sm:text-sm">
+                            <span className="text-gray-600 font-medium">Selisih:</span>
+                            <span className={`font-bold ${totalRealisasi >= totalAnggaran ? 'text-green-600' : 'text-red-600'}`}>
                               Rp {Math.abs(totalRealisasi - totalAnggaran).toLocaleString('id-ID')} 
                               {totalRealisasi >= totalAnggaran ? ' (Surplus)' : ' (Defisit)'}
                             </span>
@@ -637,11 +628,14 @@ export default function KeuanganPage() {
 
           {/* Area untuk menampilkan ketika pencarian tidak menemukan hasil */}
           {Object.keys(apbByYear).length > 0 && Object.keys(filteredApbByYear).length === 0 && (
-            <div className="text-center bg-white rounded-xl border border-gray-200 p-12 shadow-sm">
+            <div 
+              className="text-center bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-8 sm:p-12 shadow-sm"
+              style={{ animation: 'cardEntrance 0.6s ease-out 0.3s backwards' }}
+            >
               <div className="max-w-md mx-auto">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                   <svg
-                    className="w-10 h-10 text-gray-400"
+                    className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -654,10 +648,10 @@ export default function KeuanganPage() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
                   Tidak Ada Data Ditemukan
                 </h3>
-                <p className="text-gray-600 mb-4">
+                <p className="text-sm sm:text-base text-gray-600 mb-4">
                   Tidak ada data yang sesuai dengan pencarian "{searchTerm}" 
                   {selectedYear !== "all" && ` untuk tahun ${selectedYear}`}.
                 </p>
@@ -666,7 +660,7 @@ export default function KeuanganPage() {
                     setSearchTerm("");
                     setSelectedYear("all");
                   }}
-                  className="inline-flex items-center px-4 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                  className="inline-flex items-center px-4 py-2 bg-green-500 text-white font-medium text-sm sm:text-base rounded-lg hover:bg-green-600 active:scale-[0.98] transition-all"
                 >
                   Reset Filter
                 </button>
@@ -677,35 +671,33 @@ export default function KeuanganPage() {
 
         {/* Modal untuk memilih kategori */}
         {showCategoryModal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="p-6 border-b border-gray-200">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900">Pilih Kategori Keuangan</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">Pilih Kategori Keuangan</h3>
                   <button
                     onClick={() => setShowCategoryModal(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-gray-400 hover:text-gray-600 active:scale-[0.98] transition-all"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
               </div>
               
-              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {categories.map((category) => (
                   <button
                     key={category.id}
                     onClick={() => handleCategorySelect(category.id)}
-                    className={`group relative overflow-hidden rounded-2xl border-2 ${category.borderColor} p-8 text-left transition-all duration-300 hover:shadow-xl hover:scale-105 ${category.bgColor}`}
+                    className={`group relative overflow-hidden rounded-xl sm:rounded-2xl border-2 ${category.borderColor} p-6 sm:p-8 text-left transition-all duration-300 hover:shadow-xl active:scale-[0.98] ${category.bgColor}`}
                   >
                     <div className="text-center">
-                      <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl ${category.bgColor} mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                        <span className="text-3xl">{category.icon}</span>
+                      <div className={`inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl ${category.bgColor} mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                        <span className="text-2xl sm:text-3xl">{category.icon}</span>
                       </div>
-                      <h4 className={`text-xl font-bold ${category.textColor} mb-2`}>{category.name}</h4>
-                      <p className="text-sm text-gray-600">{category.description}</p>
+                      <h4 className={`text-base sm:text-xl font-bold ${category.textColor} mb-1 sm:mb-2`}>{category.name}</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">{category.description}</p>
                     </div>
                   </button>
                 ))}
@@ -716,14 +708,14 @@ export default function KeuanganPage() {
 
         {/* Modal untuk menambah data */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl border border-gray-100">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl border border-gray-100">
               {/* Header dengan Progress Bar */}
-              <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-100">
+              <div className="relative bg-gradient-to-r from-green-50 to-emerald-50 p-4 sm:p-6 border-b border-gray-100">
                 {/* Progress Bar */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gray-200">
                   <div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-out"
+                    className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-500 ease-out"
                     style={{ width: `${(currentStep / 3) * 100}%` }}
                   ></div>
                 </div>
@@ -810,7 +802,7 @@ export default function KeuanganPage() {
                       <select
                         value={formData.tahun}
                         onChange={(e) => setFormData(prev => ({...prev, tahun: e.target.value}))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-lg"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-lg text-gray-900"
                         required
                       >
                         {Array.from({length: 5}, (_, i) => new Date().getFullYear() + i - 2).map(year => (
@@ -844,7 +836,7 @@ export default function KeuanganPage() {
                                 placeholder="0"
                                 value={anggaranData[subCat.id] || ""}
                                 onChange={(e) => handleAnggaranChange(subCat.id, e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-lg font-medium bg-gray-50 focus:bg-white"
+                                className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-lg font-medium bg-gray-50 focus:bg-white text-gray-900"
                               />
                             </div>
                           </div>
@@ -899,7 +891,7 @@ export default function KeuanganPage() {
                                 placeholder="0"
                                 value={realisasiData[subCat.id] || ""}
                                 onChange={(e) => handleRealisasiChange(subCat.id, e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-lg font-medium bg-gray-50 focus:bg-white"
+                                className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-lg font-medium bg-gray-50 focus:bg-white text-gray-900"
                               />
                               {anggaranData[subCat.id] && realisasiData[subCat.id] && (
                                 <div className="mt-2 text-xs">

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import AdminLayout from "../components/AdminLayout";
@@ -56,7 +56,7 @@ const styles = `
   }
 `;
 
-function RenderIcon({ name, className = '' }: { name: string; className?: string }) {
+const RenderIcon = React.memo(({ name, className = '' }: { name: string; className?: string }) => {
   const baseProps = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, className } as const;
   switch (name) {
     case 'home': return (<svg {...baseProps}><path d="M3 11.5L12 5l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V11.5z"/></svg>);
@@ -76,12 +76,12 @@ function RenderIcon({ name, className = '' }: { name: string; className?: string
     case 'settings': return (<svg {...baseProps}><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"/></svg>);
     default: return (<svg {...baseProps}><circle cx="12" cy="12" r="10"/></svg>);
   }
-}
+});
 
 
 
 function getEnhancedIcon(iconName: string, index: number) {
-  const colors = [
+  const colors = useMemo(() => [
     { from: 'from-red-500', to: 'to-pink-600' },
     { from: 'from-blue-500', to: 'to-indigo-600' }, 
     { from: 'from-green-500', to: 'to-emerald-600' },
@@ -94,13 +94,13 @@ function getEnhancedIcon(iconName: string, index: number) {
     { from: 'from-yellow-500', to: 'to-orange-600' },
     { from: 'from-violet-500', to: 'to-purple-600' },
     { from: 'from-rose-500', to: 'to-pink-600' }
-  ];
+  ], []);
   
   const color = colors[index % colors.length];
   
   return (
-    <div className={`w-14 h-14 bg-gradient-to-br ${color.from} ${color.to} rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-      <RenderIcon name={iconName} className="w-7 h-7 text-white" />
+    <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${color.from} ${color.to} rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+      <RenderIcon name={iconName} className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
     </div>
   );
 }
@@ -141,7 +141,38 @@ export default function AdminHomePage() {
   ];
 
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  
+  // Filter gridItems berdasarkan role
+  const filteredGridItems = React.useMemo(() => {
+    if (!user?.role) return gridItems;
+    
+    // Kepala Dusun: hanya Layanan Publik dan Pengaduan
+    if (user.role === 'kepala_dusun') {
+      return gridItems.filter(item => 
+        item.label === 'Layanan Publik' || 
+        item.label === 'Pengaduan'
+      );
+    }
+    
+    // Kepala Desa: Layanan Publik, Pengaduan, Data Desa, Profil Desa
+    if (user.role === 'kepala_desa') {
+      return gridItems.filter(item => 
+        item.label === 'Layanan Publik' || 
+        item.label === 'Pengaduan' ||
+        item.label === 'Data Desa' ||
+        item.label === 'Profil Desa'
+      );
+    }
+    
+    // Admin Desa: Semua kecuali Kelola Data Pengguna
+    if (user.role === 'admin_desa') {
+      return gridItems.filter(item => item.label !== 'Kelola Data Pengguna');
+    }
+    
+    // Administrator/Super Admin: Semua menu
+    return gridItems;
+  }, [user?.role]);
   
   // State untuk statistik
   const [stats, setStats] = useState({
@@ -232,37 +263,37 @@ export default function AdminHomePage() {
           {/* Simplified Header */}
           <div className="glass-effect rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 mb-8 sm:mb-10 relative">
             {/* AdminHeaderCard with cleaner styling */}
-            <div className="w-full bg-white rounded-xl shadow-md border border-gray-200 px-6 py-6 flex items-center justify-between mb-6">
+            <div className="w-full bg-white rounded-lg sm:rounded-xl shadow-md border border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-0 sm:justify-between mb-4 sm:mb-6">
               {/* Title Section */}
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
                   </svg>
                 </div>
                 <div>
-                  <h1 className="font-bold text-3xl text-slate-800 mb-1">
+                  <h1 className="font-bold text-xl sm:text-2xl md:text-3xl text-slate-800 mb-0.5 sm:mb-1">
                     Dashboard Admin
                   </h1>
-                  <p className="text-slate-600 text-base">
+                  <p className="text-slate-600 text-xs sm:text-sm md:text-base">
                     Kelola sistem informasi desa
                   </p>
                 </div>
               </div>
               
-              {/* Controls Section */}
-              <div className="flex items-center gap-4">
+              {/* Controls Section - Mobile Optimized */}
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 {/* Search Bar */}
-                <div className="flex items-center w-full max-w-md bg-gray-50 rounded-lg shadow-sm border border-gray-300 px-4 py-3 hover:border-blue-400 transition-colors">
+                <div className="flex items-center flex-1 sm:max-w-xs md:max-w-md bg-gray-50 rounded-lg shadow-sm border border-gray-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 hover:border-blue-400 transition-colors">
                   <input
                     type="text"
                     placeholder="Cari menu..."
-                    className="flex-1 bg-transparent text-gray-700 text-sm font-medium focus:outline-none placeholder-gray-500"
+                    className="flex-1 bg-transparent text-gray-700 text-xs sm:text-sm font-medium focus:outline-none placeholder-gray-500 min-w-0"
                   />
                   <svg
-                    className="ml-2 text-gray-400"
-                    width="20"
-                    height="20"
+                    className="ml-1 sm:ml-2 text-gray-400 flex-shrink-0"
+                    width="16"
+                    height="16"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -276,11 +307,11 @@ export default function AdminHomePage() {
                 {/* Logout Button */}
                 <button
                   onClick={handleLogout}
-                  className="w-11 h-11 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors shadow-sm"
+                  className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-lg bg-red-50 hover:bg-red-100 active:bg-red-200 flex items-center justify-center transition-colors shadow-sm flex-shrink-0"
                 >
                   <svg
-                    width="20"
-                    height="20"
+                    width="16"
+                    height="16"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -293,105 +324,105 @@ export default function AdminHomePage() {
               </div>
             </div>
             
-            {/* Welcome Message */}
-            <div className="mt-6 mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {/* Welcome Message - Mobile Optimized */}
+            <div className="mt-3 sm:mt-4 md:mt-6 mb-4 sm:mb-6">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-1">
                 Selamat Datang di Dashboard Admin! 👋
               </h2>
-              <p className="text-base text-gray-600">
+              <p className="text-xs sm:text-sm md:text-base text-gray-600">
                 Kelola sistem informasi desa dengan mudah dan profesional
               </p>
             </div>
             
-            {/* Simplified Statistics Section */}
-            <div className="mt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {/* Total Pengguna - Simplified */}
-                <div className="group relative bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                      <RenderIcon name="users" className="w-6 h-6 text-white" />
+            {/* Statistics Section - Mobile Optimized */}
+            <div className="mt-3 sm:mt-4 md:mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
+                {/* Total Pengguna - Mobile Optimized */}
+                <div className="group relative bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
+                  <div className="flex items-start justify-between mb-2 sm:mb-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                      <RenderIcon name="users" className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-4xl font-bold text-white mb-1">
+                    <h4 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-1">
                       {animatedUsers.toLocaleString('id-ID')}
                     </h4>
-                    <p className="text-base text-white/90 font-medium">Total Pengguna Terdaftar</p>
+                    <p className="text-xs sm:text-sm md:text-base text-white/90 font-medium">Total Pengguna Terdaftar</p>
                   </div>
                 </div>
                   
-                {/* Layanan Aktif - Simplified */}
-                <div className="group relative bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                      <RenderIcon name="briefcase" className="w-6 h-6 text-white" />
+                {/* Layanan Aktif - Mobile Optimized */}
+                <div className="group relative bg-gradient-to-br from-green-500 to-green-600 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
+                  <div className="flex items-start justify-between mb-2 sm:mb-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                      <RenderIcon name="briefcase" className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-4xl font-bold text-white mb-1">
+                    <h4 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-1">
                       {animatedServices.toLocaleString('id-ID')}
                     </h4>
-                    <p className="text-base text-white/90 font-medium">Layanan Publik Aktif</p>
+                    <p className="text-xs sm:text-sm md:text-base text-white/90 font-medium">Layanan Publik Aktif</p>
                   </div>
                 </div>
                   
-                {/* Data Records - Simplified */}
-                <div className="group relative bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 sm:col-span-2 lg:col-span-1 cursor-pointer">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                      <RenderIcon name="database" className="w-6 h-6 text-white" />
+                {/* Data Records - Mobile Optimized */}
+                <div className="group relative bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-300 sm:col-span-2 lg:col-span-1 cursor-pointer">
+                  <div className="flex items-start justify-between mb-2 sm:mb-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                      <RenderIcon name="database" className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-4xl font-bold text-white mb-1">
+                    <h4 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-1">
                       {animatedRecords.toLocaleString('id-ID')}
                     </h4>
-                    <p className="text-base text-white/90 font-medium">Total Data Tersimpan</p>
+                    <p className="text-xs sm:text-sm md:text-base text-white/90 font-medium">Total Data Tersimpan</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Module Section Title */}
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <div className="w-1 h-6 bg-gradient-to-b from-red-500 to-pink-600 rounded-full"></div>
+          {/* Module Section Title - Mobile optimized */}
+          <div className="mb-3 sm:mb-4 md:mb-6">
+            <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+              <div className="w-1 h-4 sm:h-5 md:h-6 bg-gradient-to-b from-red-500 to-pink-600 rounded-full"></div>
               Menu Administrasi
             </h2>
-            <p className="text-sm text-gray-600 ml-5">Pilih modul yang ingin Anda kelola</p>
+            <p className="text-xs sm:text-sm text-gray-600 ml-3 sm:ml-4 md:ml-5">Pilih modul yang ingin Anda kelola</p>
           </div>
 
-          {/* Simplified Grid Layout */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {gridItems.map((item, index) => (
+          {/* Optimized Grid Layout for Mobile */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            {filteredGridItems.map((item, index) => (
               <div
                 key={item.label}
                 onClick={() => item.href && router.push(item.href)}
-                className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 hover:border-red-300"
+                className="group relative bg-white rounded-lg sm:rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 hover:border-red-300 active:scale-95"
               >
-                {/* Card Content */}
-                <div className="relative p-6 flex flex-col items-center text-center h-full">
+                {/* Card Content - Mobile optimized */}
+                <div className="relative p-3 sm:p-4 md:p-6 flex flex-col items-center text-center h-full">
                   {/* Icon */}
-                  <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300">
+                  <div className="mb-2 sm:mb-3 md:mb-4 transform group-hover:scale-110 transition-transform duration-300">
                     {getEnhancedIcon(item.icon, index)}
                   </div>
                   
                   {/* Title */}
-                  <h3 className="font-bold text-base text-gray-800 group-hover:text-red-600 transition-colors duration-300 mb-2">
+                  <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-800 group-hover:text-red-600 transition-colors duration-300 mb-1 sm:mb-2 line-clamp-2">
                     {item.label}
                   </h3>
                   
-                  {/* Description */}
-                  <p className="text-xs text-gray-500 group-hover:text-gray-700 transition-colors duration-300 leading-relaxed mb-3">
+                  {/* Description - Hidden on mobile for better performance */}
+                  <p className="hidden sm:block text-xs text-gray-500 group-hover:text-gray-700 transition-colors duration-300 leading-relaxed mb-2 sm:mb-3 line-clamp-2">
                     {getModuleDescription(item.label)}
                   </p>
                   
-                  {/* Hover Arrow */}
-                  <div className="mt-auto opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                    <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center shadow-md">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {/* Hover Arrow - Simplified for mobile */}
+                  <div className="mt-auto opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hidden sm:block">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center shadow-md">
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>

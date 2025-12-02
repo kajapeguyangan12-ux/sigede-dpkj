@@ -151,17 +151,27 @@ export default function SuperAdminUserManager() {
 
     try {
       console.log('🔐 Creating user via service...');
+      console.log('📝 Form data being sent:', {
+        email: formData.email,
+        displayName: formData.displayName,
+        userName: formData.userName,
+        role: formData.role,
+        hasPassword: !!formData.password,
+        passwordLength: formData.password.length
+      });
       
       const createdUser = await superAdminUserService.createUser(
         formData,
         currentUser?.uid || 'system'
       );
       
-      console.log('✅ User created successfully');
+      console.log('✅ User created successfully:', createdUser);
       setSuccess(`✅ User ${formData.displayName} berhasil dibuat! 
       📧 Email: ${formData.email}
+      👤 Username: ${formData.userName || formData.email.split('@')[0]}
       🔑 Password: ${formData.password}
       🆔 User ID: ${createdUser.uid}
+      👔 Role: ${formData.role}
       
       Simpan informasi login ini untuk diberikan kepada user.`);
       

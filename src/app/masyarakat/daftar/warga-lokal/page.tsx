@@ -63,6 +63,49 @@ export default function WargaLokalRegisterPage() {
   const [nikMessage, setNikMessage] = useState('');
   const [verifiedData, setVerifiedData] = useState<DataDesaItem | null>(null);
 
+  // Extract birth date from NIK
+  const extractBirthDateFromNIK = (nik: string): string => {
+    if (!nik || nik.length !== 16) return '';
+    
+    try {
+      // NIK format: PPKKSSDDMMYY####
+      // PP = Province code (2 digits)
+      // KK = Regency code (2 digits)  
+      // SS = District code (2 digits)
+      // DDMMYY = Birth date (6 digits)
+      // #### = Sequence number (4 digits)
+      
+      let day = parseInt(nik.substring(6, 8));
+      const month = parseInt(nik.substring(8, 10));
+      let year = parseInt(nik.substring(10, 12));
+      
+      // For females, day is added by 40
+      if (day > 40) {
+        day = day - 40;
+      }
+      
+      // Determine century (assume people are born between 1930-2030)
+      // If year > 30, assume 1900s, else 2000s
+      if (year > 30) {
+        year = 1900 + year;
+      } else {
+        year = 2000 + year;
+      }
+      
+      // Format to YYYY-MM-DD for input type="date"
+      const formattedMonth = month.toString().padStart(2, '0');
+      const formattedDay = day.toString().padStart(2, '0');
+      
+      const birthDate = `${year}-${formattedMonth}-${formattedDay}`;
+      console.log('📅 Extracted birth date from NIK:', birthDate);
+      
+      return birthDate;
+    } catch (error) {
+      console.error('❌ Error extracting birth date from NIK:', error);
+      return '';
+    }
+  };
+
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -90,6 +133,11 @@ export default function WargaLokalRegisterPage() {
       setNikVerified(false);
       setNikMessage('');
       setVerifiedData(null);
+      // Clear tanggal lahir when NIK changes
+      setFormData(prev => ({
+        ...prev,
+        tanggalLahir: ''
+      }));
     }
   };
 
@@ -122,14 +170,20 @@ export default function WargaLokalRegisterPage() {
         setVerifiedData(matchedData);
         setNikMessage(`✅ NIK valid! Anda dapat melanjutkan registrasi.`);
         
-        // Auto-fill daerah from matched data
-        if (matchedData.daerah) {
-          setFormData(prev => ({
-            ...prev,
-            daerah: matchedData.daerah || ''
-          }));
-          console.log('📍 Auto-filled daerah:', matchedData.daerah);
+        // Auto-fill tanggal lahir from NIK after verification
+        const birthDate = extractBirthDateFromNIK(formData.nik);
+        if (birthDate) {
+          console.log('📅 Auto-filling tanggal lahir after NIK verification:', birthDate);
         }
+        
+        // Auto-fill daerah and tanggal lahir from matched data
+        setFormData(prev => ({
+          ...prev,
+          daerah: matchedData.daerah || '',
+          tanggalLahir: birthDate || prev.tanggalLahir
+        }));
+        console.log('📍 Auto-filled daerah:', matchedData.daerah);
+        console.log('📅 Auto-filled tanggal lahir:', birthDate);
       } else {
         console.log('❌ NIK CHECK: NIK not found in data-desa');
         setNikVerified(false);
@@ -539,9 +593,14 @@ export default function WargaLokalRegisterPage() {
                     name="tanggalLahir"
                     value={formData.tanggalLahir}
                     onChange={handleInputChange}
-                    className="w-full px-6 py-4 border bg-gray-50 border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900"
+                    className="w-full px-6 py-4 border bg-gray-100 border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900 cursor-not-allowed"
                     required
+                    disabled
+                    readOnly
                   />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Otomatis terisi dari NIK setelah verifikasi
+                  </p>
                 </div>
 
                 {/* Jenis Kelamin */}

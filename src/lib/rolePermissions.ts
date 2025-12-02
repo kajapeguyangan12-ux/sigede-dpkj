@@ -77,7 +77,7 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     'pengaduan': { read: true, create: true, update: true, delete: true },
     'e-umkm': { read: true, create: true, update: true, delete: true },
     'kelola-pengguna': { read: false, create: false, update: false, delete: false },
-    'data-desa': { read: false, create: false, update: false, delete: false },
+    'data-desa': { read: true, create: true, update: true, delete: true },
     'super-admin': { read: false, create: false, update: false, delete: false },
   },
   
