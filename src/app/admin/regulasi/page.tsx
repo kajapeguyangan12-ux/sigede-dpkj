@@ -248,7 +248,7 @@ export default function RegulasiDesaPage() {
       <AdminLayout>
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Memuat data regulasi desa...</p>
           </div>
         </div>
@@ -259,10 +259,10 @@ export default function RegulasiDesaPage() {
   return (
     <AdminLayout>
       <style>{customStyles}</style>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-3 sm:p-4 md:p-6 safe-area-padding">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 p-3 sm:p-4 md:p-6 safe-area-padding">
         <div className="max-w-7xl mx-auto">
           {/* Custom Header */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8 animate-slide-up">
+          <div className="bg-gradient-to-r from-red-500 to-rose-600 rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8 animate-slide-up">
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <div className="bg-white/20 backdrop-blur-sm p-2 sm:p-3 rounded-xl sm:rounded-2xl">
                 <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
@@ -271,7 +271,7 @@ export default function RegulasiDesaPage() {
                 Kelola Regulasi Desa
               </h1>
             </div>
-            <p className="text-indigo-50 text-xs sm:text-sm md:text-base ml-0 sm:ml-14 md:ml-16 mb-3 sm:mb-4">
+            <p className="text-red-50 text-xs sm:text-sm md:text-base ml-0 sm:ml-14 md:ml-16 mb-3 sm:mb-4">
               Manajemen peraturan desa dan kelurahan
             </p>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 ml-0 sm:ml-14 md:ml-16">
@@ -280,7 +280,7 @@ export default function RegulasiDesaPage() {
                 {regulasiData.length} Total Regulasi
               </div>
               <div className="flex items-center gap-2 text-xs sm:text-sm text-white/90 font-medium bg-white/10 px-3 py-1.5 rounded-full">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
                 {stats.berlaku} Aktif
               </div>
             </div>
@@ -288,12 +288,12 @@ export default function RegulasiDesaPage() {
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8 animate-fade-in">
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 text-white transform hover:scale-105 transition-all duration-300 active:scale-[0.98]">
+            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 text-white transform hover:scale-105 transition-all duration-300 active:scale-[0.98]">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex-1">
-                  <p className="text-indigo-100 text-xs sm:text-sm font-medium mb-1">Total</p>
+                  <p className="text-red-100 text-xs sm:text-sm font-medium mb-1">Total</p>
                   <p className="text-2xl sm:text-3xl md:text-4xl font-bold">{regulasiData.length}</p>
-                  <p className="text-indigo-100 text-xs mt-0.5 sm:mt-1">Regulasi</p>
+                  <p className="text-red-100 text-xs mt-0.5 sm:mt-1">Regulasi</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-full p-2.5 sm:p-3 md:p-4">
                   <FileText className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
@@ -301,12 +301,12 @@ export default function RegulasiDesaPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 text-white transform hover:scale-105 transition-all duration-300 active:scale-[0.98]">
+            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 text-white transform hover:scale-105 transition-all duration-300 active:scale-[0.98]">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex-1">
-                  <p className="text-blue-100 text-xs sm:text-sm font-medium mb-1">Perdes</p>
+                  <p className="text-red-100 text-xs sm:text-sm font-medium mb-1">Perdes</p>
                   <p className="text-2xl sm:text-3xl md:text-4xl font-bold">{stats.totalPerdes}</p>
-                  <p className="text-blue-100 text-xs mt-0.5 sm:mt-1">Peraturan</p>
+                  <p className="text-red-100 text-xs mt-0.5 sm:mt-1">Peraturan</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-full p-2.5 sm:p-3 md:p-4">
                   <FileText className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
@@ -314,12 +314,12 @@ export default function RegulasiDesaPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 text-white transform hover:scale-105 transition-all duration-300 active:scale-[0.98]">
+            <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 text-white transform hover:scale-105 transition-all duration-300 active:scale-[0.98]">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex-1">
-                  <p className="text-purple-100 text-xs sm:text-sm font-medium mb-1">Perkel</p>
+                  <p className="text-rose-100 text-xs sm:text-sm font-medium mb-1">Perkel</p>
                   <p className="text-2xl sm:text-3xl md:text-4xl font-bold">{stats.totalPerkel}</p>
-                  <p className="text-purple-100 text-xs mt-0.5 sm:mt-1">Peraturan</p>
+                  <p className="text-rose-100 text-xs mt-0.5 sm:mt-1">Peraturan</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-full p-2.5 sm:p-3 md:p-4">
                   <FileText className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
@@ -327,12 +327,12 @@ export default function RegulasiDesaPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 text-white transform hover:scale-105 transition-all duration-300 active:scale-[0.98]">
+            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 text-white transform hover:scale-105 transition-all duration-300 active:scale-[0.98]">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex-1">
-                  <p className="text-green-100 text-xs sm:text-sm font-medium mb-1">Berlaku</p>
+                  <p className="text-red-100 text-xs sm:text-sm font-medium mb-1">Berlaku</p>
                   <p className="text-2xl sm:text-3xl md:text-4xl font-bold">{stats.berlaku}</p>
-                  <p className="text-green-100 text-xs mt-0.5 sm:mt-1">Tidak: {stats.tidakBerlaku}</p>
+                  <p className="text-red-100 text-xs mt-0.5 sm:mt-1">Tidak: {stats.tidakBerlaku}</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-full p-2.5 sm:p-3 md:p-4">
                   <FileText className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
@@ -342,7 +342,7 @@ export default function RegulasiDesaPage() {
           </div>
 
           {/* Action Bar */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-indigo-100 p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-card-entrance">
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-red-100 p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-card-entrance">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
                 <div className="relative">
@@ -351,7 +351,7 @@ export default function RegulasiDesaPage() {
                     placeholder="Cari regulasi (judul, nomor, tentang)..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all text-sm sm:text-base"
+                    className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all text-sm sm:text-base"
                   />
                   <svg
                     className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400"
@@ -373,7 +373,7 @@ export default function RegulasiDesaPage() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value as any)}
-                  className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:outline-none transition-colors font-medium text-sm sm:text-base text-gray-900"
+                  className="px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 focus:border-red-500 focus:outline-none transition-colors font-medium text-sm sm:text-base text-gray-900"
                 >
                   <option value="semua">Semua Status</option>
                   <option value="aktif">Aktif</option>
@@ -387,7 +387,7 @@ export default function RegulasiDesaPage() {
                     setSelectedDiagramFile(null);
                     setShowModal(true);
                   }}
-                  className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-[0.98] flex items-center justify-center gap-2 font-semibold text-sm sm:text-base"
+                  className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-[0.98] flex items-center justify-center gap-2 font-semibold text-sm sm:text-base"
                 >
                   <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>Tambah Regulasi</span>
@@ -397,11 +397,11 @@ export default function RegulasiDesaPage() {
           </div>
 
           {/* Regulasi List */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-indigo-100 overflow-hidden animate-card-entrance">
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-red-100 overflow-hidden animate-card-entrance">
             {filteredData.length === 0 ? (
               <div className="p-8 sm:p-12 text-center">
-                <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
-                  <FileText className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-indigo-500" />
+                <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-red-100 to-rose-100 rounded-full flex items-center justify-center mb-4">
+                  <FileText className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-red-500" />
                 </div>
                 <p className="text-gray-500 text-base sm:text-lg mb-4 sm:mb-6">
                   {searchTerm || filterStatus !== "semua"
@@ -416,7 +416,7 @@ export default function RegulasiDesaPage() {
                       setSelectedDiagramFile(null);
                       setShowModal(true);
                     }}
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all active:scale-[0.98] inline-flex items-center gap-2 font-medium text-sm sm:text-base shadow-lg hover:shadow-xl"
+                    className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all active:scale-[0.98] inline-flex items-center gap-2 font-medium text-sm sm:text-base shadow-lg hover:shadow-xl"
                   >
                     <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span>Tambah Regulasi</span>
@@ -428,7 +428,7 @@ export default function RegulasiDesaPage() {
                 {/* Desktop Table View */}
                 <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gradient-to-r from-indigo-50 to-purple-50">
+                    <thead className="bg-gradient-to-r from-red-50 to-rose-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                           No
@@ -457,7 +457,7 @@ export default function RegulasiDesaPage() {
                       {filteredData.map((item, index) => (
                         <tr
                           key={item.id}
-                          className="hover:bg-indigo-50 transition-colors"
+                          className="hover:bg-red-50 transition-colors"
                         >
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                             {index + 1}
@@ -481,11 +481,11 @@ export default function RegulasiDesaPage() {
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                               item.kategori === "perdes"
-                                ? "bg-blue-100 text-blue-800"
+                                ? "bg-red-100 text-red-800"
                                 : item.kategori === "peraturan_bersama"
-                                ? "bg-purple-100 text-purple-800"
+                                ? "bg-rose-100 text-rose-800"
                                 : item.kategori === "keputusan_kepala_desa"
-                                ? "bg-green-100 text-green-800"
+                                ? "bg-orange-100 text-orange-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}>
                               {item.kategori === "perdes"
@@ -500,7 +500,7 @@ export default function RegulasiDesaPage() {
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                               item.status === "aktif"
-                                ? "bg-green-100 text-green-800"
+                                ? "bg-red-100 text-red-800"
                                 : "bg-red-100 text-red-800"
                             }`}>
                               {item.status === "aktif" ? "Berlaku" : "Tidak Berlaku"}
@@ -527,7 +527,7 @@ export default function RegulasiDesaPage() {
                                   href={item.filePdf}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-lg transition-colors"
+                                  className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-colors"
                                   title="Lihat PDF"
                                 >
                                   <Eye className="w-4 h-4" />
@@ -551,15 +551,15 @@ export default function RegulasiDesaPage() {
                 {/* Mobile Card View */}
                 <div className="lg:hidden divide-y divide-gray-200">
                   {filteredData.map((item, index) => (
-                    <div key={item.id} className="p-4 hover:bg-indigo-50 transition-colors">
+                    <div key={item.id} className="p-4 hover:bg-red-50 transition-colors">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">
+                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-800 text-xs font-bold">
                             {index + 1}
                           </span>
                           <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
                             item.status === "aktif"
-                              ? "bg-green-100 text-green-800"
+                              ? "bg-red-100 text-red-800"
                               : "bg-red-100 text-red-800"
                           }`}>
                             {item.status === "aktif" ? "Berlaku" : "Tidak Berlaku"}
@@ -567,11 +567,11 @@ export default function RegulasiDesaPage() {
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
                           item.kategori === "perdes"
-                            ? "bg-blue-100 text-blue-800"
+                            ? "bg-red-100 text-red-800"
                             : item.kategori === "peraturan_bersama"
-                            ? "bg-purple-100 text-purple-800"
+                            ? "bg-rose-100 text-rose-800"
                             : item.kategori === "keputusan_kepala_desa"
-                            ? "bg-green-100 text-green-800"
+                            ? "bg-orange-100 text-orange-800"
                             : "bg-gray-100 text-gray-800"
                         }`}>
                           {item.kategori === "perdes"
@@ -585,7 +585,7 @@ export default function RegulasiDesaPage() {
                       </div>
                       
                       <div className="mb-2">
-                        <div className="text-sm font-bold text-indigo-600 mb-1">
+                        <div className="text-sm font-bold text-red-600 mb-1">
                           No. {item.nomor} / Tahun {item.tahun}
                         </div>
                         <h3 className="font-semibold text-gray-900 text-base mb-1">
@@ -617,7 +617,7 @@ export default function RegulasiDesaPage() {
                             href={item.filePdf}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium active:scale-[0.98]"
+                            className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium active:scale-[0.98]"
                           >
                             <Eye className="w-4 h-4" />
                             <span>Lihat</span>
