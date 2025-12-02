@@ -63,7 +63,7 @@ class AuthenticationService {
 
       // 1. Try to authenticate with Firebase Auth using actual admin credentials
       let authAttempts = 0;
-      const maxAuthAttempts = 3;
+      const maxAuthAttempts = 2; // Reduced from 3 to 2
       
       // Try to authenticate with managed user service first
       let preliminaryUserDoc: FirestoreUser | null = null;
@@ -119,57 +119,10 @@ class AuthenticationService {
         preliminaryUserDoc = await this.findUserByUsername(credentials.username);
       }
 
-      // If we have user data with email, try to sign in with Firebase Auth
-      if (preliminaryUserDoc?.email) {
-        while (authAttempts < maxAuthAttempts) {
-          try {
-            console.log(`🔐 AUTH: Attempting Firebase Auth sign-in with email (attempt ${authAttempts + 1}/${maxAuthAttempts})...`);
-            
-            // For admin users, try to sign in with email/password
-            // For now, use a default password - in production this should be proper
-            const defaultPassword = 'admin123456'; // TODO: Implement proper password management
-            
-            try {
-              await signInWithEmailAndPassword(auth, preliminaryUserDoc.email, defaultPassword);
-              console.log('✅ AUTH: Firebase Auth signed in with email successfully');
-              break;
-            } catch (emailAuthError: any) {
-              if (emailAuthError.code === 'auth/user-not-found' || 
-                  emailAuthError.code === 'auth/wrong-password' ||
-                  emailAuthError.code === 'auth/invalid-credential') {
-                // Try anonymous fallback only once
-                if (authAttempts === 0) {
-                  console.log('🔄 AUTH: Email auth not configured, trying anonymous fallback...');
-                  try {
-                    await signInAnonymously(auth);
-                    console.log('✅ AUTH: Firebase Auth signed in anonymously as fallback');
-                    break;
-                  } catch (anonError) {
-                    console.log('⚠️ AUTH: Anonymous auth also failed, continuing with Firestore only');
-                    break; // Exit loop and continue with Firestore
-                  }
-                } else {
-                  break; // Already tried anonymous, exit loop
-                }
-              } else {
-                throw emailAuthError;
-              }
-            }
-          } catch (authError: any) {
-            authAttempts++;
-            
-            if (authAttempts < maxAuthAttempts) {
-              console.log(`⚠️ AUTH: Firebase Auth attempt ${authAttempts} failed (${authError.code}), retrying in 1 second...`);
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            } else {
-              console.log('ℹ️ AUTH: Firebase Auth unavailable, continuing with Firestore-only authentication');
-              break; // Exit loop gracefully
-            }
-          }
-        }
-      } else {
-        console.log('ℹ️ AUTH: No email found, using Firestore-only authentication');
-      }
+      // Skip Firebase Auth for faster login - not needed for admin panel
+      // Firebase Auth adds significant delay and is not required for Firestore-only auth
+      console.log('ℹ️ AUTH: Using Firestore-only authentication (faster)');
+
 
       let userDoc: FirestoreUser | null = null;
 
@@ -259,11 +212,11 @@ class AuthenticationService {
         }
       }
       
-      // 5. Create session (terminates other sessions for this user) with retry
+      // 5. Create session (terminates other sessions for this user) with reduced retries
       const userType = this.isAdmin(userDoc.role) ? 'admin' : 'masyarakat';
       
       let sessionAttempts = 0;
-      const maxSessionAttempts = 3;
+      const maxSessionAttempts = 2; // Reduced from 3 to 2
       
       while (sessionAttempts < maxSessionAttempts) {
         try {
@@ -276,7 +229,7 @@ class AuthenticationService {
           
           if (sessionAttempts < maxSessionAttempts) {
             console.log('🔄 AUTH: Retrying session creation...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 500)); // Reduced from 1000ms to 500ms
           } else {
             console.warn('⚠️ AUTH: All session creation attempts failed (continuing login)');
             // Continue login even if session creation fails
@@ -311,52 +264,38 @@ class AuthenticationService {
     }
   }
 
-  // Cari user berdasarkan email dengan error handling yang lebih baik
+  // Cari user berdasarkan email dengan error handling yang lebih baik - OPTIMIZED
   private async findUserByEmail(email: string): Promise<FirestoreUser | null> {
     try {
       console.log('🔍 AUTH: Searching user by email:', email);
       
-      // Search all collections with retry mechanism
-      let usersSnapshot;
-      let masyarakatSnapshot;
-      let wargaLuarSnapshot;
-      let superAdminSnapshot;
-      
-      try {
-        usersSnapshot = await withFirebaseRetry(() => 
+      // Search all collections in parallel with retry mechanism
+      const [usersSnapshot, masyarakatSnapshot, wargaLuarSnapshot, superAdminSnapshot] = await Promise.all([
+        withFirebaseRetry(() => 
           getDocs(query(this.usersCollection, where('email', '==', email)))
-        );
-        console.log('✅ AUTH: Users collection search successful');
-      } catch (usersError: any) {
-        console.error('❌ AUTH: Users collection search failed:', usersError.message);
-      }
-      
-      try {
-        masyarakatSnapshot = await withFirebaseRetry(() =>
+        ).catch(err => {
+          console.error('❌ AUTH: Users collection search failed:', err.message);
+          return null;
+        }),
+        withFirebaseRetry(() =>
           getDocs(query(this.masyarakatCollection, where('email', '==', email)))
-        );
-        console.log('✅ AUTH: Masyarakat collection search successful');
-      } catch (masyarakatError: any) {
-        console.error('❌ AUTH: Masyarakat collection search failed:', masyarakatError.message);
-      }
-
-      try {
-        wargaLuarSnapshot = await withFirebaseRetry(() =>
+        ).catch(err => {
+          console.error('❌ AUTH: Masyarakat collection search failed:', err.message);
+          return null;
+        }),
+        withFirebaseRetry(() =>
           getDocs(query(this.wargaLuarCollection, where('email', '==', email)))
-        );
-        console.log('✅ AUTH: Warga_LuarDPKJ collection search successful');
-      } catch (wargaLuarError: any) {
-        console.error('❌ AUTH: Warga_LuarDPKJ collection search failed:', wargaLuarError.message);
-      }
-
-      try {
-        superAdminSnapshot = await withFirebaseRetry(() =>
+        ).catch(err => {
+          console.error('❌ AUTH: Warga_LuarDPKJ collection search failed:', err.message);
+          return null;
+        }),
+        withFirebaseRetry(() =>
           getDocs(query(this.superAdminCollection, where('email', '==', email)))
-        );
-        console.log('✅ AUTH: Super_Admin collection search successful');
-      } catch (superAdminError: any) {
-        console.error('❌ AUTH: Super_Admin collection search failed:', superAdminError.message);
-      }
+        ).catch(err => {
+          console.error('❌ AUTH: Super_Admin collection search failed:', err.message);
+          return null;
+        })
+      ]);
       
       // Check results - prioritize Super_Admin first
       if (superAdminSnapshot && !superAdminSnapshot.empty) {

@@ -101,8 +101,13 @@ class SuperAdminUserService {
         }
       };
 
+      // Filter out undefined values to avoid Firestore errors
+      const filteredDoc = Object.fromEntries(
+        Object.entries(userDoc).filter(([_, value]) => value !== undefined)
+      ) as ManagedUser;
+
       // Save to Firestore
-      await setDoc(doc(this.usersCollection, uid), userDoc);
+      await setDoc(doc(this.usersCollection, uid), filteredDoc);
 
       console.log('✅ Managed user created successfully:', uid);
       return userDoc;

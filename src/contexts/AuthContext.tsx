@@ -119,11 +119,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const login = async (credentials: LoginCredentials) => {
-    // Create a promise that times out after 20 seconds
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Login timeout. Silakan coba lagi.')), 20000);
-    });
-
     try {
       console.log('🔐 AUTH CONTEXT: Login attempt');
       setLoading(true);
@@ -132,11 +127,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearAllAuthData();
       setUser(null);
       
-      // Race between login and timeout
-      const authUser = await Promise.race([
-        authService.login(credentials),
-        timeoutPromise
-      ]) as AuthUser;
+      // Direct login without timeout race condition
+      const authUser = await authService.login(credentials);
       
       // Save to state and localStorage
       setUser(authUser);

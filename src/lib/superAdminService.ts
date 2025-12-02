@@ -89,8 +89,13 @@ class SuperAdminService {
         status: 'active'
       };
 
+      // Filter out undefined values to avoid Firestore errors
+      const filteredData = Object.fromEntries(
+        Object.entries(superAdminData).filter(([_, value]) => value !== undefined)
+      );
+
       // Use the Firebase UID as document ID for easy reference
-      await setDoc(doc(db, this.collectionName, firebaseUser.uid), superAdminData);
+      await setDoc(doc(db, this.collectionName, firebaseUser.uid), filteredData);
 
       console.log('✅ Super Admin data saved to Firestore');
       

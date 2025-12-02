@@ -41,22 +41,33 @@ export default function AdminLogin() {
     setIsSubmitting(true);
     setError('');
 
+    let loginTimeout: NodeJS.Timeout | null = null;
+
     try {
       console.log('🔐 ADMIN LOGIN: Attempting login with identifier:', identifier);
       
-      // Add timeout to prevent infinite loading
-      const loginTimeout = setTimeout(() => {
-        console.error('⏱️ Admin login timeout');
-        setIsSubmitting(false);
-        setError('Login timeout. Silakan coba lagi.');
-      }, 15000); // 15 second timeout
+      // Create abort controller for timeout
+      const abortController = new AbortController();
       
+      // Add timeout to prevent infinite loading (30 seconds for slow connections)
+      loginTimeout = setTimeout(() => {
+        console.error('⏱️ Admin login timeout after 30 seconds');
+        abortController.abort();
+        setIsSubmitting(false);
+        setError('Login timeout. Periksa koneksi internet dan coba lagi.');
+      }, 30000);
+      
+      // Attempt login
       await login({
         userId: identifier,
         password: password
       });
 
-      clearTimeout(loginTimeout);
+      // Clear timeout if login completes
+      if (loginTimeout) {
+        clearTimeout(loginTimeout);
+        loginTimeout = null;
+      }
 
       // Check if user is admin after successful login
       const storedUser = localStorage.getItem('sigede_auth_user');
@@ -73,7 +84,6 @@ export default function AdminLogin() {
           // Clear the login data
           localStorage.removeItem('sigede_auth_user');
           localStorage.removeItem('userId');
-          clearTimeout(loginTimeout);
           setIsSubmitting(false);
           return;
         }
@@ -81,28 +91,34 @@ export default function AdminLogin() {
         // Admin login successful, redirect immediately
         console.log('✅ ADMIN LOGIN: Admin login successful, redirecting to admin home');
         
-        // Force immediate redirect to admin home
-        setTimeout(() => {
-          console.log('🔄 Redirecting to /admin/home');
-          window.location.href = '/admin/home';
-        }, 500); // Small delay to ensure state is updated
+        // Use router.push instead of window.location for better UX
+        router.push('/admin/home');
         
-        setIsSubmitting(false);
       } else {
-        clearTimeout(loginTimeout);
         throw new Error('Session data not found after login');
       }
       
     } catch (error: any) {
+      // Clear timeout on error
+      if (loginTimeout) {
+        clearTimeout(loginTimeout);
+      }
+      
       console.error('❌ ADMIN LOGIN: Login failed:', error);
       
       // Provide more specific error messages
       let errorMessage = 'Login gagal. Periksa kembali ID dan password Anda.';
       
-      if (error.message?.includes('tidak ditemukan')) {
+      if (error.message?.includes('tidak ditemukan') || error.message?.includes('not found')) {
         errorMessage = 'User tidak ditemukan. Pastikan ID/Username sudah benar.';
       } else if (error.message?.includes('timeout')) {
         errorMessage = 'Koneksi timeout. Periksa koneksi internet dan coba lagi.';
+      } else if (error.message?.includes('Password salah')) {
+        errorMessage = 'Password salah. Silakan coba lagi.';
+      } else if (error.message?.includes('ditangguhkan')) {
+        errorMessage = 'Akun ditangguhkan. Hubungi administrator.';
+      } else if (error.message?.includes('tidak aktif')) {
+        errorMessage = 'Akun tidak aktif. Hubungi administrator.';
       } else if (error.message?.includes('ditolak')) {
         errorMessage = error.message;
       } else if (error.message) {
@@ -160,10 +176,18 @@ export default function AdminLogin() {
             )}
             <button
               type="submit"
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 rounded-md transition-colors"
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 rounded-md transition-colors relative"
               disabled={isSubmitting || loading}
             >
-              {isSubmitting ? 'MEMPROSES...' : 'LOGIN'}
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  MEMPROSES...
+                </span>
+              ) : 'LOGIN'}
             </button>
             
             {/* Link to Masyarakat Login */}

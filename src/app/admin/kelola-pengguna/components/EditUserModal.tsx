@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { UserRole } from '../../../masyarakat/lib/useCurrentUser';
 import { getRoleTitle } from '../../../../lib/rolePermissions';
 import userManagementService, { FirestoreUser, UpdateUserData, UserStatus } from '../../../../lib/userManagementService';
+import Portal from '../../../../components/Portal';
 
 interface EditUserModalProps {
   user: FirestoreUser | null;
@@ -14,48 +15,33 @@ interface EditUserModalProps {
 export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditUserModalProps) {
   const [formData, setFormData] = useState({
     displayName: '',
-    role: 'warga_dpkj' as UserRole,
-    status: 'active' as UserStatus,
-    userName: '',
-    phoneNumber: '',
-    address: '',
-    notes: '',
-    idNumber: ''
+    email: '',
+    oldPassword: '',
+    password: '',
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   // Populate form when user changes
   useEffect(() => {
     if (user && isOpen) {
       console.log('🔍 EDIT MODAL: Received user data:', user);
-      console.log('📝 EDIT MODAL: Setting form data...');
       
-      // Add small delay to ensure modal is fully rendered
       const timer = setTimeout(() => {
-        // More defensive data extraction
         const newFormData = {
           displayName: user.displayName || user.email?.split('@')[0] || '',
-          role: (user.role as UserRole) || 'warga_dpkj',
-          status: (user.status as UserStatus) || 'active',
-          userName: user.userName || user.displayName || '',
-          phoneNumber: user.phoneNumber || '',
-          address: user.address || '',
-          notes: user.notes || '',
-          idNumber: user.idNumber || ''
+          email: user.email || '',
+          oldPassword: '',
+          password: '',
+          confirmPassword: ''
         };
         
         console.log('📋 EDIT MODAL: Form data to set:', newFormData);
-        console.log('🔍 EDIT MODAL: Individual field check:', {
-          'user.displayName': user.displayName,
-          'user.role': user.role,
-          'user.status': user.status,
-          'user.userName': user.userName,
-          'user.phoneNumber': user.phoneNumber
-        });
-        
         setFormData(newFormData);
         setError('');
+        setSuccess('');
       }, 100);
       
       return () => clearTimeout(timer);
@@ -68,15 +54,13 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
       console.log('🔄 EDIT MODAL: Modal closed, resetting form');
       setFormData({
         displayName: '',
-        role: 'warga_dpkj' as UserRole,
-        status: 'active' as UserStatus,
-        userName: '',
-        phoneNumber: '',
-        address: '',
-        notes: '',
-        idNumber: ''
+        email: '',
+        oldPassword: '',
+        password: '',
+        confirmPassword: ''
       });
       setError('');
+      setSuccess('');
     }
   }, [isOpen]);
 
@@ -84,8 +68,33 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
     e.preventDefault();
     if (!user) return;
 
+    // Validation
+    if (!formData.displayName) {
+      setError('Nama lengkap wajib diisi');
+      return;
+    }
+
+    if (!formData.email) {
+      setError('Email wajib diisi');
+      return;
+    }
+
+    // Validate password if provided
+    if (formData.password) {
+      if (formData.password.length < 6) {
+        setError('Password minimal 6 karakter');
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setError('Password dan konfirmasi password tidak sama');
+        return;
+      }
+    }
+
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       console.log('🔄 Updating user:', user.uid);
@@ -93,20 +102,20 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
 
       const updateData: UpdateUserData = {
         displayName: formData.displayName,
-        // role: formData.role, // Role tidak dapat diubah
-        status: formData.status,
-        userName: formData.userName || undefined,
-        phoneNumber: formData.phoneNumber || undefined,
-        address: formData.address || undefined,
-        notes: formData.notes || undefined,
-        idNumber: formData.idNumber || undefined
+        // Only include password if it was changed
+        ...(formData.password && { password: formData.password })
       };
 
       await userManagementService.updateUser(user.uid, updateData, 'current-admin-id');
       
       console.log('✅ User updated successfully');
-      onUpdate(); // Refresh parent list
-      onClose(); // Close modal
+      setSuccess('Data pengguna berhasil diperbarui!');
+      
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        onUpdate(); // Refresh parent list
+        onClose(); // Close modal
+      }, 1500);
     } catch (error) {
       console.error('❌ Error updating user:', error);
       setError(error instanceof Error ? error.message : 'Gagal mengupdate pengguna');
@@ -116,225 +125,314 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
   };
 
   if (!isOpen || !user) return null;
-
-  // Debug current form state
-  console.log('🎭 EDIT MODAL: Rendering with form state:', formData);
-  console.log('👤 EDIT MODAL: Current user:', user);
-
-  const availableRoles: UserRole[] = [
-    'super_admin',
-    'administrator',
-    'admin_desa', 
-    'kepala_desa',
-    'kepala_dusun',
-    'warga_dpkj',
-    'warga_luar_dpkj'
-  ];
-
-  const availableStatuses: UserStatus[] = [
-    'active',
-    'inactive', 
-    'suspended',
-    'pending'
-  ];
-
-  const getStatusLabel = (status: UserStatus) => {
-    switch (status) {
-      case 'active': return 'Aktif';
-      case 'inactive': return 'Tidak Aktif';
-      case 'suspended': return 'Ditangguhkan';
-      case 'pending': return 'Menunggu';
-      default: return status;
-    }
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Ubah Data Pengguna</h2>
-              <p className="text-sm text-gray-600">{user.email}</p>
+    <Portal>
+      <div 
+        className="fixed inset-0 top-0 left-0 right-0 bottom-0 bg-black/75 flex items-center justify-center p-4 overflow-y-auto"
+        onClick={onClose}
+        style={{ 
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          zIndex: 99999,
+          position: 'fixed'
+        }}
+      >
+      <div 
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col relative my-auto"
+        onClick={(e) => e.stopPropagation()}
+        style={{ zIndex: 100000 }}
+      >
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-red-500 via-red-600 to-pink-600 px-8 py-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/5"></div>
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 shadow-lg">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-1">Ubah Data Pengguna</h2>
+                <p className="text-red-100/90 text-sm">{user.email}</p>
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2.5 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-all duration-200"
             >
-              <span className="text-xl">×</span>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6" key={user?.uid || 'empty'}>
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Display Name */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nama Lengkap *
-              </label>
-              <input
-                type="text"
-                value={formData.displayName}
-                onChange={(e) => {
-                  console.log('📝 Display name changed:', e.target.value);
-                  setFormData({ ...formData, displayName: e.target.value });
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-                placeholder="Masukkan nama lengkap"
-              />
-            </div>
-
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Role *
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.role}
-                  onChange={(e) => {
-                    console.log('👑 Role changed:', e.target.value);
-                    setFormData({ ...formData, role: e.target.value as UserRole });
-                  }}
-                  disabled={true}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed opacity-75"
-                  required
-                >
-                  {availableRoles.map((role) => (
-                    <option key={role} value={role}>
-                      {getRoleTitle(role)}
-                    </option>
-                  ))}
-                </select>
+        {/* Form Container with scroll */}
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="px-8 pt-8 pb-12" key={user?.uid || 'empty'}>
+            {/* Alert Messages */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-red-800 text-sm font-medium">{error}</p>
+                </div>
               </div>
-              <p className="mt-2 text-xs text-gray-500 flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Role tidak dapat diubah untuk menjaga konsistensi data
-              </p>
+            )}
+
+            {success && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-green-800 text-sm font-medium">{success}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-8">
+              {/* Info Box - Role tidak dapat diubah */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-blue-900 text-sm mb-1">
+                      Informasi Role
+                    </h4>
+                    <p className="text-xs text-blue-800">
+                      Role otomatis disesuaikan dengan komponen <strong>{getRoleTitle(user.role)}</strong> dan tidak dapat diubah.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Username (Read-only) */}
+              <div>
+                <label htmlFor="username" className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-5 h-5 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  Username / ID Pengguna
+                </label>
+                <div className="relative group">
+                  <input
+                    type="text"
+                    id="username"
+                    value={user.uid}
+                    readOnly
+                    disabled
+                    className="w-full px-6 py-4 bg-gray-100 border border-gray-200/70 rounded-2xl text-gray-600 cursor-not-allowed font-mono text-sm"
+                    placeholder="User ID"
+                  />
+                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-600 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Username tidak dapat diubah (bersifat permanen)
+                </p>
+              </div>
+
+              {/* Nama Lengkap */}
+              <div>
+                <label htmlFor="displayName" className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-5 h-5 bg-red-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  Nama Lengkap <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="relative group">
+                  <input
+                    type="text"
+                    id="displayName"
+                    value={formData.displayName}
+                    onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                    className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-red-500/10 focus:border-red-400 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-500 shadow-sm hover:shadow-md font-medium"
+                    required
+                    placeholder="Masukkan nama lengkap"
+                  />
+                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-200">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-5 h-5 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                    </svg>
+                  </div>
+                  Email <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="relative group">
+                  <input
+                    type="email"
+                    id="email"
+                    value={formData.email}
+                    readOnly
+                    disabled
+                    className="w-full px-6 py-4 bg-gray-100 border border-gray-200/70 rounded-2xl text-gray-600 cursor-not-allowed font-medium"
+                    placeholder="user@example.com"
+                  />
+                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-600 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Email tidak dapat diubah untuk keamanan akun
+                </p>
+              </div>
+
+              {/* Password Lama (untuk verifikasi) */}
+              <div>
+                <label htmlFor="oldPassword" className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-5 h-5 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                  </div>
+                  Password Lama
+                </label>
+                <div className="relative group">
+                  <input
+                    type="text"
+                    id="oldPassword"
+                    value={formData.oldPassword}
+                    onChange={(e) => setFormData({ ...formData, oldPassword: e.target.value })}
+                    className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-yellow-500/10 focus:border-yellow-400 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-500 shadow-sm hover:shadow-md font-medium"
+                    placeholder="Masukkan password lama untuk verifikasi"
+                  />
+                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-yellow-500 transition-colors duration-200">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-600">
+                  👁️ Password lama ditampilkan untuk memudahkan verifikasi
+                </p>
+              </div>
+
+              {/* Kata Sandi */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-5 h-5 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-3 h-3 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  Kata Sandi Baru
+                </label>
+                <div className="relative group">
+                  <input
+                    type="password"
+                    id="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-400 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-500 shadow-sm hover:shadow-md font-medium"
+                    placeholder="Minimal 6 karakter (kosongkan jika tidak ingin mengubah)"
+                    minLength={6}
+                  />
+                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors duration-200">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-600">
+                  💡 Kosongkan jika tidak ingin mengubah password
+                </p>
+              </div>
+
+              {/* Konfirmasi Kata Sandi */}
+              {formData.password && (
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <div className="w-5 h-5 bg-indigo-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    Konfirmasi Kata Sandi <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-500 shadow-sm hover:shadow-md font-medium"
+                      placeholder="Ulangi kata sandi"
+                      required
+                    />
+                    <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors duration-200">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status *
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as UserStatus })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
+            {/* Action Buttons */}
+            <div className="flex gap-4 mt-10 mb-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold shadow-sm hover:shadow"
+                disabled={loading}
               >
-                {availableStatuses.map((status) => (
-                  <option key={status} value={status}>
-                    {getStatusLabel(status)}
-                  </option>
-                ))}
-              </select>
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg hover:shadow-xl"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Menyimpan...
+                  </span>
+                ) : 'Simpan Perubahan'}
+              </button>
             </div>
-
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                value={formData.userName}
-                onChange={(e) => setFormData({ ...formData, userName: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Username (opsional)"
-              />
-            </div>
-
-            {/* Phone Number */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nomor Telepon
-              </label>
-              <input
-                type="tel"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="08xxxxxxxxxx"
-              />
-            </div>
-
-            {/* ID Number */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nomor Identitas (KTP/KK)
-              </label>
-              <input
-                type="text"
-                value={formData.idNumber}
-                onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Nomor KTP atau Kartu Keluarga"
-              />
-            </div>
-
-            {/* Address */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Alamat
-              </label>
-              <textarea
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows={3}
-                placeholder="Alamat lengkap"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Catatan
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows={3}
-                placeholder="Catatan tambahan tentang pengguna ini"
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 mt-8">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              disabled={loading}
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
+    </Portal>
   );
 }

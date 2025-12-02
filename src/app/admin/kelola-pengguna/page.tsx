@@ -9,7 +9,6 @@ import AdminLayout from '../components/AdminLayout';
 import AdminHeaderCard, { AdminHeaderSearchBar, AdminHeaderAccount } from "../../components/AdminHeaderCard";
 import { UserRole } from '../../masyarakat/lib/useCurrentUser';
 import { roleDescriptions } from '../../../lib/rolePermissions';
-import { useCurrentUser } from '../../masyarakat/lib/useCurrentUser';
 import { userManagementService } from '../../../lib/userManagementService';
 
 const styles = `
@@ -246,21 +245,11 @@ const roleCards: RoleCardType[] = [
 
 export default function KelolapengggunaAdminPage() {
   const router = useRouter();
-  const { logout } = useAuth();
-  const { user: currentUser } = useCurrentUser();
+  const { logout, user } = useAuth();
   const [listRole, setListRole] = useState<RoleCardType | null>(null);
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [isLoadingStats, setIsLoadingStats] = useState<boolean>(false); // Faster initial render
   const [userBreakdown, setUserBreakdown] = useState<{[key: string]: number}>({});
-
-  // Access Control: Admin Desa tidak boleh akses halaman ini
-  useEffect(() => {
-    if (currentUser && currentUser.role === 'admin_desa') {
-      console.log('🚫 ACCESS DENIED: Admin Desa tidak dapat mengakses Kelola Pengguna');
-      router.push('/admin/home');
-      return;
-    }
-  }, [currentUser, router]);
 
   const handleLogout = async () => {
     await handleAdminLogout(() => logout('admin'));

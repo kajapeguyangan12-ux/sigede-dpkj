@@ -6,6 +6,7 @@ import { UserRole } from '../../../masyarakat/lib/useCurrentUser';
 import { roleDescriptions, getRoleTitle, getRoleDescription } from '../../../../lib/rolePermissions';
 import userManagementService, { CreateUserData } from '../../../../lib/userManagementService';
 import superAdminService, { CreateSuperAdminData } from '../../../../lib/superAdminService';
+import adminUserService, { CreateAdminUserData } from '../../../../lib/adminUserService';
 import { useCurrentUser } from '../../../masyarakat/lib/useCurrentUser';
 import AdminRoleManager from './AdminRoleManager';
 import { getDataDesa } from '../../../../lib/dataDesaService';
@@ -33,6 +34,7 @@ export default function UserRegistrationForm({ onSuccess, onCancel, fixedRole }:
     email: '',             // Email
     password: '',          // Kata Sandi
     confirmPassword: '',   // Konfirmasi Kata Sandi
+    idNumber: '',          // NIK untuk kepala desa dan kepala dusun
     daerah: ''             // Daerah (untuk Kepala Dusun)
   });
   
@@ -165,37 +167,60 @@ export default function UserRegistrationForm({ onSuccess, onCancel, fixedRole }:
     setError('');
 
     try {
-      console.log(' FORM: Starting user creation process...');
+      console.log('🚀 FORM: Starting user creation process...');
       
-  // Check if creating admin user (administrator or admin_desa)
-      const isAdminRole = formData.role === 'administrator' || formData.role === 'admin_desa';
+      // Check if creating admin user (administrator, admin_desa, kepala_desa, kepala_dusun)
+      const isAdminRole = ['administrator', 'admin_desa', 'kepala_desa', 'kepala_dusun'].includes(formData.role);
       
       if (isAdminRole) {
-        console.log('🔐 FORM: Creating Super Admin user...');
+        console.log(`🔐 FORM: Creating admin user with role: ${formData.role}`);
         
-        const superAdminData: CreateSuperAdminData = {
+        const adminUserData: CreateAdminUserData = {
           email: formData.email,
           password: formData.password,
           displayName: formData.displayName,
           userName: formData.userName || undefined,
-          role: formData.role as 'administrator' | 'admin_desa',
+          role: formData.role as 'administrator' | 'admin_desa' | 'kepala_desa' | 'kepala_dusun',
           phoneNumber: formData.phoneNumber || undefined,
+          idNumber: formData.idNumber || undefined,
+          nik: formData.idNumber || undefined, // Use idNumber as NIK for kepala desa/dusun
+          daerah: formData.daerah || undefined, // Daerah untuk kepala dusun
+          address: undefined,
+          notes: undefined
         };
 
-        console.log('📦 FORM: SuperAdmin data prepared:', superAdminData);
-        const result = await superAdminService.createSuperAdmin(superAdminData, createdBy);
+        console.log('📦 FORM: Admin user data prepared:', adminUserData);
+        const result = await adminUserService.createAdminUser(adminUserData, createdBy);
         
-        console.log('✅ FORM: Super Admin created successfully!');
+        console.log('✅ FORM: Admin user created successfully!');
         console.log('🎉 FORM: Result:', result);
         
-        setSuccess(`✅ Super Admin ${formData.displayName} berhasil dibuat dengan role ${getRoleTitle(formData.role)}!
+        // Determine collection name for display
+        let collectionName = '';
+        switch (formData.role) {
+          case 'administrator':
+            collectionName = 'Super_admin';
+            break;
+          case 'admin_desa':
+            collectionName = 'Admin_Desa';
+            break;
+          case 'kepala_desa':
+            collectionName = 'Kepala_Desa';
+            break;
+          case 'kepala_dusun':
+            collectionName = 'Kepala_Dusun';
+            break;
+        }
+        
+        setSuccess(`✅ ${getRoleTitle(formData.role)} ${formData.displayName} berhasil dibuat!
         
 📧 Email: ${formData.email}
 🔑 Password: ${formData.password}
 👤 Role: ${getRoleTitle(formData.role)}
-💾 Data tersimpan di: Firestore > Super_admin collection
+${formData.daerah ? `📍 Daerah: ${formData.daerah}` : ''}
+💾 Data tersimpan di: Firestore > ${collectionName} & users collection
 
-⚠️ PENTING: Simpan informasi login ini untuk diberikan kepada admin yang bersangkutan. Admin dapat langsung login dengan kredensial ini.`);
+⚠️ PENTING: Simpan informasi login ini untuk diberikan kepada ${getRoleTitle(formData.role).toLowerCase()} yang bersangkutan. User dapat langsung login dengan kredensial ini.`);
         
       } else {
         console.log('👤 FORM: Creating regular user...');
@@ -229,6 +254,7 @@ export default function UserRegistrationForm({ onSuccess, onCancel, fixedRole }:
         email: '',
         password: '',
         confirmPassword: '',
+        idNumber: '',
         daerah: ''
       });
 
@@ -370,6 +396,7 @@ export default function UserRegistrationForm({ onSuccess, onCancel, fixedRole }:
                   email: 'testsuperadmin@dpkj.com',
                   password: 'admin123456',
                   confirmPassword: 'admin123456',
+                  idNumber: '',
                   daerah: ''
                 });
               }}
@@ -666,6 +693,51 @@ export default function UserRegistrationForm({ onSuccess, onCancel, fixedRole }:
                     </div>
                   </div>
                 </div>
+
+                {/* NIK/ID Number - Only for Kepala Desa and Kepala Dusun */}
+                {(formData.role === 'kepala_desa' || formData.role === 'kepala_dusun') && (
+                  <div>
+                    <label htmlFor="idNumber" className="block text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <div className="w-5 h-5 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                        </svg>
+                      </div>
+                      NIK <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="relative group">
+                      <input
+                        type="text"
+                        id="idNumber"
+                        name="idNumber"
+                        value={formData.idNumber}
+                        onChange={handleInputChange}
+                        pattern="[0-9]{16}"
+                        maxLength={16}
+                        minLength={16}
+                        title="NIK harus 16 digit angka"
+                        className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-500 shadow-sm hover:shadow-md font-medium"
+                        placeholder="1234567890123456 (16 digit)"
+                        required
+                      />
+                      <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors duration-200">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="mt-2 p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <p className="text-xs text-indigo-800">
+                          <strong>Info:</strong> NIK (Nomor Induk Kependudukan) 16 digit diperlukan untuk {getRoleTitle(formData.role)}.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Kata Sandi */}
                 <div>
