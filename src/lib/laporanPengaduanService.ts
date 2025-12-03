@@ -91,6 +91,8 @@ export interface LaporanPengaduan {
   catatanAdmin?: string;
   catatanKadus?: string;
   catatanKades?: string;
+  // Bookmark/Save feature
+  savedBy?: string[]; // Array of user IDs who saved this laporan
 }
 
 // Upload foto ke Firebase Storage dengan konversi WebP
@@ -343,6 +345,114 @@ export async function deleteLaporan(laporanId: string): Promise<void> {
     console.log('✅ Laporan deleted');
   } catch (error) {
     console.error('Error deleting laporan:', error);
+    throw error;
+  }
+}
+
+// Save/Bookmark laporan
+export async function saveLaporan(laporanId: string, userId: string): Promise<void> {
+  try {
+    const docRef = doc(db, 'laporan-pengaduan', laporanId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error('Laporan tidak ditemukan');
+    }
+    
+    const laporan = docSnap.data() as LaporanPengaduan;
+    const savedBy = laporan.savedBy || [];
+    
+    // Tambahkan userId ke array savedBy jika belum ada
+    if (!savedBy.includes(userId)) {
+      await updateDoc(docRef, {
+        savedBy: [...savedBy, userId],
+        updatedAt: Timestamp.now()
+      });
+      console.log('✅ Laporan saved');
+    }
+  } catch (error) {
+    console.error('Error saving laporan:', error);
+    throw error;
+  }
+}
+
+// Unsave/Remove bookmark laporan
+export async function unsaveLaporan(laporanId: string, userId: string): Promise<void> {
+  try {
+    const docRef = doc(db, 'laporan-pengaduan', laporanId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error('Laporan tidak ditemukan');
+    }
+    
+    const laporan = docSnap.data() as LaporanPengaduan;
+    const savedBy = laporan.savedBy || [];
+    
+    // Hapus userId dari array savedBy
+    const updatedSavedBy = savedBy.filter(id => id !== userId);
+    
+    await updateDoc(docRef, {
+      savedBy: updatedSavedBy,
+      updatedAt: Timestamp.now()
+    });
+    console.log('✅ Laporan unsaved');
+  } catch (error) {
+    console.error('Error unsaving laporan:', error);
+    throw error;
+  }
+}
+
+// Get saved laporan by user
+export async function getSavedLaporanByUser(userId: string): Promise<LaporanPengaduan[]> {
+  try {
+    // Try with index first
+    try {
+      const q = query(
+        collection(db, 'laporan-pengaduan'),
+        where('savedBy', 'array-contains', userId),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const laporan: LaporanPengaduan[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        laporan.push({
+          id: doc.id,
+          ...doc.data()
+        } as LaporanPengaduan);
+      });
+      
+      return laporan;
+    } catch (indexError: any) {
+      // If index is not ready, use fallback without orderBy
+      console.warn('Index not ready, using fallback query for saved laporan');
+      
+      const q = query(
+        collection(db, 'laporan-pengaduan'),
+        where('savedBy', 'array-contains', userId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const laporan: LaporanPengaduan[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        laporan.push({
+          id: doc.id,
+          ...doc.data()
+        } as LaporanPengaduan);
+      });
+      
+      // Sort manually in JavaScript
+      return laporan.sort((a, b) => {
+        const aTime = a.createdAt?.seconds || 0;
+        const bTime = b.createdAt?.seconds || 0;
+        return bTime - aTime;
+      });
+    }
+  } catch (error) {
+    console.error('Error getting saved laporan:', error);
     throw error;
   }
 }

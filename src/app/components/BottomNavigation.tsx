@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from '@/contexts/AuthContext';
+import { subscribeToUserNotifications } from '@/lib/notificationService';
+import { useState, useEffect } from 'react';
 
 type IconProps = {
   className?: string;
@@ -77,6 +80,20 @@ function UserIcon({ className }: IconProps) {
 
 export default function BottomNavigation() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    // Subscribe to notifications real-time
+    const unsubscribe = subscribeToUserNotifications(user.uid, (notifications) => {
+      const unreadNotifications = notifications.filter(notif => notif.status === 'unread');
+      setUnreadCount(unreadNotifications.length);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
   
   const isActive = (path: string) => {
     if (path === "/masyarakat/home" || path === "/masyarakat") {
@@ -128,6 +145,12 @@ export default function BottomNavigation() {
                 isActive("/masyarakat/notifikasi") ? "bg-red-500 scale-110" : "bg-orange-500"
               }`}>
                 <BellIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                {/* Badge for Notifikasi */}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white text-[10px] font-bold animate-pulse">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </span>
             </div>
             <span className={`font-medium line-clamp-1 transition-colors ${isActive("/masyarakat/notifikasi") ? "text-red-500" : ""}`}>Notifikasi</span>

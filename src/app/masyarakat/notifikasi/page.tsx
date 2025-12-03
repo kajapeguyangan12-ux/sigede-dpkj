@@ -51,6 +51,7 @@ export default function NotifikasiPage() {
   const [notifications, setNotifications] = useState<UniversalNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pengaduan' | 'layanan_publik'>('all');
+  const [hasAutoMarked, setHasAutoMarked] = useState(false);
 
   const fetchNotifications = useCallback(async (userId: string) => {
     try {
@@ -64,11 +65,32 @@ export default function NotifikasiPage() {
     }
   }, []);
 
+  // Fetch notifications
   useEffect(() => {
     if (user?.uid) {
       fetchNotifications(user.uid);
     }
   }, [user?.uid, fetchNotifications]);
+
+  // Auto-mark notifications as read after page load
+  useEffect(() => {
+    if (user?.uid && !hasAutoMarked && notifications.length > 0) {
+      const hasUnread = notifications.some(n => n.status === 'unread');
+      if (hasUnread) {
+        const timer = setTimeout(() => {
+          markAllNotificationsAsRead(user.uid).then(() => {
+            setHasAutoMarked(true);
+            // Refresh notifications after marking
+            fetchNotifications(user.uid);
+          }).catch(err => 
+            console.error('Failed to auto-mark notifications:', err)
+          );
+        }, 2000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user?.uid, notifications, hasAutoMarked, fetchNotifications]);
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -119,7 +141,7 @@ export default function NotifikasiPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-6 pt-3 sm:pt-4">
         <HeaderCard 
           title="Notifikasi" 
           subtitle={`${unreadCount} belum dibaca`}

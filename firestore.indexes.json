@@ -57,6 +57,20 @@
       ]
     },
     {
+      "collectionGroup": "laporan-pengaduan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "savedBy",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "universal_notifications",
       "queryScope": "COLLECTION",
       "fields": [
@@ -99,6 +113,20 @@
         {
           "fieldPath": "status",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "layanan-publik",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "savedBy",
+          "arrayConfig": "CONTAINS"
         },
         {
           "fieldPath": "createdAt",

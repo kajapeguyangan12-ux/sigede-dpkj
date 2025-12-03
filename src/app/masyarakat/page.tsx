@@ -2,6 +2,7 @@
 import React from "react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import BottomNavigation from '../components/BottomNavigation';
 
 // Custom Hook untuk Counter Animation
 function useCountAnimation(end: number, duration: number = 2000, shouldStart: boolean = false) {
@@ -325,7 +326,10 @@ export default function MasyarakatHomePage() {
             ))}
           </div>
         </div>
+        
       </div>
+      
+      <BottomNavigation />
     </>
   );
 }

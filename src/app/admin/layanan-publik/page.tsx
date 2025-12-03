@@ -888,7 +888,7 @@ export default function LayananPublikAdminPage() {
                       <p className="text-justify leading-relaxed text-gray-900">
                         Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, 
                         menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun {selectedLayanan.daerah?.replace(/_/g, ' ') || '...........'}, 
-                        Nomor <span className="font-bold text-blue-600">{nomorSuratKadus || '.............................'}</span>, 
+                        Nomor <span className="font-bold text-blue-600">{selectedLayanan.nomorSuratKadus || '.............................'}</span>, 
                         Tanggal : {selectedLayanan.createdAt ? new Date(selectedLayanan.createdAt.seconds * 1000).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'long',

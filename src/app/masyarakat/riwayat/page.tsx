@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getLaporanByUser, subscribeToUserLaporan, LaporanPengaduan, StatusLaporan } from '@/lib/laporanPengaduanService';
+import { getLaporanByUser, subscribeToUserLaporan, LaporanPengaduan, StatusLaporan, saveLaporan, unsaveLaporan, getSavedLaporanByUser } from '@/lib/laporanPengaduanService';
+import { getLayananByUser, LayananPublik, saveLayanan, unsaveLayanan, getSavedLayananByUser } from '@/lib/layananPublikService';
 import { useAuth } from '@/contexts/AuthContext';
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from '../../components/BottomNavigation';
@@ -19,43 +20,31 @@ interface RiwayatItem {
   data: any;
 }
 
-// Mock services - replace with actual imports
+// Current user hook
 const useCurrentUser = () => {
   const { user } = useAuth();
   return { user, loading: false };
-};
-
-const layananPublikService = {
-  getUserSubmissions: async (uid: string) => {
-    return [];
-  }
-};
-
-const laporanService = {
-  getUserReports: async (uid: string) => {
-    try {
-      const laporan = await getLaporanByUser(uid);
-      return laporan;
-    } catch (error) {
-      console.error('Error fetching laporan:', error);
-      return [];
-    }
-  }
 };
 
 const getStatusText = (status: string) => {
   switch (status) {
     case 'menunggu':
     case 'pending':
-      return 'Menunggu';
+    case 'pending_kadus':
+      return 'Belum di Approve oleh Kepala Dusun';
     case 'disetujui':
     case 'diterima':
+    case 'approved_kadus':
+    case 'diproses':
+      return 'Sudah di Approve Kepala Dusun, Belum di Approve oleh Admin Desa';
+    case 'approved_admin':
     case 'selesai':
-      return 'Disetujui';
+    case 'completed':
+      return 'Sudah di Approve oleh Admin Desa';
     case 'ditolak':
       return 'Ditolak';
-    case 'diproses':
-      return 'Diproses';
+    case 'auto_approved':
+      return 'Disetujui Otomatis';
     default:
       return 'Status Tidak Diketahui';
   }
@@ -65,12 +54,17 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case 'pending':
     case 'menunggu':
+    case 'pending_kadus':
       return 'text-yellow-600 bg-yellow-50';
     case 'diproses':
+    case 'approved_kadus':
       return 'text-blue-600 bg-blue-50';
     case 'diterima':
     case 'disetujui':
+    case 'approved_admin':
     case 'selesai':
+    case 'completed':
+    case 'auto_approved':
       return 'text-green-600 bg-green-50';
     case 'ditolak':
       return 'text-red-600 bg-red-50';
@@ -101,6 +95,10 @@ export default function RiwayatMasyarakatPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [savedLaporan, setSavedLaporan] = useState<RiwayatItem[]>([]);
+  const [savedLayanan, setSavedLayanan] = useState<RiwayatItem[]>([]);
+  const [savingLaporan, setSavingLaporan] = useState<{[key: string]: boolean}>({});
+  const [savingLayanan, setSavingLayanan] = useState<{[key: string]: boolean}>({});
 
   const loadSampleData = useCallback(() => {
     const sampleData: RiwayatItem[] = [
@@ -150,8 +148,10 @@ export default function RiwayatMasyarakatPage() {
   useEffect(() => {
     if (!userLoading) {
       if (user?.uid) {
+        setDataLoading(true);
+        
         // Setup real-time listener for laporan
-        const unsubscribe = subscribeToUserLaporan(user.uid, (laporanData) => {
+        const unsubscribe = subscribeToUserLaporan(user.uid, async (laporanData) => {
           // Process laporan data
           const formattedLaporanData: RiwayatItem[] = laporanData.map((item: any) => ({
             id: item.id,
@@ -163,16 +163,45 @@ export default function RiwayatMasyarakatPage() {
             data: item
           }));
 
-          // For now, just use laporan data (layanan data can be added later)
-          const sortedData = formattedLaporanData.sort((a, b) => {
-            const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date);
-            const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date);
-            return dateB.getTime() - dateA.getTime();
-          });
+          // Fetch layanan publik data
+          try {
+            const layananData = await getLayananByUser(user.uid);
+            const formattedLayananData: RiwayatItem[] = layananData.map((item: LayananPublik) => ({
+              id: item.id || '',
+              type: 'layanan' as const,
+              title: item.jenisLayanan || 'Layanan Publik',
+              subtitle: `${item.namaLengkap} - ${item.nik}`,
+              status: item.status || 'pending_kadus',
+              date: item.createdAt,
+              data: item
+            }));
+
+            // Combine both data
+            const combinedData = [...formattedLaporanData, ...formattedLayananData];
+            
+            const sortedData = combinedData.sort((a, b) => {
+              const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date);
+              const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date);
+              return dateB.getTime() - dateA.getTime();
+            });
+            
+            setAllData(sortedData);
+          } catch (error) {
+            console.error('Error loading layanan data:', error);
+            // If layanan fails, still show laporan data
+            const sortedData = formattedLaporanData.sort((a, b) => {
+              const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date);
+              const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date);
+              return dateB.getTime() - dateA.getTime();
+            });
+            setAllData(sortedData);
+          }
           
-          setAllData(sortedData);
           setDataLoading(false);
         });
+
+        // Load saved laporan
+        loadSavedLaporan();
 
         // Return cleanup function
         return () => {
@@ -184,51 +213,6 @@ export default function RiwayatMasyarakatPage() {
       }
     }
   }, [user?.uid, userLoading, loadSampleData]);
-
-  const loadData = async () => {
-    if (!user?.uid) return;
-    
-    setDataLoading(true);
-    try {
-      const [layananData, laporanData] = await Promise.all([
-        layananPublikService.getUserSubmissions(user.uid),
-        laporanService.getUserReports(user.uid)
-      ]);
-
-      const formattedData: RiwayatItem[] = [
-        ...layananData.map((item: any) => ({
-          id: item.id,
-          type: 'layanan' as const,
-          title: item.jenisPelayanan || item.jenisLayanan || 'Layanan Publik',
-          subtitle: `${item.namaLengkap || item.nama || user.displayName || 'Pemohon'} - ${item.nik || 'NIK tidak tersedia'}`,
-          status: item.status || 'pending',
-          date: item.createdAt || item.tanggalPengajuan,
-          data: item
-        })),
-        ...laporanData.map((item: any) => ({
-          id: item.id,
-          type: 'laporan' as const,
-          title: item.judul || 'Laporan Pengaduan',
-          subtitle: `${item.kategori || 'Kategori'} - ${item.userName || user.displayName || 'Pelapor'}`,
-          status: item.status || 'menunggu',
-          date: item.createdAt,
-          data: item
-        }))
-      ].sort((a, b) => {
-        const dateA = a.date?.toDate?.() ? a.date.toDate() : new Date(a.date);
-        const dateB = b.date?.toDate?.() ? b.date.toDate() : new Date(b.date);
-        return dateB.getTime() - dateA.getTime();
-      });
-
-      setAllData(formattedData);
-    } catch (error) {
-      console.error('Error loading riwayat data:', error);
-      // Fallback: Show sample data if real data fails
-      loadSampleData();
-    } finally {
-      setDataLoading(false);
-    }
-  };
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return '';
@@ -247,15 +231,137 @@ export default function RiwayatMasyarakatPage() {
     });
   };
 
-
-
-  const filteredData = allData.filter(item => {
-    // Filter berdasarkan tab
-    if (activeTab === 'disimpan') {
-      // Untuk tab disimpan, tampilkan item yang disimpan (bisa ditambah logic nanti)
-      return false; // Sementara kosong
-    }
+  const loadSavedLaporan = async () => {
+    if (!user?.uid) return;
     
+    try {
+      const savedData = await getSavedLaporanByUser(user.uid);
+      const formattedData: RiwayatItem[] = savedData.map((item: any) => ({
+        id: item.id,
+        type: 'laporan' as const,
+        title: item.judul || 'Laporan Pengaduan',
+        subtitle: `${item.kategori || 'Kategori'} - ${item.userName || user.displayName || 'Pelapor'}`,
+        status: item.status || 'menunggu',
+        date: item.createdAt,
+        data: item
+      }));
+      setSavedLaporan(formattedData);
+    } catch (error) {
+      console.error('Error loading saved laporan:', error);
+    }
+  };
+
+  const handleSaveLaporan = async (laporanId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!user?.uid) return;
+    
+    setSavingLaporan(prev => ({ ...prev, [laporanId]: true }));
+    
+    try {
+      const item = allData.find(d => d.id === laporanId);
+      const isSaved = item?.data?.savedBy?.includes(user.uid);
+      
+      if (isSaved) {
+        await unsaveLaporan(laporanId, user.uid);
+      } else {
+        await saveLaporan(laporanId, user.uid);
+      }
+      
+      // Reload data
+      await loadSavedLaporan();
+      
+      // Update allData to reflect the change immediately
+      setAllData(prevData => 
+        prevData.map(item => {
+          if (item.id === laporanId && item.data) {
+            const savedBy = item.data.savedBy || [];
+            return {
+              ...item,
+              data: {
+                ...item.data,
+                savedBy: isSaved 
+                  ? savedBy.filter((id: string) => id !== user.uid)
+                  : [...savedBy, user.uid]
+              }
+            };
+          }
+          return item;
+        })
+      );
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      alert('Gagal menyimpan laporan');
+    } finally {
+      setSavingLaporan(prev => ({ ...prev, [laporanId]: false }));
+    }
+  };
+
+  const loadSavedLayanan = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const savedData = await getSavedLayananByUser(user.uid);
+      const formattedData: RiwayatItem[] = savedData.map((item: any) => ({
+        id: item.id,
+        type: 'layanan' as const,
+        title: item.jenisLayanan || 'Layanan Publik',
+        subtitle: `${item.namaLengkap || 'Pemohon'} - ${item.nik || 'NIK tidak tersedia'}`,
+        status: item.status || 'pending',
+        date: item.createdAt,
+        data: item
+      }));
+      setSavedLayanan(formattedData);
+    } catch (error) {
+      console.error('Error loading saved layanan:', error);
+    }
+  };
+
+  const handleSaveLayanan = async (layananId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!user?.uid) return;
+    
+    setSavingLayanan(prev => ({ ...prev, [layananId]: true }));
+    
+    try {
+      const item = allData.find(d => d.id === layananId);
+      const isSaved = item?.data?.savedBy?.includes(user.uid);
+      
+      if (isSaved) {
+        await unsaveLayanan(layananId, user.uid);
+      } else {
+        await saveLayanan(layananId, user.uid);
+      }
+      
+      // Reload data
+      await loadSavedLayanan();
+      
+      // Update allData to reflect the change immediately
+      setAllData(prevData => 
+        prevData.map(item => {
+          if (item.id === layananId && item.data) {
+            const savedBy = item.data.savedBy || [];
+            return {
+              ...item,
+              data: {
+                ...item.data,
+                savedBy: isSaved 
+                  ? savedBy.filter((id: string) => id !== user.uid)
+                  : [...savedBy, user.uid]
+              }
+            };
+          }
+          return item;
+        })
+      );
+    } catch (error) {
+      console.error('Error toggling save layanan:', error);
+      alert('Gagal menyimpan layanan');
+    } finally {
+      setSavingLayanan(prev => ({ ...prev, [layananId]: false }));
+    }
+  };
+
+  const filteredData = (activeTab === 'disimpan' ? [...savedLaporan, ...savedLayanan] : allData).filter(item => {
     // Filter berdasarkan pencarian
     if (searchQuery) {
       return item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -359,7 +465,7 @@ export default function RiwayatMasyarakatPage() {
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
-      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-6 pt-3 sm:pt-4">
         <HeaderCard title="Aktivitas" backUrl="/masyarakat/home" showBackButton={false} />
 
         {/* Tabs */}
@@ -410,54 +516,73 @@ export default function RiwayatMasyarakatPage() {
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
           </div>
-        ) : activeTab === 'disimpan' ? (
+        ) : filteredData.length === 0 ? (
           <div className="text-center py-12 sm:py-16 lg:py-20">
             <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 mx-auto mb-4 sm:mb-6 bg-gray-100 rounded-2xl flex items-center justify-center">
               <svg className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={activeTab === 'disimpan' ? "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" : "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"} />
               </svg>
             </div>
-            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-2">Belum Ada Item yang disimpan</h3>
+            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-2">
+              {activeTab === 'disimpan' ? 'Belum Ada Laporan yang Disimpan' : 'Kamu belum pernah membuat laporan'}
+            </h3>
             <p className="text-sm sm:text-base text-gray-500 max-w-sm mx-auto px-4">
-              Yuk perhatikan sekitar desa sama dan buat laporan di fitur Pengaduan!
+              {activeTab === 'disimpan' 
+                ? 'Simpan laporan penting agar mudah ditemukan kembali' 
+                : 'Yuk perhatikan sekitar desa sama dan buat laporan di fitur Pengaduan!'}
             </p>
-          </div>
-        ) : !userLoading && !dataLoading && filteredData.length === 0 ? (
-          <div className="text-center py-12 sm:py-16 lg:py-20">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 mx-auto mb-4 sm:mb-6 bg-gray-100 rounded-2xl flex items-center justify-center">
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-2">Kamu belum pernah membuat laporan</h3>
-            <p className="text-sm sm:text-base text-gray-500 max-w-sm mx-auto px-4">
-              Yuk perhatikan sekitar desa sama dan buat laporan di fitur Pengaduan!
-            </p>
-            <div className="mt-6 sm:mt-8">
-              <button 
-                onClick={() => router.push('/masyarakat/pengaduan/create')}
-                className="bg-red-600 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl hover:bg-red-700 transition-colors font-medium text-sm sm:text-base shadow-lg hover:shadow-xl"
-              >
-                Buat Laporan
-              </button>
-            </div>
+            {activeTab !== 'disimpan' && (
+              <div className="mt-6 sm:mt-8">
+                <button 
+                  onClick={() => router.push('/masyarakat/pengaduan/create')}
+                  className="bg-red-600 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl hover:bg-red-700 transition-colors font-medium text-sm sm:text-base shadow-lg hover:shadow-xl"
+                >
+                  Buat Laporan
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <ul className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-            {currentData.map((item, idx) => (
+            {currentData.map((item, idx) => {
+              const isSaved = item.data?.savedBy?.includes(user?.uid || '');
+              return (
               <li 
                 key={item.id} 
-                className="rounded-2xl border bg-white/95 p-4 sm:p-5 shadow-md ring-1 ring-black/10 backdrop-blur transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer"
+                className="rounded-2xl border bg-white/95 p-4 sm:p-5 shadow-md ring-1 ring-black/10 backdrop-blur transition-all hover:shadow-xl hover:scale-[1.02] cursor-pointer relative"
                 onClick={() => {
                   setSelectedItem(item);
                   setShowDetailModal(true);
                 }}
               >
+                {/* Save Button for Both Types */}
+                <button
+                  onClick={(e) => item.type === 'laporan' ? handleSaveLaporan(item.id, e) : handleSaveLayanan(item.id, e)}
+                  disabled={item.type === 'laporan' ? savingLaporan[item.id] : savingLayanan[item.id]}
+                  className="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
+                  title={isSaved ? 'Hapus dari simpanan' : `Simpan ${item.type === 'laporan' ? 'laporan' : 'layanan'}`}
+                >
+                  {(item.type === 'laporan' ? savingLaporan[item.id] : savingLayanan[item.id]) ? (
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : isSaved ? (
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  )}
+                </button>
+                
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div className="grid h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0 place-items-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white text-2xl shadow-lg">
                     {getActivityIcon(item.type)}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-8">
                     <div className="font-semibold text-sm sm:text-base line-clamp-2 mb-2">{item.title}</div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`text-xs sm:text-sm px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full font-medium ${getStatusColor(item.status)}`}>
@@ -494,7 +619,8 @@ export default function RiwayatMasyarakatPage() {
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
 
@@ -509,6 +635,7 @@ export default function RiwayatMasyarakatPage() {
         )}
 
       </div>
+      
       <BottomNavigation />
 
       {/* Detail Modal */}
@@ -644,9 +771,74 @@ export default function RiwayatMasyarakatPage() {
                 </>
               ) : (
                 /* Layanan detail */
-                <div>
-                  <p className="text-gray-600">Detail layanan akan ditampilkan di sini</p>
-                </div>
+                <>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{selectedItem.data.jenisLayanan}</h3>
+                  </div>
+
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-semibold">Tanggal Pengajuan</p>
+                        <p className="text-sm font-bold text-gray-900">{formatDate(selectedItem.date)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-semibold">Nama Pemohon</p>
+                        <p className="text-sm font-bold text-gray-900">{selectedItem.data.namaLengkap}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-semibold">NIK</p>
+                        <p className="text-sm font-bold text-gray-900 font-mono">{selectedItem.data.nik}</p>
+                      </div>
+                    </div>
+
+                    {selectedItem.data.keperluan && (
+                      <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                        <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Keperluan
+                        </h4>
+                        <p className="text-amber-800 text-sm">{selectedItem.data.keperluan}</p>
+                      </div>
+                    )}
+
+                    {selectedItem.data.catatanAdmin && (
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          Catatan Admin
+                        </h4>
+                        <p className="text-blue-800 text-sm">{selectedItem.data.catatanAdmin}</p>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
               </div>
             </div>

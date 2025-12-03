@@ -70,6 +70,7 @@ export interface LayananPublik {
   processedBy?: string;
   processedAt?: Timestamp;
   userId: string;
+  savedBy?: string[]; // Array of user IDs who saved this layanan
 }
 
 export interface NotifikasiLayanan {
@@ -642,6 +643,109 @@ export const getUserSubmissions = async (userId: string) => {
   return await getLayananByUser(userId);
 };
 
+// Save layanan (add user to savedBy array)
+export async function saveLayanan(layananId: string, userId: string): Promise<void> {
+  try {
+    const layananRef = doc(db, 'layanan-publik', layananId);
+    const layananDoc = await getDoc(layananRef);
+    
+    if (!layananDoc.exists()) {
+      throw new Error('Layanan not found');
+    }
+
+    const currentSavedBy = layananDoc.data().savedBy || [];
+    
+    if (!currentSavedBy.includes(userId)) {
+      await updateDoc(layananRef, {
+        savedBy: [...currentSavedBy, userId],
+        updatedAt: serverTimestamp()
+      });
+      console.log('✅ Layanan saved successfully');
+    }
+  } catch (error) {
+    console.error('❌ Error saving layanan:', error);
+    throw error;
+  }
+}
+
+// Unsave layanan (remove user from savedBy array)
+export async function unsaveLayanan(layananId: string, userId: string): Promise<void> {
+  try {
+    const layananRef = doc(db, 'layanan-publik', layananId);
+    const layananDoc = await getDoc(layananRef);
+    
+    if (!layananDoc.exists()) {
+      throw new Error('Layanan not found');
+    }
+
+    const currentSavedBy = layananDoc.data().savedBy || [];
+    const updatedSavedBy = currentSavedBy.filter((id: string) => id !== userId);
+    
+    await updateDoc(layananRef, {
+      savedBy: updatedSavedBy,
+      updatedAt: serverTimestamp()
+    });
+    console.log('✅ Layanan unsaved successfully');
+  } catch (error) {
+    console.error('❌ Error unsaving layanan:', error);
+    throw error;
+  }
+}
+
+// Get saved layanan by user
+export async function getSavedLayananByUser(userId: string): Promise<LayananPublik[]> {
+  try {
+    // Try with index first
+    try {
+      const q = query(
+        collection(db, 'layanan-publik'),
+        where('savedBy', 'array-contains', userId),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const layanan: LayananPublik[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        layanan.push({
+          id: doc.id,
+          ...doc.data()
+        } as LayananPublik);
+      });
+      
+      return layanan;
+    } catch (indexError: any) {
+      // If index is not ready, use fallback without orderBy
+      console.warn('Index not ready, using fallback query for saved layanan');
+      
+      const q = query(
+        collection(db, 'layanan-publik'),
+        where('savedBy', 'array-contains', userId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const layanan: LayananPublik[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        layanan.push({
+          id: doc.id,
+          ...doc.data()
+        } as LayananPublik);
+      });
+      
+      // Sort manually in JavaScript
+      return layanan.sort((a, b) => {
+        const aTime = a.createdAt?.seconds || 0;
+        const bTime = b.createdAt?.seconds || 0;
+        return bTime - aTime;
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error getting saved layanan:', error);
+    throw error;
+  }
+}
+
 export default {
   addLayananPublik,
   updateStatusLayanan,
@@ -656,5 +760,9 @@ export default {
   subscribeToLayanan,
   subscribeToNotifikasi,
   getLayananStats,
-  deleteLayanan
+  deleteLayanan,
+  saveLayanan,
+  unsaveLayanan,
+  getSavedLayananByUser
+
 };
