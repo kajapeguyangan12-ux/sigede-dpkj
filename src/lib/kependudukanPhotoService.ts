@@ -16,16 +16,16 @@ export interface UploadResult {
 }
 
 /**
- * Upload foto KK, Ijazah, atau Foto Profil ke Firebase Storage
+ * Upload foto KK, KTP, Ijazah, atau Foto Profil ke Firebase Storage
  * @param file - File gambar yang akan diupload
  * @param userId - ID user (untuk folder path)
- * @param fileType - Tipe file: 'foto_kk' | 'foto_ijazah' | 'foto_profil'
+ * @param fileType - Tipe file: 'foto_kk' | 'foto_ktp' | 'foto_ijazah' | 'foto_profil'
  * @returns Promise<UploadResult>
  */
 export const uploadKependudukanPhoto = async (
   file: File,
   userId: string,
-  fileType: 'foto_kk' | 'foto_ijazah' | 'foto_profil'
+  fileType: 'foto_kk' | 'foto_ktp' | 'foto_ijazah' | 'foto_profil'
 ): Promise<UploadResult> => {
   try {
     console.log('🚀 UPLOAD: Starting upload process...');
@@ -90,14 +90,14 @@ export const uploadKependudukanPhoto = async (
 };
 
 /**
- * Delete foto KK, Ijazah, atau Foto Profil dari Firebase Storage
+ * Delete foto KK, KTP, Ijazah, atau Foto Profil dari Firebase Storage
  * @param userId - ID user
- * @param fileType - Tipe file: 'foto_kk' | 'foto_ijazah' | 'foto_profil'
+ * @param fileType - Tipe file: 'foto_kk' | 'foto_ktp' | 'foto_ijazah' | 'foto_profil'
  * @returns Promise<boolean>
  */
 export const deleteKependudukanPhoto = async (
   userId: string,
-  fileType: 'foto_kk' | 'foto_ijazah' | 'foto_profil'
+  fileType: 'foto_kk' | 'foto_ktp' | 'foto_ijazah' | 'foto_profil'
 ): Promise<boolean> => {
   try {
     console.log('🗑️ DELETE: Deleting photo...');
@@ -130,7 +130,7 @@ export const deleteKependudukanPhoto = async (
  */
 export const getKependudukanPhotoURL = async (
   userId: string,
-  fileType: 'foto_kk' | 'foto_ijazah' | 'foto_profil'
+  fileType: 'foto_kk' | 'foto_ktp' | 'foto_ijazah' | 'foto_profil'
 ): Promise<string | null> => {
   try {
     const storagePath = `Data_Diri_Kependudukan/${userId}/${fileType}.webp`;

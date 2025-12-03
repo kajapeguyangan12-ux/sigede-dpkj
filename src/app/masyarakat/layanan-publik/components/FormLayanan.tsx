@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import HeaderCard from "../../../components/HeaderCard";
 import BottomNavigation from "../../../components/BottomNavigation";
+import PhotoUpload from './PhotoUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDataDesa } from '@/lib/dataDesaService';
+import { uploadLayananPublikPhoto } from '@/lib/layananPublikPhotoService';
 
 interface FormLayananProps {
   jenisLayanan: string;
@@ -17,6 +19,8 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [fotoKK, setFotoKK] = useState<File | null>(null);
+  const [fotoKTP, setFotoKTP] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     // Identitas Surat
     jenisSurat: '',
@@ -114,11 +118,35 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
       return;
     }
 
+    // Validasi foto
+    if (!fotoKK || !fotoKTP) {
+      alert('Mohon upload Foto KK dan KTP');
+      return;
+    }
+
     setLoading(true);
 
     try {
       // Import layanan publik service
       const { addLayananPublik } = await import('@/lib/layananPublikService');
+      
+      // Generate temporary layanan ID
+      const tempLayananId = 'temp-' + Date.now().toString();
+      
+      // Upload foto KK dan KTP ke Firebase Storage
+      console.log('📤 Uploading photos...');
+      const [kkUploadResult, ktpUploadResult] = await Promise.all([
+        uploadLayananPublikPhoto(fotoKK, user?.uid || 'anonymous', tempLayananId, 'foto_kk'),
+        uploadLayananPublikPhoto(fotoKTP, user?.uid || 'anonymous', tempLayananId, 'foto_ktp')
+      ]);
+
+      if (!kkUploadResult.success || !ktpUploadResult.success) {
+        throw new Error(kkUploadResult.error || ktpUploadResult.error || 'Gagal upload foto');
+      }
+
+      console.log('✅ Photos uploaded successfully');
+      console.log('KK URL:', kkUploadResult.downloadURL);
+      console.log('KTP URL:', ktpUploadResult.downloadURL);
       
       // Prepare data untuk database
       const layananData = {
@@ -131,17 +159,20 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
         noTelepon: formData.noHandphone,
         email: formData.email || '',
         keperluan: formData.deskripsi,
+        foto_kk_url: kkUploadResult.downloadURL,
+        foto_ktp_url: ktpUploadResult.downloadURL,
         catatanTambahan: `Tanggal Surat: ${formData.tanggalSurat}`,
         userId: user?.uid || 'user-' + Date.now().toString(),
       };
       
-      await addLayananPublik(layananData);
+      const newLayanan = await addLayananPublik(layananData);
+      console.log('✅ Layanan created:', newLayanan);
       
       alert('Permohonan layanan berhasil diajukan!');
       onBack();
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Terjadi kesalahan. Silakan coba lagi.');
+      alert('Terjadi kesalahan: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -344,50 +375,24 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
           <section className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-sm p-4 sm:p-5 md:p-6 lg:p-7 shadow-lg ring-1 ring-gray-200">
             <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-800 mb-4 sm:mb-5 lg:mb-6">Upload Dokumen</h3>
             
-            <div className="space-y-4 sm:space-y-5">
-              <div>
-                <label className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-                  Foto/Scan KK
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 sm:p-5 lg:p-6 text-center hover:border-blue-400 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="hidden"
-                    id="fileKK"
-                  />
-                  <label htmlFor="fileKK" className="cursor-pointer">
-                    <div className="text-gray-600">
-                      <svg className="mx-auto h-8 w-8 sm:h-10 sm:w-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <span className="text-xs sm:text-sm lg:text-base">Pilih file atau drag & drop</span>
-                    </div>
-                  </label>
-                </div>
-              </div>
+            <div className="space-y-6">
+              <PhotoUpload
+                label="Foto/Scan Kartu Keluarga (KK)"
+                fileType="foto_kk"
+                file={fotoKK}
+                previewUrl={null}
+                onChange={setFotoKK}
+                disabled={loading}
+              />
 
-              <div>
-                <label className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-                  Foto/Scan KTP
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 sm:p-5 lg:p-6 text-center hover:border-blue-400 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="hidden"
-                    id="fileKTP"
-                  />
-                  <label htmlFor="fileKTP" className="cursor-pointer">
-                    <div className="text-gray-600">
-                      <svg className="mx-auto h-8 w-8 sm:h-10 sm:w-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <span className="text-xs sm:text-sm lg:text-base">Pilih file atau drag & drop</span>
-                    </div>
-                  </label>
-                </div>
-              </div>
+              <PhotoUpload
+                label="Foto/Scan KTP"
+                fileType="foto_ktp"
+                file={fotoKTP}
+                previewUrl={null}
+                onChange={setFotoKTP}
+                disabled={loading}
+              />
             </div>
           </section>
 

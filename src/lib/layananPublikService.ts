@@ -46,6 +46,8 @@ export interface LayananPublik {
   saksiSatu?: string;
   saksiDua?: string;
   dokumenPendukung?: string[];
+  foto_kk_url?: string; // URL foto KK dari Firebase Storage
+  foto_ktp_url?: string; // URL foto KTP dari Firebase Storage
   catatanTambahan?: string;
   status: 'pending_kadus' | 'approved_kadus' | 'approved_admin' | 'completed' | 'ditolak' | 'auto_approved';
   alasanTolak?: string;

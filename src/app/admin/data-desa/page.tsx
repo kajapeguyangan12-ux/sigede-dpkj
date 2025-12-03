@@ -227,6 +227,7 @@ export default function DataDesaPage() {
   const [filterBanjar, setFilterBanjar] = useState("all");
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards'); // Default ke cards
   const [hasCheckedAccess, setHasCheckedAccess] = useState(false);
+  const [userDaerah, setUserDaerah] = useState<string>("");
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -279,6 +280,18 @@ export default function DataDesaPage() {
 
     return () => unsubscribe();
   }, []);
+
+  // Auto-set filter berdasarkan daerah user jika kepala_dusun
+  useEffect(() => {
+    if (currentUser?.role === 'kepala_dusun' && currentUser?.nik) {
+      // Cari daerah user dari data warga
+      const userData = dataWarga.find(d => d.nik === currentUser.nik);
+      if (userData?.daerah) {
+        setUserDaerah(userData.daerah);
+        setFilterBanjar(userData.daerah); // Auto-set filter ke daerah user
+      }
+    }
+  }, [currentUser, dataWarga]);
 
   const resetForm = () => {
     setFormData({

@@ -37,6 +37,7 @@ export interface AuthUser {
   phoneNumber?: string;
   idNumber?: string;
   nik?: string; // NIK untuk kepala dusun dan kepala desa
+  daerah?: string; // Daerah untuk kepala dusun
   address?: string;
   isEmailVerified: boolean;
 }
@@ -93,6 +94,7 @@ class AuthenticationService {
                 phoneNumber: managedUser.phoneNumber,
                 idNumber: managedUser.idNumber,
                 nik: managedUser.nik || managedUser.idNumber, // Include NIK
+                daerah: managedUser.daerah, // Include daerah for kepala dusun
                 address: managedUser.address,
                 isEmailVerified: true
               };
@@ -284,6 +286,7 @@ class AuthenticationService {
         phoneNumber: userDoc.phoneNumber,
         idNumber: userDoc.idNumber,
         nik: userDoc.nik || userDoc.idNumber, // Include NIK for kepala dusun/desa
+        daerah: userDoc.daerah, // Include daerah for kepala dusun
         address: userDoc.address,
         isEmailVerified: false // Since no Firebase Auth yet
       };

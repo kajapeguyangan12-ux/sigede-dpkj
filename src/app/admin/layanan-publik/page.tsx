@@ -16,6 +16,7 @@ import {
 } from "../../../lib/layananPublikService";
 import { getDataDesa } from "../../../lib/dataDesaService";
 import { getMasyarakatByNIK } from "../../../lib/masyarakatService";
+import { getKependudukanPhotoURL } from "../../../lib/kependudukanPhotoService";
 
 const jenisLayananList = [
   "Surat Kelakuan Baik",
@@ -60,19 +61,46 @@ export default function LayananPublikAdminPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedLayanan, setSelectedLayanan] = useState<LayananPublik | null>(null);
   const [processingAction, setProcessingAction] = useState(false);
-  const [stats, setStats] = useState<any>(null);
   const [userDaerah, setUserDaerah] = useState<string>("");
   const [nomorSuratKadus, setNomorSuratKadus] = useState<string>("");
+  const [fotoKKUrl, setFotoKKUrl] = useState<string>("");
+  const [fotoKTPUrl, setFotoKTPUrl] = useState<string>("");
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
   useEffect(() => {
-    fetchUserDaerah();
-    fetchData();
-    fetchStats();
-  }, [user]);
+    // Set userDaerah langsung dari user object
+    if (user?.daerah && (user?.role === 'kepala_dusun' || user?.role === 'admin_desa')) {
+      console.log('✅ Setting userDaerah from user object:', user.daerah);
+      setUserDaerah(user.daerah);
+    }
+    
+    // Fetch data
+    if (user?.uid) {
+      fetchData();
+    }
+  }, [user?.uid, user?.role, user?.daerah]);
+
+  // Re-fetch when userDaerah changes (for safety)
+  useEffect(() => {
+    if (userDaerah && user?.uid) {
+      console.log('🔄 userDaerah changed to:', userDaerah, '- Refetching data...');
+      fetchData();
+    }
+  }, [userDaerah]);
+
+  // Calculate stats dari layananData yang sudah difilter
+  const calculatedStats = useMemo(() => {
+    return {
+      pending: layananData.filter(l => l.status === 'pending_kadus').length,
+      diproses: layananData.filter(l => l.status === 'approved_kadus' || l.status === 'approved_admin').length,
+      selesai: layananData.filter(l => l.status === 'completed' || l.status === 'auto_approved').length,
+      ditolak: layananData.filter(l => l.status === 'ditolak').length,
+    };
+  }, [layananData]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -97,25 +125,16 @@ export default function LayananPublikAdminPage() {
     };
   }, [showDetailModal]);
 
-  // Fetch daerah user dari data-desa berdasarkan NIK (hanya untuk kepala_dusun)
-  const fetchUserDaerah = async () => {
-    if (user?.role === 'kepala_dusun' && user?.nik) {
-      try {
-        const allData = await getDataDesa();
-        const userData = allData.find(d => d.nik === user.nik);
-        if (userData?.daerah) {
-          setUserDaerah(userData.daerah);
-        }
-      } catch (error) {
-        console.error("Error fetching user daerah:", error);
-      }
-    }
-  };
-
   const fetchData = async () => {
     try {
       setLoading(true);
+      
+      console.log('📊 Fetching layanan data...');
+      console.log('👤 User role:', user?.role);
+      console.log('📍 User daerah:', userDaerah);
+      
       const data = await getAllLayananPublik();
+      console.log('📦 Total layanan from Firestore:', data.length);
       
       // Get data-desa to enrich layanan with daerah info
       const dataDesaList = await getDataDesa();
@@ -154,18 +173,30 @@ export default function LayananPublikAdminPage() {
         return enriched;
       }));
       
-      // Filter berdasarkan role
+      console.log('📦 Total enriched layanan:', enrichedData.length);
+      
+      // Filter berdasarkan role dan daerah
       let filtered = enrichedData;
       
-      // Kepala Dusun: hanya lihat layanan dari daerah mereka
-      if (user?.role === 'kepala_dusun' && userDaerah) {
-        filtered = enrichedData.filter(layanan => 
-          layanan.daerah === userDaerah
-        );
+      // Kepala Dusun dan Admin Desa: hanya lihat layanan dari daerah mereka
+      if ((user?.role === 'kepala_dusun' || user?.role === 'admin_desa')) {
+        const filterDaerah = userDaerah;
+        console.log('🔍 Filtering by daerah:', filterDaerah);
+        
+        if (filterDaerah) {
+          filtered = enrichedData.filter(layanan => {
+            const match = layanan.daerah === filterDaerah;
+            console.log(`${match ? '✅' : '❌'} ${layanan.namaLengkap} - Daerah: ${layanan.daerah} (Looking for: ${filterDaerah})`);
+            return match;
+          });
+          console.log('📊 Filtered result:', filtered.length, 'layanan for daerah:', filterDaerah);
+        } else {
+          console.log('⚠️ No userDaerah set, showing no data for safety');
+          filtered = [];
+        }
+      } else {
+        console.log('👑 Administrator - showing all data');
       }
-      
-      // Admin Desa: lihat semua layanan (untuk monitoring dan approval)
-      // Tidak perlu filter khusus, admin desa bisa lihat semua
       
       setLayananData(filtered);
       setFilteredData(filtered);
@@ -173,15 +204,6 @@ export default function LayananPublikAdminPage() {
       console.error("Error fetching layanan:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const statsData = await getLayananStats();
-      setStats(statsData);
-    } catch (error) {
-      console.error("Error fetching stats:", error);
     }
   };
 
@@ -213,9 +235,27 @@ export default function LayananPublikAdminPage() {
     setCurrentPage(1); // Reset ke halaman 1 saat filter berubah
   }, [searchTerm, selectedJenis, selectedStatus, layananData]);
 
-  const handleDetailClick = (layanan: LayananPublik) => {
+  const handleDetailClick = async (layanan: LayananPublik) => {
     setSelectedLayanan(layanan);
     setShowDetailModal(true);
+    
+    // Load photos from layanan data (already uploaded to Firebase Storage)
+    setLoadingPhotos(true);
+    try {
+      // Photos are stored in layanan object as foto_kk_url and foto_ktp_url
+      setFotoKKUrl(layanan.foto_kk_url || '');
+      setFotoKTPUrl(layanan.foto_ktp_url || '');
+      console.log('📷 Loaded photos from layanan:', {
+        foto_kk: layanan.foto_kk_url,
+        foto_ktp: layanan.foto_ktp_url
+      });
+    } catch (error) {
+      console.error('Error loading photos:', error);
+      setFotoKKUrl('');
+      setFotoKTPUrl('');
+    } finally {
+      setLoadingPhotos(false);
+    }
   };
 
   // Pagination calculations with useMemo for optimization
@@ -421,65 +461,63 @@ export default function LayananPublikAdminPage() {
         )}
 
         {/* Stats Cards - Mobile Optimized */}
-        {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-6 mb-4 sm:mb-6 md:mb-8">
-            <div className="bg-white rounded-lg sm:rounded-xl border border-yellow-200 p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl active:scale-95 transition-all">
-              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 text-center sm:text-left">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-yellow-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 font-semibold truncate">Menunggu</p>
-                  <p className="text-xl sm:text-2xl md:text-3xl font-bold text-yellow-600">{stats.pending || 0}</p>
-                </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-6 mb-4 sm:mb-6 md:mb-8">
+          <div className="bg-white rounded-lg sm:rounded-xl border border-yellow-200 p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl active:scale-95 transition-all">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 text-center sm:text-left">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-yellow-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-            </div>
-
-            <div className="bg-white rounded-lg sm:rounded-xl border border-blue-200 p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl active:scale-95 transition-all">
-              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 text-center sm:text-left">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 font-semibold truncate">Diproses</p>
-                  <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">{stats.diproses || 0}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg sm:rounded-xl border border-green-200 p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl active:scale-95 transition-all">
-              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 text-center sm:text-left">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 font-semibold truncate">Selesai</p>
-                  <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">{stats.selesai || 0}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg sm:rounded-xl border border-red-200 p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl active:scale-95 transition-all">
-              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 text-center sm:text-left">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-red-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600 font-semibold truncate">Ditolak</p>
-                  <p className="text-xl sm:text-2xl md:text-3xl font-bold text-red-600">{stats.ditolak || 0}</p>
-                </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-600 font-semibold truncate">Menunggu</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-yellow-600">{calculatedStats.pending}</p>
               </div>
             </div>
           </div>
-        )}
+
+          <div className="bg-white rounded-lg sm:rounded-xl border border-blue-200 p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl active:scale-95 transition-all">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 text-center sm:text-left">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-600 font-semibold truncate">Diproses</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">{calculatedStats.diproses}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg sm:rounded-xl border border-green-200 p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl active:scale-95 transition-all">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 text-center sm:text-left">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-green-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-600 font-semibold truncate">Selesai</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">{calculatedStats.selesai}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg sm:rounded-xl border border-red-200 p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl active:scale-95 transition-all">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 text-center sm:text-left">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-red-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-600 font-semibold truncate">Ditolak</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-red-600">{calculatedStats.ditolak}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Filters - Mobile Optimized */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 md:mb-8">
@@ -984,6 +1022,88 @@ export default function LayananPublikAdminPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Dokumen Pendukung - Foto KK dan KTP */}
+                <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 border border-indigo-200 sm:border-2">
+                  <h4 className="font-bold text-sm sm:text-base md:text-lg text-indigo-900 mb-3 sm:mb-4 md:mb-5 flex items-center gap-2">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Dokumen Pendukung
+                  </h4>
+                  
+                  {loadingPhotos ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                      {/* Foto KK */}
+                      <div className="bg-white rounded-lg p-3 sm:p-4 border border-indigo-300">
+                        <h5 className="font-bold text-xs sm:text-sm text-indigo-900 mb-2 sm:mb-3">Foto/Scan Kartu Keluarga (KK)</h5>
+                        {fotoKKUrl ? (
+                          <div className="relative group">
+                            <img 
+                              src={fotoKKUrl} 
+                              alt="Foto KK" 
+                              className="w-full h-48 sm:h-56 md:h-64 object-cover rounded-lg border-2 border-indigo-200 cursor-pointer hover:border-indigo-400 transition-all"
+                              onClick={() => window.open(fotoKKUrl, '_blank')}
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center">
+                              <button
+                                onClick={() => window.open(fotoKKUrl, '_blank')}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm"
+                              >
+                                🔍 Lihat Full
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-48 sm:h-56 md:h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                            <div className="text-center text-gray-500">
+                              <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <p className="text-sm font-semibold">Foto KK tidak tersedia</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Foto KTP */}
+                      <div className="bg-white rounded-lg p-3 sm:p-4 border border-indigo-300">
+                        <h5 className="font-bold text-xs sm:text-sm text-indigo-900 mb-2 sm:mb-3">Foto/Scan KTP</h5>
+                        {fotoKTPUrl ? (
+                          <div className="relative group">
+                            <img 
+                              src={fotoKTPUrl} 
+                              alt="Foto KTP" 
+                              className="w-full h-48 sm:h-56 md:h-64 object-cover rounded-lg border-2 border-indigo-200 cursor-pointer hover:border-indigo-400 transition-all"
+                              onClick={() => window.open(fotoKTPUrl, '_blank')}
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center">
+                              <button
+                                onClick={() => window.open(fotoKTPUrl, '_blank')}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm"
+                              >
+                                🔍 Lihat Full
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-48 sm:h-56 md:h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                            <div className="text-center text-gray-500">
+                              <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                              </svg>
+                              <p className="text-sm font-semibold">Foto KTP tidak tersedia</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Catatan/Alasan Tolak */}
                 {selectedLayanan.alasanTolak && (

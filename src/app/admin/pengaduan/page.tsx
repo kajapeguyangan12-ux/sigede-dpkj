@@ -965,7 +965,7 @@ export default function AdminPengaduanPage() {
             onClick={() => setShowStatusModal(false)}
           >
             <div 
-              className="bg-white rounded-none sm:rounded-2xl md:rounded-3xl shadow-2xl w-full h-full sm:h-auto sm:max-w-2xl overflow-hidden animate-slideUp"
+              className="bg-white rounded-none sm:rounded-2xl md:rounded-3xl shadow-2xl w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-hidden animate-slideUp flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header - Mobile Optimized */}
@@ -994,10 +994,10 @@ export default function AdminPengaduanPage() {
                 </div>
               </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-6">
+              {/* Modal Body - Scrollable */}
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
                 {/* Current Info */}
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 rounded-2xl">
                   <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">{selectedLaporan.judul}</h3>
                   <p className="text-sm text-gray-600">Pelapor: <span className="font-bold">{selectedLaporan.namaLengkap}</span></p>
                 </div>
@@ -1007,20 +1007,20 @@ export default function AdminPengaduanPage() {
                   <label className="block text-sm font-bold text-gray-700 mb-3">
                     Pilih Status Baru <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                       <button
                         key={key}
                         onClick={() => setNewStatus(key as StatusLaporan)}
-                        className={`p-4 rounded-2xl border-2 transition-all ${
+                        className={`p-3 sm:p-4 rounded-2xl border-2 transition-all ${
                           newStatus === key
                             ? `bg-gradient-to-r ${config.color} text-white border-transparent shadow-lg scale-105`
                             : `${config.bgColor} ${config.textColor} border-gray-200 hover:border-gray-300 hover:shadow-md`
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{config.icon}</span>
-                          <span className="font-bold">{config.label}</span>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <span className="text-xl sm:text-2xl">{config.icon}</span>
+                          <span className="font-bold text-sm sm:text-base">{config.label}</span>
                         </div>
                       </button>
                     ))}
@@ -1042,8 +1042,8 @@ export default function AdminPengaduanPage() {
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-3">
+              {/* Modal Footer - Fixed at bottom */}
+              <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-3 flex-shrink-0">
                 <button
                   onClick={() => setShowStatusModal(false)}
                   disabled={submitting}

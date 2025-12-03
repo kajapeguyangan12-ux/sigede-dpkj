@@ -24,6 +24,7 @@ export interface ManagedUser {
   phoneNumber?: string;
   idNumber?: string;
   nik?: string; // NIK untuk kepala dusun/desa
+  daerah?: string; // Daerah untuk kepala dusun
   address?: string;
   notes?: string;
   createdAt?: any;
@@ -45,6 +46,7 @@ export interface CreateManagedUserData {
   role: UserRole;
   phoneNumber?: string;
   idNumber?: string;
+  daerah?: string; // Daerah untuk kepala dusun
   address?: string;
   notes?: string;
 }
@@ -90,6 +92,8 @@ class SuperAdminUserService {
         status: 'active',
         phoneNumber: userData.phoneNumber,
         idNumber: userData.idNumber,
+        nik: userData.idNumber, // Set NIK same as idNumber for kepala dusun
+        daerah: userData.daerah, // Include daerah for kepala dusun
         address: userData.address,
         notes: userData.notes,
         createdAt: serverTimestamp(),
