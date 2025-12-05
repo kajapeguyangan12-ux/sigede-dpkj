@@ -83,11 +83,11 @@ const RenderIcon = React.memo(({ name, className = '' }: { name: string; classNa
 function getEnhancedIcon(iconName: string, index: number) {
   const colors = useMemo(() => [
     { from: 'from-red-500', to: 'to-pink-600' },
-    { from: 'from-blue-500', to: 'to-indigo-600' }, 
+    { from: 'from-red-500', to: 'to-rose-600' }, 
     { from: 'from-green-500', to: 'to-emerald-600' },
     { from: 'from-purple-500', to: 'to-violet-600' },
     { from: 'from-orange-500', to: 'to-red-600' },
-    { from: 'from-cyan-500', to: 'to-blue-600' },
+    { from: 'from-red-500', to: 'to-pink-600' },
     { from: 'from-pink-500', to: 'to-rose-600' },
     { from: 'from-indigo-500', to: 'to-purple-600' },
     { from: 'from-teal-500', to: 'to-green-600' },
@@ -258,7 +258,7 @@ export default function AdminHomePage() {
     <AdminLayout>
       <style>{styles}</style>
       {/* Simplified Background */}
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 relative">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50 relative">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           {/* Simplified Header */}
           <div className="glass-effect rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 mb-8 sm:mb-10 relative">
@@ -266,7 +266,7 @@ export default function AdminHomePage() {
             <div className="w-full bg-white rounded-lg sm:rounded-xl shadow-md border border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-0 sm:justify-between mb-4 sm:mb-6">
               {/* Title Section */}
               <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
                   </svg>
@@ -284,7 +284,7 @@ export default function AdminHomePage() {
               {/* Controls Section - Mobile Optimized */}
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 {/* Search Bar */}
-                <div className="flex items-center flex-1 sm:max-w-xs md:max-w-md bg-gray-50 rounded-lg shadow-sm border border-gray-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 hover:border-blue-400 transition-colors">
+                <div className="flex items-center flex-1 sm:max-w-xs md:max-w-md bg-gray-50 rounded-lg shadow-sm border border-gray-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 hover:border-red-400 transition-colors">
                   <input
                     type="text"
                     placeholder="Cari menu..."
@@ -338,7 +338,7 @@ export default function AdminHomePage() {
             <div className="mt-3 sm:mt-4 md:mt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
                 {/* Total Pengguna - Mobile Optimized */}
-                <div className="group relative bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
+                <div className="group relative bg-gradient-to-br from-red-500 to-red-600 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
                   <div className="flex items-start justify-between mb-2 sm:mb-3">
                     <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
                       <RenderIcon name="users" className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
@@ -487,7 +487,7 @@ export default function AdminHomePage() {
                     type="email"
                     value={profileEmail} 
                     onChange={(e) => setProfileEmail(e.target.value)} 
-                    className="w-full px-4 py-2.5 rounded-lg border-2 border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none transition-colors" 
+                    className="w-full px-4 py-2.5 rounded-lg border-2 border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder-gray-400 focus:border-red-400 focus:bg-white focus:outline-none transition-colors" 
                     placeholder="Masukkan email"
                   />
                 </div>

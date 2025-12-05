@@ -304,7 +304,7 @@ export default function StrukturPage() {
                   
                   {/* Upload Cover Image */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                    <label className="cursor-pointer inline-flex items-center justify-center px-4 sm:px-5 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm sm:text-base font-medium rounded-xl hover:from-purple-700 hover:to-purple-800 active:from-purple-800 active:to-purple-900 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl">
+                    <label className="cursor-pointer inline-flex items-center justify-center px-4 sm:px-5 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm sm:text-base font-medium rounded-xl hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl">
                       <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
@@ -319,7 +319,7 @@ export default function StrukturPage() {
                     </label>
                     {uploadingCover && (
                       <div className="flex items-center text-sm text-gray-500">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500 mr-2"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500 mr-2"></div>
                         Mengupload...
                       </div>
                     )}

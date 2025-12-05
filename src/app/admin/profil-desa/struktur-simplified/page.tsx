@@ -214,7 +214,7 @@ export default function StrukturSimplifiedAdminPage() {
               <h3 className="font-semibold text-gray-800">Foto {typeLabel}</h3>
               <button
                 onClick={() => setShowImageModal(true)}
-                className="text-sm rounded px-3 py-1 bg-blue-600 text-white hover:bg-blue-700"
+                className="text-sm rounded px-3 py-1 bg-red-600 text-white hover:bg-red-700"
               >
                 Ubah Foto
               </button>
@@ -256,7 +256,7 @@ export default function StrukturSimplifiedAdminPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEditOfficer(index)}
-                        className="text-sm rounded px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200"
+                        className="text-sm rounded px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200"
                       >
                         Edit
                       </button>
@@ -299,7 +299,7 @@ export default function StrukturSimplifiedAdminPage() {
                   type="text"
                   value={formData.jabatan}
                   onChange={(e) => setFormData({ ...formData, jabatan: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                   placeholder="Contoh: Kepala Desa"
                 />
               </div>
@@ -312,7 +312,7 @@ export default function StrukturSimplifiedAdminPage() {
                   type="text"
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                   placeholder="Nama lengkap"
                 />
               </div>
@@ -331,7 +331,7 @@ export default function StrukturSimplifiedAdminPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                   disabled={uploading}
                 >
                   {uploading ? 'Menyimpan...' : 'Simpan'}
@@ -401,7 +401,7 @@ export default function StrukturSimplifiedAdminPage() {
               <button
                 type="button"
                 onClick={handleSaveFoto}
-                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                 disabled={uploading || !fotoFile}
               >
                 {uploading ? 'Uploading...' : 'Upload'}

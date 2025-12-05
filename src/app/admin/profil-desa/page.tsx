@@ -81,7 +81,7 @@ const menu = [
 	{
 		label: "Wilayah Desa",
 		icon: "🗺️",
-		color: "from-blue-500 to-cyan-500",
+		color: "from-red-500 to-rose-500",
 		path: "/admin/profil-desa/wilayah",
 		description: "Kelola informasi geografis"
 	},
@@ -95,7 +95,7 @@ const menu = [
 	{
 		label: "Visi & Misi",
 		icon: "🎯",
-		color: "from-purple-500 to-pink-500",
+		color: "from-red-500 to-rose-500",
 		path: "/admin/profil-desa/visi-misi",
 		description: "Kelola visi dan misi desa"
 	},
@@ -109,7 +109,7 @@ const menu = [
 	{
 		label: "Lembaga Kemasyarakatan",
 		icon: "👥",
-		color: "from-indigo-500 to-blue-500",
+		color: "from-red-500 to-rose-500",
 		path: "/admin/profil-desa/lembaga",
 		description: "Data lembaga masyarakat"
 	},
@@ -118,14 +118,12 @@ const menu = [
 export default function ProfilDesaAdminPage() {
 	const router = useRouter();
 
-	return (
-		<AdminLayout>
-			<style>{styles}</style>
-			
-			{/* Mobile-First Background */}
-			<div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/40 relative">
+		return (
+			<AdminLayout>
+				<style>{styles}</style>
 				
-				{/* Simplified Background - Desktop Only */}
+				{/* Mobile-First Background */}
+				<div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50/30 to-rose-100/40 relative">				{/* Simplified Background - Desktop Only */}
 				<div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
 					<div className="absolute inset-0 opacity-30" style={{
 						backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.05'%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
@@ -137,9 +135,9 @@ export default function ProfilDesaAdminPage() {
 					{/* Compact Header for Mobile */}
 					<div className="glass-effect rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-md sm:shadow-lg border border-white/60 p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 lg:mb-8 animate-slideUp">
 						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-							{/* Title Section */}
-							<div className="flex items-center gap-3">
-								<div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+						{/* Title Section */}
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
 									<svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
 										<path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
 									</svg>
@@ -211,9 +209,9 @@ export default function ProfilDesaAdminPage() {
 					</div>
 
 					{/* Compact Info Card */}
-					<div className="mt-6 sm:mt-8 lg:mt-12 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-blue-200/20 p-4 sm:p-5 lg:p-6 text-center">
+					<div className="mt-6 sm:mt-8 lg:mt-12 bg-gradient-to-r from-red-500/5 to-rose-500/5 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-red-200/20 p-4 sm:p-5 lg:p-6 text-center">
 						<div className="flex items-center justify-center mb-2.5 sm:mb-3">
-							<div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full p-2">
+							<div className="bg-gradient-to-r from-red-500 to-rose-600 rounded-full p-2">
 								<svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
 									<path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>

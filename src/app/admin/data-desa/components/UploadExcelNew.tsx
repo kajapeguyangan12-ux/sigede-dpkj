@@ -46,6 +46,7 @@ interface ParsedData {
   penghasilan?: string;
   golonganDarah?: string;
   shdk?: string;
+  desil?: string;
 }
 
 type UploadStep = 'select' | 'preview' | 'uploading' | 'complete';
@@ -197,7 +198,8 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
             'pendidikanterakhir': 'pendidikanTerakhir', 'pendidikan': 'pendidikanTerakhir',
             'pekerjaan': 'pekerjaan', 'penghasilan': 'penghasilan',
             'golongandarah': 'golonganDarah', 'goldarah': 'golonganDarah',
-            'shdk': 'shdk', 'statusdalamkeluarga': 'shdk', 'hubungan': 'shdk'
+            'shdk': 'shdk', 'statusdalamkeluarga': 'shdk', 'hubungan': 'shdk',
+            'desil': 'desil'
           };
 
           const parsedData: ParsedData[] = [];
@@ -325,7 +327,7 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
     const fieldsToCompare = ['jenisKelamin', 'tempatLahir', 'tanggalLahir', 
                            'alamat', 'daerah', 'statusNikah', 'agama', 'sukuBangsa', 
                            'kewarganegaraan', 'pendidikanTerakhir', 'pekerjaan', 'penghasilan', 
-                           'golonganDarah', 'shdk'];
+                           'golonganDarah', 'shdk', 'desil'];
     
     return fieldsToCompare.every(key => 
       String(existing[key] || '').trim() === String(newData[key] || '').trim()
@@ -1173,6 +1175,7 @@ function PreviewStep({ parsedDataAll, previewData, onBack, onUpload }: PreviewSt
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Tempat/Tgl Lahir</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Daerah</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">SHDK</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Desil</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
@@ -1200,6 +1203,7 @@ function PreviewStep({ parsedDataAll, previewData, onBack, onUpload }: PreviewSt
                       {item.shdk || '-'}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{item.desil || '-'}</td>
                 </tr>
               ))}
             </tbody>

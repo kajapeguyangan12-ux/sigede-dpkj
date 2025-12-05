@@ -307,6 +307,7 @@ export async function updateStatusLaporan(
         title: notificationData.title,
         message: notificationData.message,
         kategori: laporanData.kategori,
+        tanggapan: tanggapan,
         priority: notificationData.priority
       });
     }

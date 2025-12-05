@@ -189,6 +189,7 @@ export const updateStatusLayanan = async (
         jenisLayanan: layananData.jenisLayanan,
         buktiApproval: layananData.buktiApproval,
         estimasiSelesai: layananData.estimasiSelesai?.toDate?.()?.toLocaleDateString('id-ID') || undefined,
+        alasanTolak: adminData.alasanTolak,
         priority: notificationData.priority
       });
     }

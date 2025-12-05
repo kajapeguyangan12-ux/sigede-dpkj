@@ -18,6 +18,18 @@ import { getDataDesa } from "../../../lib/dataDesaService";
 import { getMasyarakatByNIK } from "../../../lib/masyarakatService";
 import { getKependudukanPhotoURL } from "../../../lib/kependudukanPhotoService";
 
+// Dynamic import html2pdf dan JSZip untuk client-side only
+let html2pdf: any = null;
+let JSZip: any = null;
+if (typeof window !== 'undefined') {
+  import('html2pdf.js').then((module) => {
+    html2pdf = module.default;
+  });
+  import('jszip').then((module) => {
+    JSZip = module.default;
+  });
+}
+
 const jenisLayananList = [
   "Surat Kelakuan Baik",
   "Surat Keterangan Belum Nikah/Kawin", 
@@ -66,6 +78,13 @@ export default function LayananPublikAdminPage() {
   const [fotoKKUrl, setFotoKKUrl] = useState<string>("");
   const [fotoKTPUrl, setFotoKTPUrl] = useState<string>("");
   const [loadingPhotos, setLoadingPhotos] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [nomorSurat, setNomorSurat] = useState<string>("");
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [modalImageUrl, setModalImageUrl] = useState<string>("");
+  const [modalImageTitle, setModalImageTitle] = useState<string>("");
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [alasanPenolakan, setAlasanPenolakan] = useState<string>("");
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -104,7 +123,7 @@ export default function LayananPublikAdminPage() {
 
   // Lock body scroll when modal is open
   useEffect(() => {
-    if (showDetailModal) {
+    if (showDetailModal || showImageModal || showRejectModal) {
       // Prevent scrolling on body
       document.body.style.overflow = 'hidden';
       // For iOS Safari
@@ -123,7 +142,7 @@ export default function LayananPublikAdminPage() {
       document.body.style.position = '';
       document.body.style.width = '';
     };
-  }, [showDetailModal]);
+  }, [showDetailModal, showImageModal, showRejectModal]);
 
   const fetchData = async () => {
     try {
@@ -280,6 +299,13 @@ export default function LayananPublikAdminPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  // Function to open image modal
+  const handleImageClick = (imageUrl: string, title: string) => {
+    setModalImageUrl(imageUrl);
+    setModalImageTitle(title);
+    setShowImageModal(true);
+  };
+
   // Generate page numbers with ellipsis - memoized
   const pageNumbers = useMemo(() => {
     const pages = [];
@@ -341,6 +367,8 @@ export default function LayananPublikAdminPage() {
       await updateStatusLayanan(layananId, 'ditolak', { alasanTolak: alasan });
       await fetchData();
       setShowDetailModal(false);
+      setShowRejectModal(false);
+      setAlasanPenolakan('');
       alert('Permohonan ditolak');
     } catch (error) {
       console.error("Error rejecting:", error);
@@ -348,6 +376,413 @@ export default function LayananPublikAdminPage() {
     } finally {
       setProcessingAction(false);
     }
+  };
+
+  const handleOpenRejectModal = () => {
+    setAlasanPenolakan('');
+    setShowRejectModal(true);
+  };
+
+  const handleConfirmReject = () => {
+    if (!alasanPenolakan.trim()) {
+      alert('⚠️ Alasan penolakan wajib diisi!');
+      return;
+    }
+    if (selectedLayanan?.id) {
+      handleTolak(selectedLayanan.id, alasanPenolakan);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!selectedLayanan) return;
+    
+    if (!nomorSurat || nomorSurat.trim() === '') {
+      alert('⚠️ Mohon isi Nomor Surat terlebih dahulu sebelum download!');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+
+    try {
+      // Tunggu JSZip loaded
+      if (!JSZip) {
+        const module = await import('jszip');
+        JSZip = module.default;
+      }
+
+      const zip = new JSZip();
+      const folderName = `Layanan_${selectedLayanan.namaLengkap}_${selectedLayanan.nik}`;
+      const folder = zip.folder(folderName);
+
+      if (!folder) {
+        throw new Error('Failed to create folder');
+      }
+
+      // 1. Generate dan tambahkan PDF Surat
+      const suratHTML = generateSuratHTML(selectedLayanan, nomorSurat);
+      
+      // Tunggu html2pdf loaded
+      if (!html2pdf) {
+        const module = await import('html2pdf.js');
+        html2pdf = module.default;
+      }
+
+      const pdfBlob = await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: `Surat_${selectedLayanan.jenisLayanan.replace(/\s+/g, '_')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 2,
+            useCORS: true,
+            logging: false
+          },
+          jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait' 
+          }
+        })
+        .from(suratHTML)
+        .outputPdf('blob');
+
+      folder.file(`Surat_${selectedLayanan.jenisLayanan.replace(/\s+/g, '_')}.pdf`, pdfBlob);
+
+      // Helper function to convert image to WebP
+      const convertToWebP = async (imageUrl: string): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              reject(new Error('Failed to get canvas context'));
+              return;
+            }
+            
+            ctx.drawImage(img, 0, 0);
+            
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  resolve(blob);
+                } else {
+                  reject(new Error('Failed to convert to WebP'));
+                }
+              },
+              'image/webp',
+              0.85 // Quality 85% untuk balance antara ukuran dan kualitas
+            );
+          };
+          
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = imageUrl;
+        });
+      };
+
+      // 2. Download dan konversi foto KK ke WebP
+      if (fotoKKUrl) {
+        try {
+          const kkWebPBlob = await convertToWebP(fotoKKUrl);
+          folder.file('Foto_KK.webp', kkWebPBlob);
+        } catch (error) {
+          console.error('Error converting KK to WebP:', error);
+          // Fallback: download original jika gagal konversi
+          try {
+            const kkResponse = await fetch(fotoKKUrl);
+            const kkBlob = await kkResponse.blob();
+            const kkExtension = kkBlob.type.split('/')[1] || 'jpg';
+            folder.file(`Foto_KK.${kkExtension}`, kkBlob);
+          } catch (fallbackError) {
+            console.error('Error downloading original KK:', fallbackError);
+          }
+        }
+      }
+
+      // 3. Download dan konversi foto KTP ke WebP
+      if (fotoKTPUrl) {
+        try {
+          const ktpWebPBlob = await convertToWebP(fotoKTPUrl);
+          folder.file('Foto_KTP.webp', ktpWebPBlob);
+        } catch (error) {
+          console.error('Error converting KTP to WebP:', error);
+          // Fallback: download original jika gagal konversi
+          try {
+            const ktpResponse = await fetch(fotoKTPUrl);
+            const ktpBlob = await ktpResponse.blob();
+            const ktpExtension = ktpBlob.type.split('/')[1] || 'jpg';
+            folder.file(`Foto_KTP.${ktpExtension}`, ktpBlob);
+          } catch (fallbackError) {
+            console.error('Error downloading original KTP:', fallbackError);
+          }
+        }
+      }
+
+      // 4. Generate ZIP dan download
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${folderName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      alert('✅ Download berhasil! File ZIP berisi surat, KTP, dan KK.');
+      
+    } catch (error) {
+      console.error('Error generating download package:', error);
+      alert('❌ Gagal membuat paket download. Silakan coba lagi.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const generateSuratHTML = (layanan: LayananPublik, nomorSurat: string): string => {
+    // Helper function untuk format tanggal
+    const formatDate = (timestamp: any): string => {
+      if (!timestamp) return '';
+      try {
+        let date;
+        if (timestamp?.toDate) {
+          date = timestamp.toDate();
+        } else if (timestamp?.seconds) {
+          date = new Date(timestamp.seconds * 1000);
+        } else if (typeof timestamp === 'string') {
+          date = new Date(timestamp);
+        } else if (timestamp instanceof Date) {
+          date = timestamp;
+        } else {
+          return '';
+        }
+        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+      } catch (error) {
+        return '';
+      }
+    };
+
+    // Helper function untuk format tanggal lahir
+    const formatTanggalLahir = (tanggal: any): string => {
+      if (!tanggal) return '...';
+      return formatDate(tanggal);
+    };
+
+    // Helper function untuk judul surat
+    const getJudulSurat = (jenisLayanan: string) => {
+      const judulMap: { [key: string]: string } = {
+        "Surat Kelakuan Baik": "SURAT KETERANGAN KELAKUAN BAIK",
+        "Surat Keterangan Belum Nikah/Kawin": "SURAT KETERANGAN BELUM PERNAH KAWIN/MENIKAH",
+        "Surat Keterangan Belum Bekerja": "SURAT KETERANGAN BELUM BEKERJA",
+        "Surat Keterangan Kawin/Menikah": "SURAT KETERANGAN KAWIN/MENIKAH",
+        "Surat Keterangan Kematian": "SURAT KETERANGAN KEMATIAN",
+        "Surat Keterangan Perjalanan": "SURAT KETERANGAN PERJALANAN"
+      };
+      return judulMap[jenisLayanan] || "SURAT KETERANGAN";
+    };
+
+    // Prepare data
+    const tanggalSurat = formatDate(layanan.createdAt || new Date());
+    const tanggalLahir = formatTanggalLahir(layanan.tanggalLahir);
+    const daerah = layanan.daerah?.replace(/_/g, ' ') || '............';
+    const nomorKadus = layanan.nomorSuratKadus || '.............................';
+    
+    // Skip logo untuk menghindari CORS issues - focus on content first
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { margin: 0; padding: 0; }
+          * { box-sizing: border-box; }
+        </style>
+      </head>
+      <body>
+      <div style="font-family: 'Times New Roman', Times, serif; padding: 15mm 20mm; font-size: 12pt; line-height: 1.6; color: #000000; background: #ffffff; width: 210mm; min-height: 297mm;">
+        
+        <!-- Header -->
+        <div style="width: 100%; border-bottom: 3px solid #000000; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">
+          <h1 style="margin: 0; padding: 0; font-size: 16pt; font-weight: bold; color: #000000;">PEMERINTAH KOTA DENPASAR</h1>
+          <h2 style="margin: 5px 0; padding: 0; font-size: 14pt; font-weight: bold; color: #000000;">KECAMATAN DENPASAR UTARA</h2>
+          <h2 style="margin: 5px 0; padding: 0; font-size: 14pt; font-weight: bold; color: #000000;">DESA DAUH PURI KAJA</h2>
+          <p style="margin: 10px 0 0 0; padding: 0; font-size: 9pt; color: #000000;">
+            <i>Alamat: Jl. Gatot Subroto VI J Denpasar - Telp. (0361) 419973 Kode Pos 80111</i>
+          </p>
+          <p style="margin: 3px 0 0 0; padding: 0; font-size: 9pt; color: #000000;">
+            <i>http://dauhpurikaja.denpasarkota.go.id - desadauhpurikdja@gmail.com</i>
+          </p>
+        </div>
+
+        <!-- Title -->
+        <div style="text-align: center; margin: 30px 0 25px 0;">
+          <h3 style="margin: 0; padding: 0; font-size: 14pt; font-weight: bold; text-decoration: underline; color: #000000;">${getJudulSurat(layanan.jenisLayanan)}</h3>
+          <p style="margin: 10px 0 0 0; padding: 0; font-size: 11pt; color: #000000;">Nomor: <b>${nomorSurat}</b></p>
+        </div>
+
+        <!-- Body -->
+        <div style="text-align: justify; margin-bottom: 20px; color: #000000;">
+          <p style="margin: 0 0 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+            Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, 
+            menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerah}, 
+            Nomor <b>${nomorKadus}</b>, Tanggal: ${tanggalSurat}, bahwa:
+          </p>
+          
+          <table style="width: 100%; margin: 20px 0 25px 0; border-collapse: collapse; color: #000000;">
+            <tbody>
+            <tr>
+              <td style="width: 180px; padding: 6px 0; vertical-align: top; color: #000000;">Nama Lengkap</td>
+              <td style="width: 20px; padding: 6px 0; vertical-align: top; color: #000000;">:</td>
+              <td style="padding: 6px 0; vertical-align: top; font-weight: bold; color: #000000;">${layanan.namaLengkap || '...'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">NIK</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.nik || '...'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Tempat/Tgl Lahir</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.tempatLahir || '...'} / ${tanggalLahir}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Jenis Kelamin</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.jenisKelamin === 'L' ? 'Laki-laki' : layanan.jenisKelamin === 'P' ? 'Perempuan' : '...'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Agama</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.agama || '...'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Pekerjaan</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.pekerjaan || '...'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Alamat</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.alamat || '...'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Daerah/Banjar</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
+              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${daerah}</td>
+            </tr>
+            </tbody>
+          </table>
+
+          ${(() => {
+            // Generate content based on surat type
+            let content = '';
+            const jenisLayanan = layanan.jenisLayanan?.toLowerCase() || '';
+
+            if (jenisLayanan.includes('kelakuan baik')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Sepanjang pengetahuan kami orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berkelakuan baik, 
+                  tidak pernah tersangkut dalam tindakan kriminal/kejahatan.
+                </p>
+              `;
+            } else if (jenisLayanan.includes('belum nikah') || jenisLayanan.includes('belum kawin')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
+                  data yang ada, orang tersebut belum pernah kawin/menikah sampai saat ini.
+                </p>
+              `;
+            } else if (jenisLayanan.includes('belum bekerja')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
+                  data yang ada, orang tersebut belum bekerja dan tidak terikat kontrak kerja dengan perusahaan/instansi manapun.
+                </p>
+              `;
+            } else if (jenisLayanan.includes('kawin') || jenisLayanan.includes('menikah')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah 
+                  melangsungkan perkawinan serta berstatus sebagai suami/istri yang sah.
+                </p>
+              `;
+            } else if (jenisLayanan.includes('kematian') || jenisLayanan.includes('meninggal')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah 
+                  meninggal dunia pada tanggal ${tanggalSurat}.
+                </p>
+              `;
+            } else if (jenisLayanan.includes('perjalanan') || jenisLayanan.includes('berpergian')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan 
+                  melakukan perjalanan untuk keperluan sebagaimana dimaksud dalam surat ini.
+                </p>
+              `;
+            } else if (jenisLayanan.includes('domisili') || jenisLayanan.includes('tinggal')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan bertempat 
+                  tinggal di alamat sebagaimana tercantum dalam surat ini.
+                </p>
+              `;
+            } else if (jenisLayanan.includes('usaha')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan memiliki 
+                  usaha sebagaimana dimaksud dalam surat ini.
+                </p>
+              `;
+            } else if (jenisLayanan.includes('tidak mampu') || jenisLayanan.includes('kurang mampu')) {
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
+                  data yang ada, orang tersebut tergolong kurang mampu secara ekonomi.
+                </p>
+              `;
+            } else {
+              // Default content for other types
+              content = `
+                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja.
+                </p>
+              `;
+            }
+
+            return content;
+          })()}
+          
+          <p style="margin: 20px 0 40px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
+            Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk 
+            <b>${layanan.keperluan || '...'}</b>.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="width: 100%; margin-top: 50px;">
+          <div style="width: 50%; float: right; text-align: center;">
+            <p style="margin: 0; padding: 0; color: #000000;">Denpasar, ${tanggalSurat}</p>
+            <p style="margin: 5px 0; padding: 0; font-weight: bold; color: #000000;">Perbekel</p>
+            <div style="height: 70px;"></div>
+            <p style="margin: 0; padding: 0; font-weight: bold; text-decoration: underline; color: #000000;">I PUTU YUDA</p>
+          </div>
+          <div style="clear: both;"></div>
+        </div>
+      </div>
+      </body>
+      </html>
+    `;
   };
 
   const getStatusColor = (status: string) => {
@@ -872,6 +1307,14 @@ export default function LayananPublikAdminPage() {
                         <span className="text-gray-600 font-semibold">Jenis Layanan:</span>
                         <p className="text-gray-900 font-bold mt-1">{selectedLayanan.jenisLayanan}</p>
                       </div>
+                      {selectedLayanan.jenisLayanan !== 'Pelayanan Taring Dukcapil' && (
+                        <div>
+                          <span className="text-gray-600 font-semibold">Nomor Surat:</span>
+                          <p className="text-gray-900 font-bold mt-1 font-mono text-sm">
+                            {nomorSurat || '(Belum diisi)'}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <span className="text-gray-600 font-semibold">Tanggal Permohonan:</span>
                         <p className="text-gray-900 font-bold mt-1">
@@ -906,22 +1349,34 @@ export default function LayananPublikAdminPage() {
                       Review Surat
                     </h4>
                     <div className="space-y-2 sm:space-y-3 text-xs bg-white p-2 sm:p-3 md:p-4 rounded-lg border border-pink-300 text-gray-900">
-                      <div className="text-center mb-2 sm:mb-3 md:mb-4">
-                        <p className="font-bold text-xs sm:text-sm text-gray-900">PEMERINTAH KOTA DENPASAR</p>
-                        <p className="font-bold text-xs sm:text-sm text-gray-900">KECAMATAN DENPASAR UTARA</p>
-                        <p className="font-bold text-xs sm:text-sm text-gray-900">DESA DAUH PURI KAJA</p>
+                      <div className="mb-2 sm:mb-3 md:mb-4">
+                        <img 
+                          src="/logo/cop-surat-header.png" 
+                          alt="Header Surat" 
+                          className="w-full h-auto"
+                          style={{ maxHeight: '140px', objectFit: 'contain' }}
+                        />
+                        <div className="border-b-2 border-black mt-2"></div>
                       </div>
                       <div className="text-center mb-4">
                         <p className="font-bold underline text-gray-900">
-                          {selectedLayanan.jenisLayanan === 'Surat Kelakuan Baik' ? 'SURAT KETERANGAN KELAKUAN BAIK' :
-                           selectedLayanan.jenisLayanan === 'Surat Keterangan Belum Nikah/Kawin' ? 'SURAT KETERANGAN BELUM PERNAH KAWIN/MENIKAH' :
-                           selectedLayanan.jenisLayanan === 'Surat Keterangan Belum Bekerja' ? 'SURAT KETERANGAN BELUM BEKERJA' :
-                           selectedLayanan.jenisLayanan === 'Surat Keterangan Kawin/Menikah' ? 'SURAT KETERANGAN KAWIN/MENIKAH' :
-                           selectedLayanan.jenisLayanan === 'Surat Keterangan Kematian' ? 'SURAT KETERANGAN KEMATIAN' :
-                           selectedLayanan.jenisLayanan === 'Surat Keterangan Perjalanan' ? 'SURAT KETERANGAN PERJALANAN' :
-                           'SURAT KETERANGAN'}
+                          {(() => {
+                            const jenis = selectedLayanan.jenisLayanan?.toLowerCase() || '';
+                            if (jenis.includes('kelakuan baik')) return 'SURAT KETERANGAN KELAKUAN BAIK';
+                            if (jenis.includes('belum nikah') || jenis.includes('belum kawin')) return 'SURAT KETERANGAN BELUM PERNAH KAWIN/MENIKAH';
+                            if (jenis.includes('belum bekerja')) return 'SURAT KETERANGAN BELUM BEKERJA';
+                            if (jenis.includes('kawin') || jenis.includes('menikah')) return 'SURAT KETERANGAN KAWIN/MENIKAH';
+                            if (jenis.includes('kematian') || jenis.includes('meninggal')) return 'SURAT KETERANGAN KEMATIAN';
+                            if (jenis.includes('perjalanan') || jenis.includes('berpergian')) return 'SURAT KETERANGAN PERJALANAN';
+                            if (jenis.includes('domisili') || jenis.includes('tinggal')) return 'SURAT KETERANGAN DOMISILI';
+                            if (jenis.includes('usaha')) return 'SURAT KETERANGAN USAHA';
+                            if (jenis.includes('tidak mampu') || jenis.includes('kurang mampu')) return 'SURAT KETERANGAN TIDAK MAMPU';
+                            return 'SURAT KETERANGAN';
+                          })()}
                         </p>
-                        <p className="text-xs mt-1 text-gray-900">Nomor: ............................</p>
+                        <p className="text-xs mt-1 text-gray-900">
+                          Nomor: <span className="font-bold text-blue-600">{nomorSurat || '(Belum diisi)'}</span>
+                        </p>
                       </div>
                       <p className="text-justify leading-relaxed text-gray-900">
                         Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, 
@@ -944,19 +1399,29 @@ export default function LayananPublikAdminPage() {
                         <p className="text-gray-900">Daerah/Banjar: <span className="font-semibold text-gray-900">{selectedLayanan.daerah?.replace(/_/g, ' ') || '...'}</span></p>
                       </div>
                       <p className="text-justify leading-relaxed mt-3 text-gray-900">
-                        {selectedLayanan.jenisLayanan === 'Surat Kelakuan Baik' ? 
-                          'Sepanjang pengetahuan kami orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berkelakuan baik, tidak pernah tersangkut dalam tindakan kriminal/kejahatan.' :
-                         selectedLayanan.jenisLayanan === 'Surat Keterangan Belum Nikah/Kawin' ?
-                          'Sepanjang pengetahuan kami memang benar orang tersebut diatas belum pernah kawin/menikah sampai saat ini.' :
-                         selectedLayanan.jenisLayanan === 'Surat Keterangan Belum Bekerja' ?
-                          'Sepanjang pengetahuan kami memang benar orang tersebut diatas belum bekerja dan tidak terikat kontrak kerja dengan instansi/perusahaan manapun sampai saat ini.' :
-                         selectedLayanan.jenisLayanan === 'Surat Keterangan Kawin/Menikah' ?
-                          'Sepanjang pengetahuan kami memang benar orang tersebut diatas telah melangsungkan perkawinan dan berstatus sebagai suami/istri yang sah.' :
-                         selectedLayanan.jenisLayanan === 'Surat Keterangan Kematian' ?
-                          'Telah meninggal dunia pada tanggal .............. di .............. karena ..............' :
-                         selectedLayanan.jenisLayanan === 'Surat Keterangan Perjalanan' ?
-                          'Orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan melakukan perjalanan ke .............. untuk keperluan ..............' :
-                         'Orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja.'}
+                        {(() => {
+                          const jenis = selectedLayanan.jenisLayanan?.toLowerCase() || '';
+                          if (jenis.includes('kelakuan baik')) {
+                            return 'Sepanjang pengetahuan kami orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berkelakuan baik, tidak pernah tersangkut dalam tindakan kriminal/kejahatan.';
+                          } else if (jenis.includes('belum nikah') || jenis.includes('belum kawin')) {
+                            return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan data yang ada, orang tersebut belum pernah kawin/menikah sampai saat ini.';
+                          } else if (jenis.includes('belum bekerja')) {
+                            return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan data yang ada, orang tersebut belum bekerja dan tidak terikat kontrak kerja dengan perusahaan/instansi manapun.';
+                          } else if (jenis.includes('kawin') || jenis.includes('menikah')) {
+                            return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah melangsungkan perkawinan serta berstatus sebagai suami/istri yang sah.';
+                          } else if (jenis.includes('kematian') || jenis.includes('meninggal')) {
+                            return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah meninggal dunia.';
+                          } else if (jenis.includes('perjalanan') || jenis.includes('berpergian')) {
+                            return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan melakukan perjalanan untuk keperluan sebagaimana dimaksud dalam surat ini.';
+                          } else if (jenis.includes('domisili') || jenis.includes('tinggal')) {
+                            return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan bertempat tinggal di alamat sebagaimana tercantum dalam surat ini.';
+                          } else if (jenis.includes('usaha')) {
+                            return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan memiliki usaha sebagaimana dimaksud dalam surat ini.';
+                          } else if (jenis.includes('tidak mampu') || jenis.includes('kurang mampu')) {
+                            return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan data yang ada, orang tersebut tergolong kurang mampu secara ekonomi.';
+                          }
+                          return 'Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja.';
+                        })()}
                       </p>
                       <p className="text-justify leading-relaxed text-gray-900">
                         Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk {selectedLayanan.keperluan || '..........'}.
@@ -1039,24 +1504,43 @@ export default function LayananPublikAdminPage() {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                       {/* Foto KK */}
-                      <div className="bg-white rounded-lg p-3 sm:p-4 border border-indigo-300">
-                        <h5 className="font-bold text-xs sm:text-sm text-indigo-900 mb-2 sm:mb-3">Foto/Scan Kartu Keluarga (KK)</h5>
+                      <div className="bg-white rounded-lg p-3 sm:p-4 border-2 border-indigo-300 shadow-md hover:shadow-xl transition-shadow">
+                        <h5 className="font-bold text-xs sm:text-sm text-indigo-900 mb-2 sm:mb-3 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Foto/Scan Kartu Keluarga (KK)
+                        </h5>
                         {fotoKKUrl ? (
                           <div className="relative group">
                             <img 
                               src={fotoKKUrl} 
                               alt="Foto KK" 
-                              className="w-full h-48 sm:h-56 md:h-64 object-cover rounded-lg border-2 border-indigo-200 cursor-pointer hover:border-indigo-400 transition-all"
-                              onClick={() => window.open(fotoKKUrl, '_blank')}
+                              className="w-full h-48 sm:h-56 md:h-64 object-contain bg-gray-50 rounded-lg border-2 border-indigo-200 cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all active:scale-98"
+                              onClick={() => handleImageClick(fotoKKUrl, 'Foto/Scan Kartu Keluarga (KK)')}
                             />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center">
+                            {/* Desktop hover overlay */}
+                            <div className="hidden md:flex absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all rounded-lg items-end justify-center pb-4">
                               <button
-                                onClick={() => window.open(fotoKKUrl, '_blank')}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm"
+                                onClick={() => handleImageClick(fotoKKUrl, 'Foto/Scan Kartu Keluarga (KK)')}
+                                className="bg-white text-indigo-700 px-4 py-2 rounded-lg font-bold text-sm shadow-lg hover:bg-indigo-50 transition-all flex items-center gap-2"
                               >
-                                🔍 Lihat Full
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                </svg>
+                                Lihat Full
                               </button>
                             </div>
+                            {/* Mobile button - always visible */}
+                            <button
+                              onClick={() => handleImageClick(fotoKKUrl, 'Foto/Scan Kartu Keluarga (KK)')}
+                              className="md:hidden absolute bottom-2 right-2 bg-white text-indigo-700 px-3 py-2 rounded-lg font-bold text-xs shadow-lg active:scale-95 transition-all flex items-center gap-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                              Full
+                            </button>
                           </div>
                         ) : (
                           <div className="w-full h-48 sm:h-56 md:h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
@@ -1071,24 +1555,43 @@ export default function LayananPublikAdminPage() {
                       </div>
 
                       {/* Foto KTP */}
-                      <div className="bg-white rounded-lg p-3 sm:p-4 border border-indigo-300">
-                        <h5 className="font-bold text-xs sm:text-sm text-indigo-900 mb-2 sm:mb-3">Foto/Scan KTP</h5>
+                      <div className="bg-white rounded-lg p-3 sm:p-4 border-2 border-indigo-300 shadow-md hover:shadow-xl transition-shadow">
+                        <h5 className="font-bold text-xs sm:text-sm text-indigo-900 mb-2 sm:mb-3 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                          </svg>
+                          Foto/Scan KTP
+                        </h5>
                         {fotoKTPUrl ? (
                           <div className="relative group">
                             <img 
                               src={fotoKTPUrl} 
                               alt="Foto KTP" 
-                              className="w-full h-48 sm:h-56 md:h-64 object-cover rounded-lg border-2 border-indigo-200 cursor-pointer hover:border-indigo-400 transition-all"
-                              onClick={() => window.open(fotoKTPUrl, '_blank')}
+                              className="w-full h-48 sm:h-56 md:h-64 object-contain bg-gray-50 rounded-lg border-2 border-indigo-200 cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all active:scale-98"
+                              onClick={() => handleImageClick(fotoKTPUrl, 'Foto/Scan KTP')}
                             />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center">
+                            {/* Desktop hover overlay */}
+                            <div className="hidden md:flex absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all rounded-lg items-end justify-center pb-4">
                               <button
-                                onClick={() => window.open(fotoKTPUrl, '_blank')}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold text-sm"
+                                onClick={() => handleImageClick(fotoKTPUrl, 'Foto/Scan KTP')}
+                                className="bg-white text-indigo-700 px-4 py-2 rounded-lg font-bold text-sm shadow-lg hover:bg-indigo-50 transition-all flex items-center gap-2"
                               >
-                                🔍 Lihat Full
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                </svg>
+                                Lihat Full
                               </button>
                             </div>
+                            {/* Mobile button - always visible */}
+                            <button
+                              onClick={() => handleImageClick(fotoKTPUrl, 'Foto/Scan KTP')}
+                              className="md:hidden absolute bottom-2 right-2 bg-white text-indigo-700 px-3 py-2 rounded-lg font-bold text-xs shadow-lg active:scale-95 transition-all flex items-center gap-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                              Full
+                            </button>
                           </div>
                         ) : (
                           <div className="w-full h-48 sm:h-56 md:h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
@@ -1116,6 +1619,37 @@ export default function LayananPublikAdminPage() {
 
               {/* Modal Footer - Action Buttons */}
               <div className="bg-gray-50 px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 rounded-b-none sm:rounded-b-xl md:rounded-b-2xl border-t border-gray-200 sm:border-t-2 flex-shrink-0">
+                {/* Input Nomor Surat - hanya tampil jika bisa download */}
+                {selectedLayanan.jenisLayanan !== 'Pelayanan Taring Dukcapil' && 
+                 (selectedLayanan.status === 'approved_admin' || selectedLayanan.status === 'completed') && (
+                  <div className="mb-4 pb-4 border-b-2 border-gray-200">
+                    <label className="block text-sm font-bold text-gray-900 mb-2">
+                      📋 Nomor Surat <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={nomorSurat}
+                      onChange={(e) => setNomorSurat(e.target.value)}
+                      placeholder="Contoh: 01/SKB/DPKJ/XII/2025"
+                      className="w-full px-4 py-3 border-2 border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-base text-gray-900 font-medium placeholder:text-gray-400"
+                    />
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-orange-700 font-medium flex items-center gap-1">
+                        <span>⚠️</span>
+                        <span>Wajib diisi sebelum download</span>
+                      </p>
+                      <p className="text-xs text-blue-700 font-medium flex items-center gap-1">
+                        <span>📦</span>
+                        <span>Download akan menghasilkan 1 file ZIP berisi: Surat PDF + Foto KK (WebP) + Foto KTP (WebP)</span>
+                      </p>
+                      <p className="text-xs text-green-700 font-medium flex items-center gap-1">
+                        <span>✨</span>
+                        <span>Foto otomatis dikonversi ke WebP untuk ukuran file lebih kecil</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 md:gap-4">
                   <button
                     onClick={() => setShowDetailModal(false)}
@@ -1124,14 +1658,28 @@ export default function LayananPublikAdminPage() {
                     Tutup
                   </button>
                   
-                  {/* Download Surat Button - Only available when approved_admin or completed */}
+                  {/* Download Surat Button - Direct PDF download */}
                   {selectedLayanan.jenisLayanan !== 'Pelayanan Taring Dukcapil' && 
                    (selectedLayanan.status === 'approved_admin' || selectedLayanan.status === 'completed') && (
                     <button
-                      onClick={() => window.open(`/admin/layanan-publik/cetak-surat?id=${selectedLayanan.id}`, '_blank')}
-                      className="w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold rounded-lg sm:rounded-xl hover:shadow-lg active:scale-98 transition-all text-sm sm:text-base"
+                      onClick={handleDownloadPDF}
+                      disabled={isGeneratingPDF}
+                      className={`w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold rounded-lg sm:rounded-xl hover:shadow-lg active:scale-98 transition-all text-sm sm:text-base ${isGeneratingPDF ? 'opacity-75 cursor-wait' : ''}`}
                     >
-                      📥 Download Surat
+                      {isGeneratingPDF ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 inline mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Memproses...
+                        </>
+                      ) : (
+                        <>
+                          📦 Download Paket Lengkap
+                          <span className="block text-xs mt-0.5 opacity-90">(Surat + KTP + KK)</span>
+                        </>
+                      )}
                     </button>
                   )}
                   
@@ -1146,10 +1694,7 @@ export default function LayananPublikAdminPage() {
                         ✓ Setujui
                       </button>
                       <button
-                        onClick={() => {
-                          const alasan = prompt('Masukkan alasan penolakan:');
-                          if (alasan) handleTolak(selectedLayanan.id!, alasan);
-                        }}
+                        onClick={handleOpenRejectModal}
                         disabled={processingAction}
                         className="w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold rounded-lg sm:rounded-xl hover:shadow-lg active:scale-98 transition-all disabled:opacity-50 text-sm sm:text-base"
                       >
@@ -1183,10 +1728,7 @@ export default function LayananPublikAdminPage() {
                         ✓ Setujui (Kadus)
                       </button>
                       <button
-                        onClick={() => {
-                          const alasan = prompt('Masukkan alasan penolakan:');
-                          if (alasan) handleTolak(selectedLayanan.id!, alasan);
-                        }}
+                        onClick={handleOpenRejectModal}
                         disabled={processingAction}
                         className="w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold rounded-lg sm:rounded-xl hover:shadow-lg active:scale-98 transition-all disabled:opacity-50 text-sm sm:text-base"
                       >
@@ -1195,6 +1737,216 @@ export default function LayananPublikAdminPage() {
                     </>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Image Popup Modal - Optimized for Mobile & Desktop */}
+        {showImageModal && (
+          <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-95 animate-fadeIn"
+            onClick={() => setShowImageModal(false)}
+          >
+            <div 
+              className="relative w-full h-full max-w-7xl flex flex-col p-2 sm:p-4 md:p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header - Compact on mobile */}
+              <div className="flex items-center justify-between mb-2 sm:mb-4 bg-gradient-to-r from-indigo-600/90 to-purple-600/90 backdrop-blur-md rounded-xl p-2 sm:p-3 md:p-4 shadow-lg">
+                <h3 className="text-xs sm:text-sm md:text-lg lg:text-xl font-bold text-white flex items-center gap-1 sm:gap-2 truncate flex-1 mr-2">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="truncate">{modalImageTitle}</span>
+                </h3>
+                <button
+                  onClick={() => setShowImageModal(false)}
+                  className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-lg flex items-center justify-center transition-all flex-shrink-0 touch-manipulation"
+                  aria-label="Tutup"
+                >
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Image - Scrollable with pinch-zoom support */}
+              <div className="flex-1 flex items-center justify-center overflow-auto rounded-lg bg-black/30 backdrop-blur-sm p-2 sm:p-4 touch-pan-x touch-pan-y">
+                <img 
+                  src={modalImageUrl} 
+                  alt={modalImageTitle}
+                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg shadow-2xl select-none"
+                  style={{ touchAction: 'pinch-zoom' }}
+                  draggable={false}
+                />
+              </div>
+
+              {/* Modal Footer - Responsive button layout */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 sm:gap-3 md:gap-4 mt-2 sm:mt-4 bg-gradient-to-r from-gray-800/90 to-gray-900/90 backdrop-blur-md rounded-xl p-2 sm:p-3 md:p-4 shadow-lg">
+                {/* Mobile: Stack buttons vertically, Desktop: Row */}
+                <a
+                  href={modalImageUrl}
+                  download
+                  className="px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span className="hidden xs:inline">Download</span>
+                  <span className="xs:hidden">📥</span>
+                </a>
+                <a
+                  href={modalImageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  <span className="hidden sm:inline">Tab Baru</span>
+                  <span className="sm:hidden">🔗</span>
+                </a>
+                <button
+                  onClick={() => setShowImageModal(false)}
+                  className="px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-lg hover:shadow-xl active:scale-95 transition-all text-sm sm:text-base touch-manipulation"
+                >
+                  ✕ Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reject Modal - Professional & Modern */}
+        {showRejectModal && selectedLayanan && (
+          <div 
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-0 sm:p-4 overflow-y-auto"
+            onClick={() => setShowRejectModal(false)}
+          >
+            <div 
+              className="bg-white rounded-none sm:rounded-xl shadow-xl max-w-lg w-full h-full sm:h-auto overflow-hidden flex flex-col sm:my-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-red-500 to-pink-600 px-4 py-3 sm:py-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-white truncate">Konfirmasi Penolakan</h3>
+                      <p className="text-white/90 text-xs truncate">Mohon berikan alasan penolakan</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowRejectModal(false)}
+                    className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0"
+                  >
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-4 space-y-3 overflow-y-auto flex-1">
+                {/* Info Pemohon */}
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div className="flex items-start gap-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-500 font-semibold">Pemohon:</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{selectedLayanan.namaLengkap}</p>
+                      <p className="text-xs text-gray-600 mt-1 font-mono truncate">NIK: {selectedLayanan.nik}</p>
+                      <p className="text-xs text-gray-600 truncate">Layanan: {selectedLayanan.jenisLayanan}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Warning Alert */}
+                <div className="bg-amber-50 border-l-4 border-amber-500 rounded p-3">
+                  <div className="flex gap-2">
+                    <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-amber-900">Perhatian!</p>
+                      <p className="text-xs text-amber-800">Alasan penolakan akan dikirim ke pemohon dan ditampilkan di halaman notifikasi & riwayat mereka.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Textarea Alasan */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-900 mb-1.5">
+                    Alasan Penolakan <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={alasanPenolakan}
+                    onChange={(e) => setAlasanPenolakan(e.target.value)}
+                    placeholder="Contoh: Dokumen KTP tidak jelas, mohon upload ulang dengan foto yang lebih baik..."
+                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-xs text-gray-900 placeholder:text-gray-400 min-h-[100px] resize-none"
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-xs text-gray-500">
+                      {alasanPenolakan.length} karakter
+                    </p>
+                    {alasanPenolakan.length < 20 && alasanPenolakan.length > 0 && (
+                      <p className="text-xs text-red-600 font-medium">
+                        Min. 20 karakter
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-4 py-3 flex flex-col sm:flex-row items-stretch gap-2 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setAlasanPenolakan('');
+                  }}
+                  disabled={processingAction}
+                  className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg text-xs disabled:opacity-50 order-2 sm:order-1"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleConfirmReject}
+                  disabled={processingAction || !alasanPenolakan.trim() || alasanPenolakan.length < 20}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs flex items-center justify-center gap-2 order-1 sm:order-2"
+                >
+                  {processingAction ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Memproses...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Proses Tolak
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

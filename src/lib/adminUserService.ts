@@ -30,6 +30,7 @@ export interface AdminUserData {
   daerah?: string; // Daerah untuk kepala dusun
   address?: string;
   notes?: string;
+  initialPassword?: string; // Password awal yang dibuat admin (hanya untuk tampilan)
   createdAt: any;
   createdBy: string;
   updatedAt?: any;
@@ -109,6 +110,7 @@ class AdminUserService {
         daerah: data.daerah,
         address: data.address,
         notes: data.notes,
+        initialPassword: data.password, // Simpan password untuk ditampilkan ke admin
         createdAt: serverTimestamp(),
         createdBy,
         status: 'active'

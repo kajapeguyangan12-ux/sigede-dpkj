@@ -210,6 +210,7 @@ interface DataDesa {
   penghasilan: string;
   golonganDarah: string;
   shdk: string;
+  desil: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -264,7 +265,8 @@ export default function DataDesaPage() {
     pekerjaan: "",
     penghasilan: "",
     golonganDarah: "",
-    shdk: ""
+    shdk: "",
+    desil: ""
   });
 
   useEffect(() => {
@@ -311,7 +313,8 @@ export default function DataDesaPage() {
       pekerjaan: "",
       penghasilan: "",
       golonganDarah: "",
-      shdk: ""
+      shdk: "",
+      desil: ""
     });
     setEditingId(null);
   };
@@ -382,7 +385,8 @@ export default function DataDesaPage() {
       pekerjaan: item.pekerjaan,
       penghasilan: item.penghasilan,
       golonganDarah: item.golonganDarah,
-      shdk: item.shdk
+      shdk: item.shdk,
+      desil: item.desil
     });
     setEditingId(item.id);
     setShowModal(true);
@@ -778,6 +782,18 @@ export default function DataDesaPage() {
                                       <p className="text-sm font-semibold text-gray-900 truncate">{warga.pekerjaan}</p>
                                     </div>
                                   </div>
+
+                                  {warga.desil && (
+                                    <div className="flex items-start gap-2">
+                                      <svg className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                      </svg>
+                                      <div className="min-w-0">
+                                        <p className="text-xs text-gray-500">Desil</p>
+                                        <p className="text-sm font-semibold text-gray-900 truncate">{warga.desil}</p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Alamat & Daerah */}
@@ -1262,6 +1278,19 @@ export default function DataDesaPage() {
                       onChange={(e) => setFormData(prev => ({...prev, statusNikah: e.target.value}))}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
                       placeholder="Masukkan Status Nikah"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-2">
+                      Desil
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.desil}
+                      onChange={(e) => setFormData(prev => ({...prev, desil: e.target.value}))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
+                      placeholder="Masukkan Desil"
                     />
                   </div>
 

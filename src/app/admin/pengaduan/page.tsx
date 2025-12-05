@@ -961,73 +961,85 @@ export default function AdminPengaduanPage() {
         {/* Status Update Modal - Mobile Optimized */}
         {showStatusModal && selectedLaporan && (
           <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:bg-black/60 backdrop-blur-sm"
             onClick={() => setShowStatusModal(false)}
+            style={{ animation: 'fadeIn 0.2s ease-out' }}
           >
             <div 
-              className="bg-white rounded-none sm:rounded-2xl md:rounded-3xl shadow-2xl w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-hidden animate-slideUp flex flex-col"
+              className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:w-auto sm:min-w-[600px] sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
+              style={{ 
+                animation: 'slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                willChange: 'transform'
+              }}
             >
-              {/* Modal Header - Mobile Optimized */}
-              <div className="relative p-4 sm:p-5 md:p-6 bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 text-white">
-                <div className="absolute inset-0 bg-black/10"></div>
-                <div className="relative flex items-center justify-between">
+              {/* Modal Header - Compact */}
+              <div className="relative p-4 sm:p-5 bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 text-white flex-shrink-0">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 backdrop-blur-lg rounded-xl flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold">Ubah Status Pengaduan</h2>
-                      <p className="text-orange-100 text-sm">Update status dan tambahkan catatan</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl font-bold text-white truncate">Ubah Status Pengaduan</h2>
+                      <p className="text-white/90 text-xs sm:text-sm">Update status dan tambahkan catatan</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowStatusModal(false)}
-                    className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-xl transition-all"
+                    className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-xl transition-colors flex-shrink-0"
+                    aria-label="Tutup"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
               </div>
 
-              {/* Modal Body - Scrollable */}
-              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
-                {/* Current Info */}
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 rounded-2xl">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">{selectedLaporan.judul}</h3>
-                  <p className="text-sm text-gray-600">Pelapor: <span className="font-bold">{selectedLaporan.namaLengkap}</span></p>
+              {/* Modal Body - Scrollable with momentum */}
+              <div 
+                className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain"
+                style={{ 
+                  WebkitOverflowScrolling: 'touch',
+                  scrollBehavior: 'smooth'
+                }}
+              >
+                {/* Current Info - Compact */}
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-4 rounded-xl">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 line-clamp-2">{selectedLaporan.judul}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">Pelapor: <span className="font-semibold">{selectedLaporan.namaLengkap}</span></p>
                 </div>
 
-                {/* Status Selection */}
+                {/* Status Selection - Optimized Grid */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
                     Pilih Status Baru <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                       <button
                         key={key}
+                        type="button"
                         onClick={() => setNewStatus(key as StatusLaporan)}
-                        className={`p-3 sm:p-4 rounded-2xl border-2 transition-all ${
+                        className={`p-2.5 sm:p-3 rounded-xl border-2 transition-all touch-manipulation active:scale-95 ${
                           newStatus === key
-                            ? `bg-gradient-to-r ${config.color} text-white border-transparent shadow-lg scale-105`
-                            : `${config.bgColor} ${config.textColor} border-gray-200 hover:border-gray-300 hover:shadow-md`
+                            ? `bg-gradient-to-r ${config.color} text-white border-transparent shadow-md`
+                            : `${config.bgColor} border-gray-200 active:border-gray-300`
                         }`}
                       >
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <span className="text-xl sm:text-2xl">{config.icon}</span>
-                          <span className="font-bold text-sm sm:text-base">{config.label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg sm:text-xl flex-shrink-0">{config.icon}</span>
+                          <span className={`font-semibold text-xs sm:text-sm ${newStatus === key ? 'text-white' : 'text-gray-800'}`}>{config.label}</span>
                         </div>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Catatan Admin */}
+                {/* Tanggapan Admin - Optimized */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Tanggapan Admin
@@ -1035,36 +1047,42 @@ export default function AdminPengaduanPage() {
                   <textarea
                     value={catatanAdmin}
                     onChange={(e) => setCatatanAdmin(e.target.value)}
-                    rows={4}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                    rows={3}
+                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none text-sm sm:text-base text-gray-800 placeholder:text-gray-400 transition-shadow"
                     placeholder="Tambahkan tanggapan untuk masyarakat..."
+                    style={{ 
+                      WebkitOverflowScrolling: 'touch'
+                    }}
                   />
                 </div>
               </div>
 
-              {/* Modal Footer - Fixed at bottom */}
-              <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-3 flex-shrink-0">
+              {/* Modal Footer - Compact & Fixed */}
+              <div className="px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2 sm:gap-3 flex-shrink-0">
                 <button
+                  type="button"
                   onClick={() => setShowStatusModal(false)}
                   disabled={submitting}
-                  className="px-6 py-3 bg-white text-gray-700 font-bold rounded-xl border-2 border-gray-300 hover:bg-gray-50 hover:shadow-lg transition-all disabled:opacity-50"
+                  className="px-4 py-2 sm:px-6 sm:py-3 bg-white text-gray-700 text-sm sm:text-base font-semibold rounded-lg sm:rounded-xl border-2 border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 touch-manipulation"
                 >
                   Batal
                 </button>
                 <button
+                  type="button"
                   onClick={handleUpdateStatus}
                   disabled={submitting || !newStatus}
-                  className="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2 sm:px-8 sm:py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm sm:text-base font-semibold rounded-lg sm:rounded-xl hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                 >
                   {submitting ? (
                     <span className="flex items-center gap-2">
-                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Menyimpan...
+                      <span className="hidden sm:inline">Menyimpan...</span>
+                      <span className="sm:hidden">...</span>
                     </span>
-                  ) : 'Simpan Perubahan'}
+                  ) : 'Simpan'}
                 </button>
               </div>
             </div>

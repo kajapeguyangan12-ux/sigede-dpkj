@@ -29,6 +29,8 @@ export interface UniversalNotification {
     currentStatus?: string;
     buktiApproval?: string;
     estimasiSelesai?: string;
+    alasanTolak?: string;
+    tanggapan?: string;
     [key: string]: any;
   };
   createdAt: Timestamp;
@@ -45,6 +47,7 @@ export const createPengaduanNotification = async (data: {
   title: string;
   message: string;
   kategori?: string;
+  tanggapan?: string;
   priority?: 'low' | 'medium' | 'high';
 }) => {
   try {
@@ -52,6 +55,7 @@ export const createPengaduanNotification = async (data: {
     const metadata: {
       kategoriPengaduan?: string;
       currentStatus: string;
+      tanggapan?: string;
     } = {
       currentStatus: data.status,
     };
@@ -59,6 +63,9 @@ export const createPengaduanNotification = async (data: {
     // Only add optional fields if they are defined
     if (data.kategori !== undefined) {
       metadata.kategoriPengaduan = data.kategori;
+    }
+    if (data.tanggapan !== undefined) {
+      metadata.tanggapan = data.tanggapan;
     }
 
     const notification: Omit<UniversalNotification, 'id'> = {
@@ -93,6 +100,7 @@ export const createLayananNotification = async (data: {
   jenisLayanan?: string;
   buktiApproval?: string;
   estimasiSelesai?: string;
+  alasanTolak?: string;
   priority?: 'low' | 'medium' | 'high';
 }) => {
   try {
@@ -102,6 +110,7 @@ export const createLayananNotification = async (data: {
       currentStatus: string;
       buktiApproval?: string;
       estimasiSelesai?: string;
+      alasanTolak?: string;
     } = {
       currentStatus: data.status,
     };
@@ -115,6 +124,9 @@ export const createLayananNotification = async (data: {
     }
     if (data.estimasiSelesai !== undefined) {
       metadata.estimasiSelesai = data.estimasiSelesai;
+    }
+    if (data.alasanTolak !== undefined) {
+      metadata.alasanTolak = data.alasanTolak;
     }
 
     const notification: Omit<UniversalNotification, 'id'> = {

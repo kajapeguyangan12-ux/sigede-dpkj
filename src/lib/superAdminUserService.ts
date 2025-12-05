@@ -31,6 +31,7 @@ export interface ManagedUser {
   updatedAt?: any;
   createdBy?: string;
   lastLogin?: any;
+  initialPassword?: string; // Password awal yang dibuat admin (hanya untuk tampilan)
   loginCredentials?: {
     password?: string; // For display purposes only, not stored
     passwordHash?: string; // In real app, this would be hashed
@@ -96,6 +97,7 @@ class SuperAdminUserService {
         daerah: userData.daerah, // Include daerah for kepala dusun
         address: userData.address,
         notes: userData.notes,
+        initialPassword: userData.password, // Simpan password untuk ditampilkan ke admin
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         createdBy,

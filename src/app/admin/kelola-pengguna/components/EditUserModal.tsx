@@ -228,13 +228,13 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
                   <input
                     type="text"
                     id="username"
-                    value={user.uid}
+                    value={user.userName || user.uid}
                     readOnly
                     disabled
-                    className="w-full px-6 py-4 bg-gray-100 border border-gray-200/70 rounded-2xl text-gray-600 cursor-not-allowed font-mono text-sm"
+                    className="w-full px-6 py-4 bg-blue-50 border-2 border-blue-200 rounded-2xl text-gray-900 font-bold text-lg cursor-not-allowed"
                     placeholder="User ID"
                   />
-                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-blue-400">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
@@ -318,26 +318,28 @@ export default function EditUserModal({ user, isOpen, onClose, onUpdate }: EditU
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
                   </div>
-                  Password Lama
+                  Password Saat Ini
                 </label>
                 <div className="relative group">
                   <input
                     type="text"
                     id="oldPassword"
-                    value={formData.oldPassword}
-                    onChange={(e) => setFormData({ ...formData, oldPassword: e.target.value })}
-                    className="w-full px-6 py-4 bg-gray-50/80 border border-gray-200/70 rounded-2xl focus:ring-4 focus:ring-yellow-500/10 focus:border-yellow-400 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-500 shadow-sm hover:shadow-md font-medium"
-                    placeholder="Masukkan password lama untuk verifikasi"
+                    value={user.initialPassword || '(Password tidak tersimpan)'}
+                    readOnly
+                    disabled
+                    className="w-full px-6 py-4 bg-yellow-50 border-2 border-yellow-200 rounded-2xl text-gray-900 font-bold text-lg cursor-not-allowed"
+                    placeholder="Password saat ini"
                   />
-                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-yellow-500 transition-colors duration-200">
+                  <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-yellow-400">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-gray-600">
-                  👁️ Password lama ditampilkan untuk memudahkan verifikasi
+                <p className="mt-2 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 flex items-start gap-2">
+                  <span className="text-base">🔑</span>
+                  <span>Password lama ditampilkan untuk memudahkan verifikasi</span>
                 </p>
               </div>
 

@@ -304,13 +304,13 @@ export default function KelolapengggunaAdminPage() {
       {/* Modern Background with Enhanced Geometric Patterns */}
       <div className="min-h-screen relative overflow-hidden">
         {/* Primary Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/80 to-indigo-100/60"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-red-50/80 to-rose-100/60"></div>
         
         {/* Enhanced Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Floating Orbs */}
-          <div className="absolute -top-48 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-purple-400/15 via-pink-400/10 to-transparent rounded-full blur-3xl animate-float"></div>
-          <div className="absolute -bottom-40 -left-48 w-[700px] h-[700px] bg-gradient-to-br from-blue-400/15 via-indigo-400/10 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute -top-48 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-red-400/15 via-pink-400/10 to-transparent rounded-full blur-3xl animate-float"></div>
+          <div className="absolute -bottom-40 -left-48 w-[700px] h-[700px] bg-gradient-to-br from-red-400/15 via-rose-400/10 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
           <div className="absolute top-1/4 left-1/2 w-[500px] h-[500px] bg-gradient-to-br from-emerald-400/12 via-green-400/8 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
           
           {/* Enhanced Grid Pattern */}
@@ -328,36 +328,36 @@ export default function KelolapengggunaAdminPage() {
           {/* Enhanced Header */}
           <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 animate-fadeInUp relative z-40 overflow-visible">
             {/* Header Decoration */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 rounded-t-3xl"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 rounded-t-3xl"></div>
             
             {/* Floating Background Elements */}
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-purple-400/10 to-blue-400/10 rounded-full blur-xl animate-pulse"></div>
-            <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
-            <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-indigo-400/5 to-cyan-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
+            <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-red-400/10 to-pink-400/10 rounded-full blur-xl animate-pulse"></div>
+            <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-red-400/10 to-rose-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
+            <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-red-400/5 to-pink-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
 
             {/* Enhanced AdminHeaderCard with better styling */}
-            <div className="w-full bg-gradient-to-r from-white via-purple-50/30 to-blue-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
+            <div className="w-full bg-gradient-to-r from-white via-red-50/30 to-pink-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
               {/* Enhanced Title Section */}
               <div className="flex items-center gap-6 relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-xl shadow-purple-500/25 transform hover:scale-105 transition-all duration-300">
+                <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-xl shadow-red-500/25 transform hover:scale-105 transition-all duration-300">
                   <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                   </svg>
                 </div>
                 <div>
-                  <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-purple-800 to-blue-800 bg-clip-text text-transparent mb-2">
+                  <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-red-800 to-pink-800 bg-clip-text text-transparent mb-2">
                     Kelola Pengguna
                   </h1>
                   <p className="text-slate-600 font-medium text-lg">
                     Manajemen pengguna dan role sistem
                   </p>
                   <div className="flex items-center gap-4 mt-2">
-                    <div className="flex items-center gap-2 text-sm text-purple-600 font-semibold">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                    <div className="flex items-center gap-2 text-sm text-red-600 font-semibold">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                       {roleCards.length} Total Pengguna
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-blue-600 font-semibold">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="flex items-center gap-2 text-sm text-red-600 font-semibold">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                       Role Aktif
                     </div>
                   </div>
@@ -367,14 +367,14 @@ export default function KelolapengggunaAdminPage() {
               {/* Enhanced Controls Section */}
               <div className="flex items-center gap-6 relative z-10">
                 {/* Enhanced Search Bar */}
-                <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-purple-400 hover:shadow-lg transition-all duration-300 group">
+                <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-red-400 hover:shadow-lg transition-all duration-300 group">
                   <input
                     type="text"
                     placeholder="Cari pengguna berdasarkan nama atau email..."
                     className="flex-1 bg-transparent text-gray-700 text-base font-medium focus:outline-none placeholder-gray-500"
                   />
                   <svg
-                    className="ml-3 text-gray-400 group-hover:text-purple-500 transition-colors duration-300"
+                    className="ml-3 text-gray-400 group-hover:text-red-500 transition-colors duration-300"
                     width="24"
                     height="24"
                     fill="none"
@@ -389,7 +389,7 @@ export default function KelolapengggunaAdminPage() {
                 
                 {/* Enhanced Account Section */}
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-purple-50 hover:to-purple-100 transition-all duration-300 cursor-pointer shadow-md">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-red-50 hover:to-red-100 transition-all duration-300 cursor-pointer shadow-md">
                     <svg
                       width="24"
                       height="24"
@@ -427,17 +427,17 @@ export default function KelolapengggunaAdminPage() {
             <div className="mt-6 pt-6 pb-6 border-t border-gray-200/50 relative z-30 overflow-visible">
               <div className="flex items-center justify-center gap-6 sm:gap-8 relative overflow-visible">
                 <div className="text-center">
-                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
                     {roleCards.length}
                   </div>
                   <div className="text-xs sm:text-sm text-gray-600 font-medium">Jenis Peran</div>
                 </div>
                 <div className="w-px h-10 bg-gradient-to-b from-gray-300 to-gray-200"></div>
                 <div className="text-center tooltip-container">
-                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent cursor-help">
+                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent cursor-help">
                     {isLoadingStats ? (
                       <div className="inline-flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin -ml-1 mr-2 h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -456,7 +456,7 @@ export default function KelolapengggunaAdminPage() {
                         
                         <div className="text-left">
                           <h4 className="text-sm font-semibold text-gray-800 mb-3 text-center flex items-center justify-center gap-2">
-                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
                             Detail Pengguna
@@ -487,14 +487,14 @@ export default function KelolapengggunaAdminPage() {
                             })}
                           </div>
                           <div className="border-t border-gray-200 mt-3 pt-3">
-                            <div className="flex justify-between items-center text-sm font-semibold bg-blue-50 rounded-lg p-2">
+                            <div className="flex justify-between items-center text-sm font-semibold bg-red-50 rounded-lg p-2">
                               <span className="text-gray-800 flex items-center gap-2">
-                                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                                 </svg>
                                 Total Keseluruhan
                               </span>
-                              <span className="text-blue-600 bg-blue-100 px-3 py-1 rounded-full font-bold">
+                              <span className="text-red-600 bg-red-100 px-3 py-1 rounded-full font-bold">
                                 {totalUsers.toLocaleString('id-ID')}
                               </span>
                             </div>
@@ -506,7 +506,7 @@ export default function KelolapengggunaAdminPage() {
                 </div>
                 <div className="w-px h-10 bg-gradient-to-b from-gray-300 to-gray-200"></div>
                 <div className="text-center">
-                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
                     24/7
                   </div>
                   <div className="text-xs sm:text-sm text-gray-600 font-medium">Akses Sistem</div>
@@ -521,17 +521,17 @@ export default function KelolapengggunaAdminPage() {
             {/* Enhanced Header Section */}
             <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-8 mb-10 text-center animate-scaleIn relative z-20 overflow-hidden" style={{ animationDelay: '0.4s' }}>
               {/* Background Decoration */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-pink-500/5"></div>
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-pink-500/5 to-rose-500/5"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-pink-500 to-rose-500"></div>
               
               <div className="relative z-10">
-                <div className="inline-flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-pink-500/10 backdrop-blur-sm rounded-full border border-white/40 mb-8 shadow-xl">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg animate-gradient">
+                <div className="inline-flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-red-500/10 via-pink-500/10 to-rose-500/10 backdrop-blur-sm rounded-full border border-white/40 mb-8 shadow-xl">
+                  <div className="w-12 h-12 bg-gradient-to-r from-red-600 via-pink-600 to-rose-600 rounded-full flex items-center justify-center shadow-lg animate-gradient">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <span className="text-xl font-bold bg-gradient-to-r from-purple-700 via-blue-700 to-pink-700 bg-clip-text text-transparent">Manajemen Peran Lanjutan</span>
+                  <span className="text-xl font-bold bg-gradient-to-r from-red-700 via-pink-700 to-rose-700 bg-clip-text text-transparent">Manajemen Peran Lanjutan</span>
                 </div>
                 
                 <h2 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 bg-clip-text text-transparent mb-6 leading-tight">
@@ -547,12 +547,12 @@ export default function KelolapengggunaAdminPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 relative z-10">
               {roleCards.map((role, index) => {
                 const gradients = [
-                  'from-violet-600 to-purple-700',
-                  'from-blue-600 to-indigo-700', 
+                  'from-red-600 to-rose-700',
+                  'from-pink-600 to-rose-700', 
                   'from-emerald-600 to-green-700',
                   'from-orange-600 to-red-700',
                   'from-pink-600 to-rose-700',
-                  'from-cyan-600 to-blue-700',
+                  'from-red-600 to-rose-700',
                   'from-amber-600 to-orange-700'
                 ];
                 
@@ -610,7 +610,7 @@ export default function KelolapengggunaAdminPage() {
                             <span className={`text-sm font-semibold bg-gradient-to-r ${cardGradient} bg-clip-text text-transparent`}>
                               Kelola Pengguna
                             </span>
-                            <svg className={`w-4 h-4 text-purple-600 group-hover:translate-x-1 transition-transform duration-300`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className={`w-4 h-4 text-red-600 group-hover:translate-x-1 transition-transform duration-300`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
                           </div>
@@ -650,7 +650,7 @@ export default function KelolapengggunaAdminPage() {
                   <div className="h-8 w-px bg-gray-300"></div>
                   
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-600 flex items-center justify-center shadow-lg">
                       <span className="text-xl">{listRole.icon}</span>
                     </div>
                     <div>

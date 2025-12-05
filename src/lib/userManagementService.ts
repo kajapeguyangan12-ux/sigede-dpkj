@@ -80,6 +80,7 @@ class UserManagementService {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         createdBy: createdBy,
+        initialPassword: userData.password, // Simpan password awal untuk ditampilkan ke admin
         notes: userData.notes ? `${userData.notes}\n\n[TEMP] User created without Firebase Auth - needs email/password setup` : '[TEMP] User created without Firebase Auth - needs email/password setup'
       };
 
@@ -261,6 +262,7 @@ class UserManagementService {
               lastLoginAt: data.lastLoginAt?.toDate?.() || null,
               // Additional fields from masyarakat collection
               userName: data.userName || data.username,
+              initialPassword: data.initialPassword || data.password || data.kataSandi, // Ambil password
               idNumber: data.nik || data.idNumber,
               phoneNumber: data.noTelp || data.phoneNumber || data.phone,
               address: data.alamat || data.address,
@@ -337,6 +339,7 @@ class UserManagementService {
           lastLoginAt: data.lastLoginAt?.toDate?.() || null,
           // Additional fields
           userName: data.userName || data.username,
+          initialPassword: data.initialPassword || data.password || data.kataSandi, // Ambil password dari berbagai field
           idNumber: data.nik || data.idNumber || data.id,
           phoneNumber: data.noTelepon || data.noTelp || data.phoneNumber || data.phone,
           address: data.alamat || data.address,
@@ -689,6 +692,7 @@ class UserManagementService {
         userName: userData.username,
         idNumber: userData.nik,
         phoneNumber: userData.phoneNumber,
+        initialPassword: userData.password, // Simpan password untuk ditampilkan ke admin
         role: 'warga' as UserRole,
         status: 'active' as UserStatus,
         createdAt: serverTimestamp(),
@@ -797,6 +801,7 @@ class UserManagementService {
         displayName: userData.username, // Use username as display name for warga luar
         userName: userData.username,
         phoneNumber: userData.phoneNumber,
+        initialPassword: userData.password, // Simpan password untuk ditampilkan ke admin
         role: 'warga_luar_dpkj' as UserRole, // Set role sebagai 'warga_luar_dpkj'
         status: 'active' as UserStatus, // Langsung active, tidak perlu approval admin
         createdAt: serverTimestamp(),

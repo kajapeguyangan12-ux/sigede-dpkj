@@ -281,6 +281,7 @@ export interface FirestoreUser {
   role: UserRole;
   status: UserStatus;
   userName?: string;          // Username untuk identifikasi
+  initialPassword?: string;   // Password awal yang dibuat admin (hanya untuk tampilan)
   idNumber?: string;           // ID yang diperlukan untuk login
   phoneNumber?: string;
   address?: string;

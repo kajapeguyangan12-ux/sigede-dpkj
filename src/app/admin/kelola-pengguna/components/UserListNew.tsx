@@ -182,6 +182,14 @@ function UserCard({ user, onEdit, onDelete, onApprove, onReject }: UserCardProps
                 </svg>
                 {user.email}
               </p>
+              {user.userName && (
+                <p className="text-sm text-blue-600 flex items-center gap-2 mt-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Username: <span className="font-semibold">{user.userName}</span>
+                </p>
+              )}
             </div>
           </div>
           
@@ -200,6 +208,59 @@ function UserCard({ user, onEdit, onDelete, onApprove, onReject }: UserCardProps
         </div>
 
 
+
+        {/* Login Credentials - Show for newly created users */}
+        {(user.userName || user.initialPassword) && (
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-4 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <h4 className="text-sm font-bold text-blue-900">🔐 Kredensial Login</h4>
+            </div>
+            
+            <div className="space-y-3">
+              {user.userName && (
+                <div className="bg-white rounded-lg border-2 border-blue-300 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Username</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-base font-mono font-bold text-gray-900 bg-blue-50 px-3 py-1 rounded border border-blue-200">
+                          {user.userName}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {user.initialPassword && (
+                <div className="bg-white rounded-lg border-2 border-indigo-300 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">Password</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-base font-mono font-bold text-gray-900 bg-indigo-50 px-3 py-1 rounded border border-indigo-200">
+                          {user.initialPassword}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs text-amber-800 flex items-start gap-2">
+                  <span className="text-base">⚠️</span>
+                  <span>
+                    <strong>Penting:</strong> Simpan kredensial ini dengan aman. Password hanya ditampilkan sekali saat pembuatan user.
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Enhanced User Details */}
         {(user.nik || user.alamat || user.noTelp || user.jenisKelamin) && (
@@ -811,6 +872,9 @@ export default function UserList({ roleId, roleLabel }: UserListProps) {
                       Pengguna
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Kredensial
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Kontak
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -850,6 +914,26 @@ export default function UserList({ roleId, roleLabel }: UserListProps) {
                               ID: {user.uid?.slice(-8) || 'N/A'}
                             </p>
                           </div>
+                        </div>
+                      </td>
+
+                      {/* Login Credentials */}
+                      <td className="px-6 py-4">
+                        <div className="space-y-1.5">
+                          {user.userName ? (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5">
+                              <p className="text-xs font-semibold text-blue-700 mb-0.5">Username</p>
+                              <p className="text-sm font-mono font-bold text-gray-900">{user.userName}</p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">-</p>
+                          )}
+                          {user.initialPassword && (
+                            <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-1.5">
+                              <p className="text-xs font-semibold text-indigo-700 mb-0.5">Password</p>
+                              <p className="text-sm font-mono font-bold text-gray-900">{user.initialPassword}</p>
+                            </div>
+                          )}
                         </div>
                       </td>
 

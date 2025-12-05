@@ -485,14 +485,14 @@ export default function WilayahDesaAdminPage() {
                       return (
                         <div 
                           key={actualIndex}
-                          className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-md hover:shadow-lg hover:border-blue-300 active:scale-[0.99] transition-all duration-300 p-4 sm:p-5"
+                          className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-md hover:shadow-lg hover:border-red-300 active:scale-[0.99] transition-all duration-300 p-4 sm:p-5"
                           style={{
                             animation: `cardEntrance 0.4s ease-out ${indexInPage * 0.08}s backwards`
                           }}
                         >
                           <div className="flex items-start justify-between mb-3 sm:mb-4">
                             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                              <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
+                              <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                                 {actualIndex + 1}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -527,13 +527,13 @@ export default function WilayahDesaAdminPage() {
 
                           {/* Detail Data - Mobile Grid */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                            <div className="bg-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-blue-200">
-                              <label className="text-xs font-semibold text-blue-700 uppercase tracking-wide block mb-1.5 sm:mb-2">Luas Wilayah</label>
-                              <p className="text-lg sm:text-xl font-bold text-blue-900">{dusun.luasDusun} <span className="text-xs sm:text-sm font-normal">m²</span></p>
+                            <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-red-200">
+                              <label className="text-xs font-semibold text-red-700 uppercase tracking-wide block mb-1.5 sm:mb-2">Luas Wilayah</label>
+                              <p className="text-lg sm:text-xl font-bold text-red-900">{dusun.luasDusun} <span className="text-xs sm:text-sm font-normal">m²</span></p>
                             </div>
-                            <div className="bg-purple-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-purple-200">
-                              <label className="text-xs font-semibold text-purple-700 uppercase tracking-wide block mb-1.5 sm:mb-2">Garis Keliling</label>
-                              <p className="text-lg sm:text-xl font-bold text-purple-900">{dusun.garisKeliling} <span className="text-xs sm:text-sm font-normal">km</span></p>
+                            <div className="bg-red-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-red-200">
+                              <label className="text-xs font-semibold text-red-700 uppercase tracking-wide block mb-1.5 sm:mb-2">Garis Keliling</label>
+                              <p className="text-lg sm:text-xl font-bold text-red-900">{dusun.garisKeliling} <span className="text-xs sm:text-sm font-normal">km</span></p>
                             </div>
                           </div>
                         </div>
@@ -564,8 +564,8 @@ export default function WilayahDesaAdminPage() {
                             onClick={() => setCurrentPage(page)}
                             className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg text-sm sm:text-base font-semibold transition-all duration-300 active:scale-95 ${
                               currentPage === page
-                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
-                                : 'border border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 active:bg-gray-100'
+                                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg'
+                                : 'border border-gray-300 text-gray-700 hover:border-red-500 hover:text-red-600 active:bg-gray-100'
                             }`}
                           >
                             {page}
@@ -617,7 +617,7 @@ export default function WilayahDesaAdminPage() {
             <button 
               onClick={handleAddMain}
               disabled={wilayahData !== null && !!wilayahData?.deskripsi}
-              className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 active:scale-[0.98] text-white text-sm sm:text-base font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:shadow-sm"
+              className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:scale-[0.98] text-white text-sm sm:text-base font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:shadow-sm"
             >
               <span>Buat (Main)</span>
               <svg

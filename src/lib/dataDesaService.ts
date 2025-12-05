@@ -32,6 +32,7 @@ export interface DataDesaItem {
   penghasilan?: string;
   golonganDarah?: string;
   shdk?: string;
+  desil?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   [key: string]: any; // Untuk mendukung field dinamis

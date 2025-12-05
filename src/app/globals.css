@@ -828,3 +828,138 @@ textarea::placeholder {
   font-style: italic;
   color: #6b7280;
 }
+
+/* Print styles untuk PDF generation */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  .print-container {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
+
+/* ========================================
+   PDF GENERATION: ANTI-PUCAT OVERRIDE
+   Solusi lengkap untuk PDF tidak pucat
+   ======================================== */
+
+/* 1. FORCE FULL OPACITY & NO FILTER */
+#printArea,
+#printArea *,
+.print-container,
+.print-container * {
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 2. FORCE BLACK TEXT (tidak abu-abu/pucat) */
+#printArea p,
+#printArea span:not(img):not([class*="image"]),
+#printArea div:not([class*="image"]):not([class*="logo"]),
+#printArea h1,
+#printArea h2,
+#printArea h3,
+#printArea h4,
+#printArea h5,
+#printArea h6,
+#printArea td,
+#printArea th,
+#printArea li,
+.print-container p,
+.print-container span:not(img):not([class*="image"]),
+.print-container div:not([class*="image"]):not([class*="logo"]),
+.print-container h1,
+.print-container h2,
+.print-container h3,
+.print-container h4,
+.print-container h5,
+.print-container h6 {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  text-shadow: none !important;
+}
+
+/* 3. FORCE WHITE BACKGROUND (tidak transparan) */
+#printArea,
+.print-container {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+/* 4. REMOVE BLUR & BRIGHTNESS - Kecuali Logo */
+#printArea img:not([alt*="Logo"]):not([alt*="logo"]),
+.print-container img:not([alt*="Logo"]):not([alt*="logo"]) {
+  filter: none !important;
+  -webkit-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* 5. LOGO - Biarkan Natural */
+#printArea img[alt*="Logo"],
+#printArea img[alt*="logo"],
+.print-container img[alt*="Logo"],
+.print-container img[alt*="logo"] {
+  filter: none !important;
+  -webkit-filter: none !important;
+  /* Warna natural dari gambar */
+}
+
+/* 6. PRINT COLOR ADJUST EXACT */
+#printArea,
+#printArea *,
+.print-container,
+.print-container * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+/* 7. FONT RENDERING OPTIMIZATION */
+#printArea,
+.print-container {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+
+/* 8. REMOVE SHADOW & GRADIENTS */
+#printArea *,
+.print-container * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  background-image: none !important;
+}
+
+/* 9. KHUSUS: Class print-pdf untuk elemen yang perlu extra clean */
+.print-pdf,
+.print-pdf * {
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  color: #000000 !important;
+  background-color: transparent !important;
+}
+
+.print-pdf img {
+  filter: none !important;
+  opacity: 1 !important;
+}

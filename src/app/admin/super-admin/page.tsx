@@ -259,11 +259,11 @@ export default function SuperAdminPage() {
       <style>{styles}</style>
       
       {/* Modern Background with Geometric Patterns */}
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-rose-50 relative overflow-hidden">
         {/* Enhanced Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-32 w-[500px] h-[500px] bg-gradient-to-br from-purple-400/20 via-pink-400/15 to-transparent rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-32 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute -top-40 -right-32 w-[500px] h-[500px] bg-gradient-to-br from-red-400/20 via-pink-400/15 to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-32 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-red-400/20 via-rose-400/15 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] bg-gradient-to-br from-red-400/15 via-pink-400/10 to-transparent rounded-full blur-3xl"></div>
           
           {/* Grid Pattern Overlay */}
@@ -282,7 +282,7 @@ export default function SuperAdminPage() {
               <nav className="flex items-center gap-2" aria-label="Breadcrumb">
                 <button
                   onClick={() => router.push('/admin')}
-                  className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200 group"
+                  className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-red-600 transition-colors duration-200 group"
                 >
                   <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -294,7 +294,7 @@ export default function SuperAdminPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
                 
-                <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
+                <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-lg">
                   Super Administrator
                 </span>
               </nav>
@@ -310,7 +310,7 @@ export default function SuperAdminPage() {
           <div className="max-w-4xl mx-auto animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
             
             {/* Premium Header Card */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-600 to-purple-700 rounded-3xl p-8 mb-0 shadow-2xl">
+            <div className="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-600 to-rose-700 rounded-3xl p-8 mb-0 shadow-2xl">
               {/* Floating Background Elements */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
               <div className="absolute bottom-0 left-0 w-28 h-28 bg-white/10 rounded-full blur-3xl -ml-14 -mb-14"></div>
@@ -362,7 +362,7 @@ export default function SuperAdminPage() {
                 {/* Username */}
                 <div className="group">
                   <label className="flex items-center gap-3 text-sm font-bold text-gray-700 mb-3">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <div className="w-6 h-6 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center">
                       <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                       </svg>
@@ -375,7 +375,7 @@ export default function SuperAdminPage() {
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50/80 text-gray-800 font-medium placeholder-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 group-hover:border-gray-300"
+                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50/80 text-gray-800 font-medium placeholder-gray-400 focus:border-red-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-red-100 transition-all duration-300 group-hover:border-gray-300"
                     placeholder="Unique username"
                   />
                 </div>
@@ -383,7 +383,7 @@ export default function SuperAdminPage() {
                 {/* Role User */}
                 <div className="group">
                   <label className="flex items-center gap-3 text-sm font-bold text-gray-700 mb-3">
-                    <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-violet-600 rounded-lg flex items-center justify-center">
+                    <div className="w-6 h-6 bg-gradient-to-br from-red-500 to-rose-600 rounded-lg flex items-center justify-center">
                       <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                       </svg>
@@ -395,7 +395,7 @@ export default function SuperAdminPage() {
                     name="roleUser"
                     value={formData.roleUser}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50/80 text-gray-800 font-medium focus:border-purple-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-purple-100 transition-all duration-300 group-hover:border-gray-300"
+                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50/80 text-gray-800 font-medium focus:border-red-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-red-100 transition-all duration-300 group-hover:border-gray-300"
                   >
                     <option value="super_administrator">Super Administrator</option>
                     <option value="administrator">Administrator</option>
@@ -494,16 +494,16 @@ export default function SuperAdminPage() {
               {/* Premium Info Cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                 {/* Role Info Card */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-100 shadow-lg">
+                <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl p-6 border-2 border-red-100 shadow-lg">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-black text-blue-900 mb-2 text-lg">Role Information</h4>
-                      <p className="text-blue-700 font-medium leading-relaxed">Full access to all system features with complete permissions</p>
+                      <h4 className="font-black text-red-900 mb-2 text-lg">Role Information</h4>
+                      <p className="text-red-700 font-medium leading-relaxed">Full access to all system features with complete permissions</p>
                     </div>
                   </div>
                 </div>
@@ -533,7 +533,7 @@ export default function SuperAdminPage() {
                 <button
                   onClick={createAdmin}
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-red-500 via-pink-600 to-purple-700 hover:from-red-600 hover:via-pink-700 hover:to-purple-800 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 text-white py-5 px-8 rounded-2xl font-black text-lg shadow-xl hover:shadow-2xl disabled:shadow-lg transition-all duration-500 flex items-center justify-center gap-4 transform hover:scale-[1.02] hover:-translate-y-1 disabled:transform-none"
+                  className="w-full bg-gradient-to-r from-red-500 via-pink-600 to-rose-700 hover:from-red-600 hover:via-pink-700 hover:to-rose-800 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 text-white py-5 px-8 rounded-2xl font-black text-lg shadow-xl hover:shadow-2xl disabled:shadow-lg transition-all duration-500 flex items-center justify-center gap-4 transform hover:scale-[1.02] hover:-translate-y-1 disabled:transform-none"
                 >
                   {isLoading ? (
                     <>

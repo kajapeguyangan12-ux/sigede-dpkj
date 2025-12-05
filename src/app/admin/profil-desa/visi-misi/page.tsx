@@ -235,7 +235,7 @@ export default function VisiMisiDesaAdminPage() {
           }}
         >
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-md">
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-white sm:w-6 sm:h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
@@ -249,7 +249,7 @@ export default function VisiMisiDesaAdminPage() {
         <div className="mb-4 sm:mb-6">
           <Link
             href="/admin/profil-desa"
-            className="group inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 text-blue-700 text-sm sm:text-base font-semibold hover:from-blue-100 hover:to-purple-100 hover:border-blue-300 active:scale-[0.98] transition-all duration-300 shadow-sm hover:shadow-lg"
+            className="group inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-700 text-sm sm:text-base font-semibold hover:from-red-100 hover:to-rose-100 hover:border-red-300 active:scale-[0.98] transition-all duration-300 shadow-sm hover:shadow-lg"
             title="Kembali ke halaman pemilihan Profil Desa"
           >
             <svg
@@ -259,11 +259,11 @@ export default function VisiMisiDesaAdminPage() {
               stroke="currentColor"
               strokeWidth="2.5"
               viewBox="0 0 24 24"
-              className="text-blue-600 group-hover:text-blue-700 transition-colors sm:w-5 sm:h-5"
+              className="text-red-600 group-hover:text-red-700 transition-colors sm:w-5 sm:h-5"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
-            <span className="group-hover:text-blue-800 transition-colors">Kembali ke Pemilihan</span>
+            <span className="group-hover:text-red-800 transition-colors">Kembali ke Pemilihan</span>
           </Link>
         </div>
 
@@ -288,7 +288,7 @@ export default function VisiMisiDesaAdminPage() {
                     <div className="mt-3 sm:mt-4">
                       <button
                         onClick={() => setShowImageReview('visi')}
-                        className="inline-block rounded-xl overflow-hidden border-2 border-gray-300 hover:border-blue-500 active:border-blue-600 transition-colors group"
+                        className="inline-block rounded-xl overflow-hidden border-2 border-gray-300 hover:border-red-500 active:border-red-600 transition-colors group"
                       >
                         <img
                           src={visiMisiData.visiImageUrl}
@@ -310,7 +310,7 @@ export default function VisiMisiDesaAdminPage() {
                     <div className="mt-3 sm:mt-4">
                       <button
                         onClick={() => setShowImageReview('misi')}
-                        className="inline-block rounded-xl overflow-hidden border-2 border-gray-300 hover:border-purple-500 active:border-purple-600 transition-colors group"
+                        className="inline-block rounded-xl overflow-hidden border-2 border-gray-300 hover:border-red-500 active:border-red-600 transition-colors group"
                       >
                         <img
                           src={visiMisiData.misiImageUrl}
@@ -428,7 +428,7 @@ export default function VisiMisiDesaAdminPage() {
                     value={formData.visi}
                     onChange={handleInputChange}
                     placeholder="Masukkan visi desa..."
-                    className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-gray-300 bg-gray-50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors text-sm sm:text-base"
+                    className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-gray-300 bg-gray-50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:bg-white transition-colors text-sm sm:text-base"
                     rows={4}
                     required
                   />
@@ -451,11 +451,11 @@ export default function VisiMisiDesaAdminPage() {
                       <button
                         type="button"
                         onClick={() => document.getElementById('fileInputVisi')?.click()}
-                        className="w-full flex items-center justify-center gap-3 px-5 sm:px-6 py-6 sm:py-8 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-blue-500 hover:bg-blue-50 active:bg-blue-100 transition-all duration-300 group"
+                        className="w-full flex items-center justify-center gap-3 px-5 sm:px-6 py-6 sm:py-8 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-red-500 hover:bg-red-50 active:bg-red-100 transition-all duration-300 group"
                       >
                         <div className="flex flex-col items-center gap-3">
-                          <div className="p-4 rounded-full bg-blue-100 group-hover:bg-blue-200 transition-colors">
-                            <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-blue-600">
+                          <div className="p-4 rounded-full bg-red-100 group-hover:bg-red-200 transition-colors">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-red-600">
                               <rect x="3" y="3" width="18" height="18" rx="2"/>
                               <circle cx="8.5" cy="8.5" r="1.5"/>
                               <path d="M21 15l-5-5L5 21"/>
@@ -472,7 +472,7 @@ export default function VisiMisiDesaAdminPage() {
                       <div className="mt-4 space-y-3">
                         <div className="relative group">
                           <div 
-                            className="relative w-full h-64 sm:h-80 rounded-xl overflow-hidden border-2 border-gray-300 cursor-pointer hover:border-blue-500 active:border-blue-600 transition-colors"
+                            className="relative w-full h-64 sm:h-80 rounded-xl overflow-hidden border-2 border-gray-300 cursor-pointer hover:border-red-500 active:border-red-600 transition-colors"
                             onClick={() => setShowImageModal('visi')}
                           >
                             <img
@@ -516,7 +516,7 @@ export default function VisiMisiDesaAdminPage() {
                         <button
                           type="button"
                           onClick={() => document.getElementById('fileInputVisi')?.click()}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 active:from-blue-700 active:to-blue-800 active:scale-[0.98] text-white text-sm sm:text-base font-semibold transition-all duration-300 shadow-lg"
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800 active:scale-[0.98] text-white text-sm sm:text-base font-semibold transition-all duration-300 shadow-lg"
                         >
                           <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -538,7 +538,7 @@ export default function VisiMisiDesaAdminPage() {
                     value={formData.misi}
                     onChange={handleInputChange}
                     placeholder="Masukkan misi desa..."
-                    className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-gray-300 bg-gray-50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white transition-colors text-sm sm:text-base"
+                    className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-gray-300 bg-gray-50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:bg-white transition-colors text-sm sm:text-base"
                     rows={6}
                     required
                   />
@@ -561,11 +561,11 @@ export default function VisiMisiDesaAdminPage() {
                       <button
                         type="button"
                         onClick={() => document.getElementById('fileInputMisi')?.click()}
-                        className="w-full flex items-center justify-center gap-3 px-5 sm:px-6 py-6 sm:py-8 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-purple-500 hover:bg-purple-50 active:bg-purple-100 transition-all duration-300 group"
+                        className="w-full flex items-center justify-center gap-3 px-5 sm:px-6 py-6 sm:py-8 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-red-500 hover:bg-red-50 active:bg-red-100 transition-all duration-300 group"
                       >
                         <div className="flex flex-col items-center gap-3">
-                          <div className="p-4 rounded-full bg-purple-100 group-hover:bg-purple-200 transition-colors">
-                            <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-purple-600">
+                          <div className="p-4 rounded-full bg-red-100 group-hover:bg-red-200 transition-colors">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-red-600">
                               <rect x="3" y="3" width="18" height="18" rx="2"/>
                               <circle cx="8.5" cy="8.5" r="1.5"/>
                               <path d="M21 15l-5-5L5 21"/>
@@ -582,7 +582,7 @@ export default function VisiMisiDesaAdminPage() {
                       <div className="mt-4 space-y-3">
                         <div className="relative group">
                           <div 
-                            className="relative w-full h-64 sm:h-80 rounded-xl overflow-hidden border-2 border-gray-300 cursor-pointer hover:border-purple-500 active:border-purple-600 transition-colors"
+                            className="relative w-full h-64 sm:h-80 rounded-xl overflow-hidden border-2 border-gray-300 cursor-pointer hover:border-red-500 active:border-red-600 transition-colors"
                             onClick={() => setShowImageModal('misi')}
                           >
                             <img
@@ -626,7 +626,7 @@ export default function VisiMisiDesaAdminPage() {
                         <button
                           type="button"
                           onClick={() => document.getElementById('fileInputMisi')?.click()}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 active:from-purple-700 active:to-purple-800 active:scale-[0.98] text-white text-sm sm:text-base font-semibold transition-all duration-300 shadow-lg"
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800 active:scale-[0.98] text-white text-sm sm:text-base font-semibold transition-all duration-300 shadow-lg"
                         >
                           <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -685,7 +685,7 @@ export default function VisiMisiDesaAdminPage() {
               {/* Close Button */}
               <button
                 onClick={() => setShowImageModal(null)}
-                className="absolute -top-10 sm:-top-12 right-0 text-white hover:text-blue-400 active:text-blue-500 transition-colors p-2 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80"
+                className="absolute -top-10 sm:-top-12 right-0 text-white hover:text-red-400 active:text-red-500 transition-colors p-2 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80"
                 title="Tutup"
               >
                 <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="sm:w-8 sm:h-8">
@@ -715,7 +715,7 @@ export default function VisiMisiDesaAdminPage() {
             <div className="relative z-10 max-w-5xl max-h-[90vh] w-full">
               <button
                 onClick={() => setShowImageReview(null)}
-                className="absolute -top-10 sm:-top-12 right-0 text-white hover:text-blue-400 active:text-blue-500 transition-colors p-2 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80"
+                className="absolute -top-10 sm:-top-12 right-0 text-white hover:text-red-400 active:text-red-500 transition-colors p-2 rounded-full bg-black/50 hover:bg-black/70 active:bg-black/80"
                 title="Tutup"
               >
                 <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="sm:w-8 sm:h-8">
