@@ -1,95 +1,282 @@
 rules_version = '2';
 
-// Firebase Storage Security Rules
+// Firebase Storage Security Rules for DPKJ Application
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // E-News folder - allow all operations for development
-    match /e-news/{filename} {
-      allow read, write, delete: if true; // Allow all for development
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             request.auth.token.role == 'admin';
     }
     
-    // Pengumuman folder - allow authenticated users to write
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to validate image file types
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // Helper function to validate document file types
+    function isDocument() {
+      return request.resource.contentType.matches('application/pdf') ||
+             request.resource.contentType.matches('application/msword') ||
+             request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*') ||
+             request.resource.contentType.matches('text/.*');
+    }
+    
+    // Helper function to validate file size (max 10MB)
+    function isValidSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // ============================================
+    // PUBLIC CONTENT (Readable by everyone)
+    // ============================================
+    
+    // E-News folder - public read, admin write
+    match /e-news/{filename} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isImage() && isValidSize();
+    }
+    
+    // Pengumuman folder - public read, authenticated write
     match /pengumuman/{filename} {
-      allow read: if true; // Public read
-      allow write, delete: if request.auth != null; // Any authenticated user
+      allow read: if true;
+      allow write, delete: if isAuthenticated();
+      allow create: if isAuthenticated() && isImage() && isValidSize();
+    }
+    
+    // Pengaturan folder - for system settings
+    match /pengaturan/{filename} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isImage() && isValidSize();
     }
     
     // Ucapan Selamat Datang
     match /ucapan-selamat-datang.jpg {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAdmin();
     }
     
     // Foto Kepala Desa
     match /kepala-desa.jpg {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAdmin();
     }
     
-    // Slideshow images
+    // Slideshow images - public read, admin write
     match /slideshow/{filename} {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isImage() && isValidSize();
     }
     
-    // Popup images
+    // Popup iklan images - public read, admin write
     match /popup/{filename} {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isImage() && isValidSize();
     }
     
-    // Profil Desa images
+    // Profil Desa images - public read, admin write
     match /profil-desa/{filename} {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isImage() && isValidSize();
     }
     
-    // Wisata Budaya images
+    // Wisata Budaya images - public read, authenticated write
     match /wisata-budaya/{filename} {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAuthenticated();
+      allow create: if isAuthenticated() && isImage() && isValidSize();
     }
     
-    // E-UMKM images
+    // Wisata Budaya with nested structure
+    match /wisata-budaya/{wisataId}/{filename} {
+      allow read: if true;
+      allow write, delete: if isAuthenticated();
+      allow create: if isAuthenticated() && isImage() && isValidSize();
+    }
+    
+    // ============================================
+    // E-UMKM (E-Commerce)
+    // ============================================
+    
+    // E-UMKM product images - public read, owner/admin write
     match /e-umkm/{filename} {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAuthenticated();
+      allow create: if isAuthenticated() && isImage() && isValidSize();
     }
     
-    // Layanan Publik images
+    // E-UMKM products with nested structure (userId/productId)
+    match /e-umkm/{userId}/{filename} {
+      allow read: if true;
+      allow write, delete: if isAuthenticated() && 
+                            (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && 
+                     (request.auth.uid == userId || isAdmin()) && 
+                     isImage() && isValidSize();
+    }
+    
+    // Produk UMKM dengan struktur nested
+    match /produk-umkm/{umkmId}/{filename} {
+      allow read: if true;
+      allow write, delete: if isAuthenticated();
+      allow create: if isAuthenticated() && isImage() && isValidSize();
+    }
+    
+    // ============================================
+    // LAYANAN PUBLIK (Public Services)
+    // ============================================
+    
+    // Layanan Publik images - public read, admin write
     match /layanan-publik/{filename} {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isImage() && isValidSize();
     }
     
-    // Data Desa KK Excel files
+    // Layanan Publik documents/attachments - authenticated read, authenticated write
+    match /layanan-publik/{serviceId}/{userId}/{filename} {
+      allow read: if isAuthenticated() && 
+                   (request.auth.uid == userId || isAdmin());
+      allow write, delete: if isAuthenticated() && 
+                            (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && 
+                     (request.auth.uid == userId || isAdmin()) && 
+                     isValidSize();
+    }
+    
+    // ============================================
+    // PENGADUAN (Public Complaints)
+    // ============================================
+    
+    // Pengaduan images - authenticated users can upload
+    match /pengaduan/{userId}/{filename} {
+      allow read: if isAuthenticated() && 
+                   (request.auth.uid == userId || isAdmin());
+      allow write, delete: if isAuthenticated() && 
+                            (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && 
+                     request.auth.uid == userId && 
+                     isImage() && isValidSize();
+    }
+    
+    // Alternative pengaduan path
+    match /pengaduan/{filename} {
+      allow read: if isAuthenticated();
+      allow write, delete: if isAuthenticated();
+      allow create: if isAuthenticated() && isImage() && isValidSize();
+    }
+    
+    // ============================================
+    // DATA DESA & DOCUMENTS
+    // ============================================
+    
+    // Data Desa KK Excel files - authenticated only
     match /data-desa-kk/{filename} {
-      allow read: if request.auth != null;
-      allow write, delete: if request.auth != null;
+      allow read: if isAuthenticated();
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isDocument() && isValidSize();
     }
     
-    // Regulasi documents
+    // Regulasi documents - public read, admin write
     match /regulasi/{filename} {
       allow read: if true;
-      allow write, delete: if request.auth != null;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isDocument() && isValidSize();
     }
     
-    // Keuangan documents
+    // Keuangan documents - authenticated read, admin write
     match /keuangan/{filename} {
-      allow read: if request.auth != null;
-      allow write, delete: if request.auth != null;
+      allow read: if isAuthenticated();
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isDocument() && isValidSize();
     }
     
-    // User profile pictures
+    // Transparansi Desa documents
+    match /transparansi/{category}/{filename} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isDocument() && isValidSize();
+    }
+    
+    // ============================================
+    // USER FILES
+    // ============================================
+    
+    // User profile pictures - public read, owner write
     match /users/{userId}/{filename} {
       allow read: if true;
-      allow write, delete: if request.auth != null && request.auth.uid == userId;
+      allow write, delete: if isAuthenticated() && 
+                            (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && 
+                     request.auth.uid == userId && 
+                     isImage() && isValidSize();
     }
     
-    // Default rule - allow all for development
+    // User documents/KTP/KK
+    match /users/{userId}/documents/{filename} {
+      allow read: if isAuthenticated() && 
+                   (request.auth.uid == userId || isAdmin());
+      allow write, delete: if isAuthenticated() && 
+                            (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && 
+                     request.auth.uid == userId && 
+                     isValidSize();
+    }
+    
+    // ============================================
+    // BERITA & ARTIKEL
+    // ============================================
+    
+    // Berita/artikel images
+    match /berita/{articleId}/{filename} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isImage() && isValidSize();
+    }
+    
+    // ============================================
+    // GALERI
+    // ============================================
+    
+    // Galeri/gallery images
+    match /galeri/{category}/{filename} {
+      allow read: if true;
+      allow write, delete: if isAdmin();
+      allow create: if isAdmin() && isImage() && isValidSize();
+    }
+    
+    // ============================================
+    // TEMPORARY/UPLOADS
+    // ============================================
+    
+    // Temporary uploads (24 hour expiry should be set via lifecycle)
+    match /temp/{userId}/{filename} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write, delete: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && 
+                     request.auth.uid == userId && 
+                     isValidSize();
+    }
+    
+    // ============================================
+    // DEFAULT DENY
+    // ============================================
+    
+    // Deny all other paths by default for security
+    // Remove or comment this in development if needed
     match /{allPaths=**} {
-      allow read, write, delete: if true; // Allow all for development
+      allow read, write: if false;
     }
   }
 }

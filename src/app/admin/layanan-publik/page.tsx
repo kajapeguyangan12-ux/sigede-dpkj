@@ -17,14 +17,14 @@ import {
 import { getDataDesa } from "../../../lib/dataDesaService";
 import { getMasyarakatByNIK } from "../../../lib/masyarakatService";
 import { getKependudukanPhotoURL } from "../../../lib/kependudukanPhotoService";
+import { storage } from "../../../lib/firebase";
+import { ref, getBlob } from "firebase/storage";
+import generateSuratPDF from "../../utils/generateSuratPDF";
+import SuratTemplate from "../../../components/SuratTemplate";
 
-// Dynamic import html2pdf dan JSZip untuk client-side only
-let html2pdf: any = null;
+// Dynamic import JSZip untuk client-side only
 let JSZip: any = null;
 if (typeof window !== 'undefined') {
-  import('html2pdf.js').then((module) => {
-    html2pdf = module.default;
-  });
   import('jszip').then((module) => {
     JSZip = module.default;
   });
@@ -91,8 +91,8 @@ export default function LayananPublikAdminPage() {
   const [itemsPerPage] = useState(10);
 
   useEffect(() => {
-    // Set userDaerah langsung dari user object
-    if (user?.daerah && (user?.role === 'kepala_dusun' || user?.role === 'admin_desa')) {
+    // Set userDaerah hanya untuk kepala_dusun
+    if (user?.daerah && user?.role === 'kepala_dusun') {
       console.log('✅ Setting userDaerah from user object:', user.daerah);
       setUserDaerah(user.daerah);
     }
@@ -103,9 +103,9 @@ export default function LayananPublikAdminPage() {
     }
   }, [user?.uid, user?.role, user?.daerah]);
 
-  // Re-fetch when userDaerah changes (for safety)
+  // Re-fetch when userDaerah changes (for kepala_dusun only)
   useEffect(() => {
-    if (userDaerah && user?.uid) {
+    if (userDaerah && user?.uid && user?.role === 'kepala_dusun') {
       console.log('🔄 userDaerah changed to:', userDaerah, '- Refetching data...');
       fetchData();
     }
@@ -197,10 +197,11 @@ export default function LayananPublikAdminPage() {
       // Filter berdasarkan role dan daerah
       let filtered = enrichedData;
       
-      // Kepala Dusun dan Admin Desa: hanya lihat layanan dari daerah mereka
-      if ((user?.role === 'kepala_dusun' || user?.role === 'admin_desa')) {
+      // Kepala Dusun: hanya lihat layanan dari daerah mereka
+      // Admin Desa: lihat SEMUA layanan (tidak difilter)
+      if (user?.role === 'kepala_dusun') {
         const filterDaerah = userDaerah;
-        console.log('🔍 Filtering by daerah:', filterDaerah);
+        console.log('🔍 Kepala Dusun - Filtering by daerah:', filterDaerah);
         
         if (filterDaerah) {
           filtered = enrichedData.filter(layanan => {
@@ -213,6 +214,9 @@ export default function LayananPublikAdminPage() {
           console.log('⚠️ No userDaerah set, showing no data for safety');
           filtered = [];
         }
+      } else if (user?.role === 'admin_desa') {
+        console.log('👤 Admin Desa - showing ALL layanan data');
+        filtered = enrichedData; // Admin Desa dapat melihat semua data
       } else {
         console.log('👑 Administrator - showing all data');
       }
@@ -393,6 +397,33 @@ export default function LayananPublikAdminPage() {
     }
   };
 
+  // Helper function to download photo from Firebase Storage
+  const downloadPhotoFromStorage = async (photoUrl: string): Promise<Blob | null> => {
+    try {
+      if (!photoUrl) return null;
+      
+      // Extract path from Firebase Storage URL
+      const url = new URL(photoUrl);
+      const pathMatch = url.pathname.match(/\/o\/(.+?)(\?|$)/);
+      
+      if (!pathMatch) {
+        console.error('Invalid Firebase Storage URL:', photoUrl);
+        return null;
+      }
+      
+      const filePath = decodeURIComponent(pathMatch[1]);
+      console.log('Downloading from path:', filePath);
+      
+      const storageRef = ref(storage, filePath);
+      const blob = await getBlob(storageRef);
+      
+      return blob;
+    } catch (error) {
+      console.error('Error downloading photo:', error);
+      return null;
+    }
+  };
+
   const handleDownloadPDF = async () => {
     if (!selectedLayanan) return;
     
@@ -403,147 +434,177 @@ export default function LayananPublikAdminPage() {
 
     setIsGeneratingPDF(true);
 
-    try {
-      // Tunggu JSZip loaded
-      if (!JSZip) {
-        const module = await import('jszip');
-        JSZip = module.default;
-      }
+    // Use setTimeout to allow UI to update before heavy processing
+    setTimeout(async () => {
+      try {
+        console.log('🚀 Starting PDF generation with new utility...');
+        
+        // Tunggu JSZip loaded
+        if (!JSZip) {
+          const module = await import('jszip');
+          JSZip = module.default;
+        }
 
-      const zip = new JSZip();
-      const folderName = `Layanan_${selectedLayanan.namaLengkap}_${selectedLayanan.nik}`;
-      const folder = zip.folder(folderName);
+        const zip = new JSZip();
+        const folderName = `Layanan_${selectedLayanan.namaLengkap}_${selectedLayanan.nik}`;
+        const folder = zip.folder(folderName);
 
-      if (!folder) {
-        throw new Error('Failed to create folder');
-      }
+        if (!folder) {
+          throw new Error('Failed to create folder');
+        }
 
-      // 1. Generate dan tambahkan PDF Surat
-      const suratHTML = generateSuratHTML(selectedLayanan, nomorSurat);
-      
-      // Tunggu html2pdf loaded
-      if (!html2pdf) {
-        const module = await import('html2pdf.js');
-        html2pdf = module.default;
-      }
+        // 1. Generate PDF menggunakan utilitas baru
+        console.log('📄 Generating PDF with generateSuratPDF...');
+        
+        // Prepare data surat
+        const dataSurat = {
+          jenisLayanan: selectedLayanan.jenisLayanan || '',
+          nomorSurat: nomorSurat,
+          namaLengkap: selectedLayanan.namaLengkap || '',
+          nik: selectedLayanan.nik || '',
+          tempatLahir: selectedLayanan.tempatLahir || '',
+          tanggalLahir: selectedLayanan.tanggalLahir || '',
+          jenisKelamin: selectedLayanan.jenisKelamin || '',
+          agama: selectedLayanan.agama || '',
+          pekerjaan: selectedLayanan.pekerjaan || '',
+          alamat: selectedLayanan.alamat || '',
+          daerah: selectedLayanan.daerah || '',
+          keperluan: selectedLayanan.keperluan || selectedLayanan.jenisLayanan || '',
+          tanggalSurat: typeof selectedLayanan.createdAt === 'string' 
+            ? selectedLayanan.createdAt 
+            : selectedLayanan.createdAt?.toDate?.() 
+              ? selectedLayanan.createdAt.toDate().toISOString() 
+              : new Date().toISOString(),
+        };
+        
+        // Generate PDF
+        const pdfBlob = await generateSuratPDF(dataSurat, nomorSurat);
+        console.log('✅ PDF generated:', pdfBlob.size, 'bytes');
+        
+        folder.file(`Surat_${selectedLayanan.jenisLayanan.replace(/\s+/g, '_')}.pdf`, pdfBlob);
 
-      const pdfBlob = await html2pdf()
-        .set({
-          margin: [10, 10, 10, 10],
-          filename: `Surat_${selectedLayanan.jenisLayanan.replace(/\s+/g, '_')}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { 
-            scale: 2,
-            useCORS: true,
-            logging: false
-          },
-          jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait' 
+        // 2 & 3. Download foto KK dan KTP secara paralel
+        console.log('📥 Starting photo downloads...');
+        console.log('KK URL:', fotoKKUrl);
+        console.log('KTP URL:', fotoKTPUrl);
+        
+        const photoDownloads = [];
+        
+        if (fotoKKUrl) {
+          photoDownloads.push(
+            (async () => {
+              try {
+                const kkBlob = await downloadPhotoFromStorage(fotoKKUrl);
+                if (!kkBlob) throw new Error('Failed to download KK');
+                
+                console.log('✅ KK Blob received:', kkBlob.size, 'bytes, type:', kkBlob.type);
+                let kkExtension = 'jpg';
+                if (kkBlob.type.includes('webp')) kkExtension = 'webp';
+                else if (kkBlob.type.includes('png')) kkExtension = 'png';
+                else if (kkBlob.type.includes('jpeg') || kkBlob.type.includes('jpg')) kkExtension = 'jpg';
+                
+                folder.file(`Foto_KK.${kkExtension}`, kkBlob);
+                console.log('✅ Foto KK added to ZIP');
+                return { success: true, type: 'KK' };
+              } catch (error) {
+                console.error('❌ KK error:', error);
+                return { success: false, type: 'KK', error: (error as Error).message };
+              }
+            })()
+          );
+        } else {
+          console.warn('⚠️ Foto KK URL tidak tersedia');
+        }
+
+        if (fotoKTPUrl) {
+          photoDownloads.push(
+            (async () => {
+              try {
+                const ktpBlob = await downloadPhotoFromStorage(fotoKTPUrl);
+                if (!ktpBlob) throw new Error('Failed to download KTP');
+                
+                console.log('✅ KTP Blob received:', ktpBlob.size, 'bytes, type:', ktpBlob.type);
+                let ktpExtension = 'jpg';
+                if (ktpBlob.type.includes('webp')) ktpExtension = 'webp';
+                else if (ktpBlob.type.includes('png')) ktpExtension = 'png';
+                else if (ktpBlob.type.includes('jpeg') || ktpBlob.type.includes('jpg')) ktpExtension = 'jpg';
+                
+                folder.file(`Foto_KTP.${ktpExtension}`, ktpBlob);
+                console.log('✅ Foto KTP added to ZIP');
+                return { success: true, type: 'KTP' };
+              } catch (error) {
+                console.error('❌ KTP error:', error);
+                return { success: false, type: 'KTP', error: (error as Error).message };
+              }
+            })()
+          );
+        } else {
+          console.warn('⚠️ Foto KTP URL tidak tersedia');
+        }
+
+        // Wait for all photos to download in parallel
+        const results = await Promise.allSettled(photoDownloads);
+        console.log('📊 Photo download results:', results);
+        
+        // Check results
+        let kkSuccess = false;
+        let ktpSuccess = false;
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled' && result.value) {
+            if (result.value.type === 'KK' && result.value.success) kkSuccess = true;
+            if (result.value.type === 'KTP' && result.value.success) ktpSuccess = true;
           }
-        })
-        .from(suratHTML)
-        .outputPdf('blob');
-
-      folder.file(`Surat_${selectedLayanan.jenisLayanan.replace(/\s+/g, '_')}.pdf`, pdfBlob);
-
-      // Helper function to convert image to WebP
-      const convertToWebP = async (imageUrl: string): Promise<Blob> => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              reject(new Error('Failed to get canvas context'));
-              return;
-            }
-            
-            ctx.drawImage(img, 0, 0);
-            
-            canvas.toBlob(
-              (blob) => {
-                if (blob) {
-                  resolve(blob);
-                } else {
-                  reject(new Error('Failed to convert to WebP'));
-                }
-              },
-              'image/webp',
-              0.85 // Quality 85% untuk balance antara ukuran dan kualitas
-            );
-          };
-          
-          img.onerror = () => reject(new Error('Failed to load image'));
-          img.src = imageUrl;
         });
-      };
+        
+        console.log('✅ Download summary - KK:', kkSuccess, 'KTP:', ktpSuccess);
 
-      // 2. Download dan konversi foto KK ke WebP
-      if (fotoKKUrl) {
-        try {
-          const kkWebPBlob = await convertToWebP(fotoKKUrl);
-          folder.file('Foto_KK.webp', kkWebPBlob);
-        } catch (error) {
-          console.error('Error converting KK to WebP:', error);
-          // Fallback: download original jika gagal konversi
-          try {
-            const kkResponse = await fetch(fotoKKUrl);
-            const kkBlob = await kkResponse.blob();
-            const kkExtension = kkBlob.type.split('/')[1] || 'jpg';
-            folder.file(`Foto_KK.${kkExtension}`, kkBlob);
-          } catch (fallbackError) {
-            console.error('Error downloading original KK:', fallbackError);
-          }
+        // 4. Generate ZIP dan download
+        console.log('📦 Generating ZIP file...');
+        const zipBlob = await zip.generateAsync({ 
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
+        });
+        
+        // Create download link
+        const url = window.URL.createObjectURL(zipBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${folderName}.zip`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup after a short delay
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+
+        console.log('✅ Download complete!');
+        
+        // Show appropriate success message
+        let message = '✅ Download berhasil!\n\nFile ZIP berisi:';
+        message += '\n• Surat PDF ✓';
+        if (kkSuccess) message += '\n• Foto KK ✓';
+        if (ktpSuccess) message += '\n• Foto KTP ✓';
+        
+        if (!kkSuccess && fotoKKUrl) {
+          message += '\n\n⚠️ Foto KK gagal didownload';
         }
-      }
-
-      // 3. Download dan konversi foto KTP ke WebP
-      if (fotoKTPUrl) {
-        try {
-          const ktpWebPBlob = await convertToWebP(fotoKTPUrl);
-          folder.file('Foto_KTP.webp', ktpWebPBlob);
-        } catch (error) {
-          console.error('Error converting KTP to WebP:', error);
-          // Fallback: download original jika gagal konversi
-          try {
-            const ktpResponse = await fetch(fotoKTPUrl);
-            const ktpBlob = await ktpResponse.blob();
-            const ktpExtension = ktpBlob.type.split('/')[1] || 'jpg';
-            folder.file(`Foto_KTP.${ktpExtension}`, ktpBlob);
-          } catch (fallbackError) {
-            console.error('Error downloading original KTP:', fallbackError);
-          }
+        if (!ktpSuccess && fotoKTPUrl) {
+          message += '\n⚠️ Foto KTP gagal didownload';
         }
+        
+        alert(message);
+        
+      } catch (error) {
+        console.error('❌ Error generating download package:', error);
+        alert('❌ Gagal membuat paket download. Silakan coba lagi.\n\nDetail: ' + (error as Error).message);
+      } finally {
+        setIsGeneratingPDF(false);
       }
-
-      // 4. Generate ZIP dan download
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      
-      // Create download link
-      const url = window.URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${folderName}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      alert('✅ Download berhasil! File ZIP berisi surat, KTP, dan KK.');
-      
-    } catch (error) {
-      console.error('Error generating download package:', error);
-      alert('❌ Gagal membuat paket download. Silakan coba lagi.');
-    } finally {
-      setIsGeneratingPDF(false);
-    }
+    }, 0); // End setTimeout wrapper
   };
 
   const generateSuratHTML = (layanan: LayananPublik, nomorSurat: string): string => {
@@ -596,92 +657,217 @@ export default function LayananPublikAdminPage() {
     const daerah = layanan.daerah?.replace(/_/g, ' ') || '............';
     const nomorKadus = layanan.nomorSuratKadus || '.............................';
     
-    // Skip logo untuk menghindari CORS issues - focus on content first
-    
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
         <style>
-          body { margin: 0; padding: 0; }
-          * { box-sizing: border-box; }
+          body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Times New Roman', Times, serif;
+          }
+          * { 
+            box-sizing: border-box; 
+          }
+          @page { 
+            margin: 0; 
+            size: 210mm 297mm;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            width: 794px;
+            height: 1123px;
+            margin: 0;
+            padding: 25px 50px 35px 50px;
+            font-size: 10.5pt;
+            line-height: 1.4;
+            color: #000000;
+            box-sizing: border-box;
+            background: white;
+          }
+          .header-img {
+            width: 100%;
+            height: 165px;
+            display: block;
+            margin: 0 auto 12px auto;
+            object-fit: contain;
+            object-position: center;
+          }
+          .header-border {
+            border-top: 3px solid #000000;
+            border-bottom: 1px solid #000000;
+            padding: 1px 0;
+            margin-bottom: 15px;
+          }
+          .title {
+            text-align: center;
+            margin: 12px 0 15px 0;
+            width: 100%;
+          }
+          .title h3 {
+            margin: 0 auto;
+            padding: 0 0 2px 0;
+            font-size: 13pt;
+            font-weight: bold;
+            text-decoration: none;
+            color: #000000;
+            letter-spacing: 0.3px;
+            border-bottom: 1px solid #000000;
+            display: inline-block;
+          }
+          .title .nomor {
+            margin: 6px 0 0 0;
+            padding: 0;
+            font-size: 10pt;
+            color: #000000;
+          }
+          .nomor-value {
+            color: #0000FF;
+            font-weight: bold;
+          }
+          .content {
+            text-align: justify;
+            margin-bottom: 12px;
+            line-height: 1.6;
+            font-size: 10pt;
+          }
+          .content p {
+            margin: 0 0 10px 0;
+            padding: 0;
+            text-indent: 30px;
+          }
+          .content p:first-child {
+            text-indent: 30px;
+          }
+          .data-table {
+            margin: 12px 0 12px 30px;
+            width: calc(100% - 30px);
+          }
+          .data-row {
+            display: flex;
+            margin: 4px 0;
+            line-height: 1.4;
+            font-size: 10pt;
+          }
+          .data-label {
+            width: 150px;
+            flex-shrink: 0;
+            color: #000000;
+          }
+          .data-separator {
+            width: 15px;
+            flex-shrink: 0;
+            text-align: center;
+            color: #000000;
+          }
+          .data-value {
+            flex: 1;
+            font-weight: 600;
+            color: #000000;
+          }
+          .footer-section {
+            margin-top: 20px;
+            width: 100%;
+          }
+          .signature-box {
+            float: right;
+            width: 48%;
+            text-align: center;
+          }
+          .signature-box p {
+            margin: 0 0 4px 0;
+            padding: 0;
+            font-size: 10pt;
+          }
+          .signature-title {
+            margin-bottom: 12px !important;
+            font-weight: bold;
+          }
+          .signature-space {
+            height: 50px;
+            display: block;
+          }
+          .signature-name {
+            font-weight: bold;
+            border-bottom: 1px dotted #000000;
+            display: inline-block;
+            padding-bottom: 3px;
+            margin-top: 0;
+            min-width: 220px;
+            text-align: center;
+          }
+          .clearfix {
+            clear: both;
+          }
         </style>
       </head>
       <body>
-      <div style="font-family: 'Times New Roman', Times, serif; padding: 15mm 20mm; font-size: 12pt; line-height: 1.6; color: #000000; background: #ffffff; width: 210mm; min-height: 297mm;">
-        
-        <!-- Header -->
-        <div style="width: 100%; border-bottom: 3px solid #000000; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">
-          <h1 style="margin: 0; padding: 0; font-size: 16pt; font-weight: bold; color: #000000;">PEMERINTAH KOTA DENPASAR</h1>
-          <h2 style="margin: 5px 0; padding: 0; font-size: 14pt; font-weight: bold; color: #000000;">KECAMATAN DENPASAR UTARA</h2>
-          <h2 style="margin: 5px 0; padding: 0; font-size: 14pt; font-weight: bold; color: #000000;">DESA DAUH PURI KAJA</h2>
-          <p style="margin: 10px 0 0 0; padding: 0; font-size: 9pt; color: #000000;">
-            <i>Alamat: Jl. Gatot Subroto VI J Denpasar - Telp. (0361) 419973 Kode Pos 80111</i>
-          </p>
-          <p style="margin: 3px 0 0 0; padding: 0; font-size: 9pt; color: #000000;">
-            <i>http://dauhpurikaja.denpasarkota.go.id - desadauhpurikdja@gmail.com</i>
-          </p>
-        </div>
+        <div class="container">
+          <!-- Header dengan logo -->
+          <img src="/logo/cop-surat-header.png" alt="Header" class="header-img" />
+          <div class="header-border"></div>
 
-        <!-- Title -->
-        <div style="text-align: center; margin: 30px 0 25px 0;">
-          <h3 style="margin: 0; padding: 0; font-size: 14pt; font-weight: bold; text-decoration: underline; color: #000000;">${getJudulSurat(layanan.jenisLayanan)}</h3>
-          <p style="margin: 10px 0 0 0; padding: 0; font-size: 11pt; color: #000000;">Nomor: <b>${nomorSurat}</b></p>
-        </div>
+          <!-- Title -->
+          <div class="title">
+            <h3>${getJudulSurat(layanan.jenisLayanan)}</h3>
+            <p class="nomor">Nomor: <span class="nomor-value">${nomorSurat}</span></p>
+          </div>
 
-        <!-- Body -->
-        <div style="text-align: justify; margin-bottom: 20px; color: #000000;">
-          <p style="margin: 0 0 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-            Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, 
-            menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerah}, 
-            Nomor <b>${nomorKadus}</b>, Tanggal: ${tanggalSurat}, bahwa:
-          </p>
-          
-          <table style="width: 100%; margin: 20px 0 25px 0; border-collapse: collapse; color: #000000;">
-            <tbody>
-            <tr>
-              <td style="width: 180px; padding: 6px 0; vertical-align: top; color: #000000;">Nama Lengkap</td>
-              <td style="width: 20px; padding: 6px 0; vertical-align: top; color: #000000;">:</td>
-              <td style="padding: 6px 0; vertical-align: top; font-weight: bold; color: #000000;">${layanan.namaLengkap || '...'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">NIK</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.nik || '...'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Tempat/Tgl Lahir</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.tempatLahir || '...'} / ${tanggalLahir}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Jenis Kelamin</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.jenisKelamin === 'L' ? 'Laki-laki' : layanan.jenisKelamin === 'P' ? 'Perempuan' : '...'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Agama</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.agama || '...'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Pekerjaan</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.pekerjaan || '...'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Alamat</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${layanan.alamat || '...'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">Daerah/Banjar</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">:</td>
-              <td style="padding: 6px 0; vertical-align: top; color: #000000;">${daerah}</td>
-            </tr>
-            </tbody>
-          </table>
+          <!-- Body -->
+          <div class="content">
+            <p>
+              Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, 
+              menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerah.toUpperCase()}, 
+              Nomor <span class="nomor-value">${nomorKadus}</span>, Tanggal : ${tanggalSurat}, bahwa :
+            </p>
+            
+            <div class="data-table">
+              <div class="data-row">
+                <div class="data-label">Nama Lengkap</div>
+                <div class="data-separator">:</div>
+                <div class="data-value">${layanan.namaLengkap || '...'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">NIK</div>
+                <div class="data-separator">:</div>
+                <div class="data-value">${layanan.nik || '...'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Tempat/Tgl Lahir</div>
+                <div class="data-separator">:</div>
+                <div class="data-value">${layanan.tempatLahir || '...'} / ${tanggalLahir}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Jenis Kelamin</div>
+                <div class="data-separator">:</div>
+                <div class="data-value">${layanan.jenisKelamin ? (layanan.jenisKelamin === 'L' || layanan.jenisKelamin.toLowerCase() === 'laki-laki' ? 'Laki-laki' : 'Perempuan') : '...'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Agama</div>
+                <div class="data-separator">:</div>
+                <div class="data-value">${layanan.agama || '...'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Pekerjaan</div>
+                <div class="data-separator">:</div>
+                <div class="data-value">${layanan.pekerjaan || '...'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Alamat</div>
+                <div class="data-separator">:</div>
+                <div class="data-value">${layanan.alamat || '...'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Daerah/Banjar</div>
+                <div class="data-separator">:</div>
+                <div class="data-value">${daerah.toUpperCase()}</div>
+              </div>
+            </div>
 
           ${(() => {
             // Generate content based on surat type
@@ -690,96 +876,96 @@ export default function LayananPublikAdminPage() {
 
             if (jenisLayanan.includes('kelakuan baik')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Sepanjang pengetahuan kami orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berkelakuan baik, 
-                  tidak pernah tersangkut dalam tindakan kriminal/kejahatan.
-                </p>
+            <p>
+              Sepanjang pengetahuan kami orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berkelakuan baik, 
+              tidak pernah tersangkut dalam tindakan kriminal/kejahatan.
+            </p>
               `;
             } else if (jenisLayanan.includes('belum nikah') || jenisLayanan.includes('belum kawin')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
-                  data yang ada, orang tersebut belum pernah kawin/menikah sampai saat ini.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
+              data yang ada, orang tersebut belum pernah kawin/menikah sampai saat ini.
+            </p>
               `;
             } else if (jenisLayanan.includes('belum bekerja')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
-                  data yang ada, orang tersebut belum bekerja dan tidak terikat kontrak kerja dengan perusahaan/instansi manapun.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
+              data yang ada, orang tersebut belum bekerja dan tidak terikat kontrak kerja dengan perusahaan/instansi manapun.
+            </p>
               `;
             } else if (jenisLayanan.includes('kawin') || jenisLayanan.includes('menikah')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah 
-                  melangsungkan perkawinan serta berstatus sebagai suami/istri yang sah.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah 
+              melangsungkan perkawinan serta berstatus sebagai suami/istri yang sah.
+            </p>
               `;
             } else if (jenisLayanan.includes('kematian') || jenisLayanan.includes('meninggal')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah 
-                  meninggal dunia pada tanggal ${tanggalSurat}.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah 
+              meninggal dunia pada tanggal ${tanggalSurat}.
+            </p>
               `;
             } else if (jenisLayanan.includes('perjalanan') || jenisLayanan.includes('berpergian')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan 
-                  melakukan perjalanan untuk keperluan sebagaimana dimaksud dalam surat ini.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan 
+              melakukan perjalanan untuk keperluan sebagaimana dimaksud dalam surat ini.
+            </p>
               `;
             } else if (jenisLayanan.includes('domisili') || jenisLayanan.includes('tinggal')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan bertempat 
-                  tinggal di alamat sebagaimana tercantum dalam surat ini.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan bertempat 
+              tinggal di alamat sebagaimana tercantum dalam surat ini.
+            </p>
               `;
             } else if (jenisLayanan.includes('usaha')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan memiliki 
-                  usaha sebagaimana dimaksud dalam surat ini.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan memiliki 
+              usaha sebagaimana dimaksud dalam surat ini.
+            </p>
               `;
             } else if (jenisLayanan.includes('tidak mampu') || jenisLayanan.includes('kurang mampu')) {
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
-                  data yang ada, orang tersebut tergolong kurang mampu secara ekonomi.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan 
+              data yang ada, orang tersebut tergolong kurang mampu secara ekonomi.
+            </p>
               `;
             } else {
               // Default content for other types
               content = `
-                <p style="margin: 20px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-                  Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja.
-                </p>
+            <p>
+              Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja.
+            </p>
               `;
             }
 
             return content;
           })()}
-          
-          <p style="margin: 20px 0 40px 0; padding: 0; text-indent: 50px; line-height: 1.8; color: #000000;">
-            Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk 
-            <b>${layanan.keperluan || '...'}</b>.
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="width: 100%; margin-top: 50px;">
-          <div style="width: 50%; float: right; text-align: center;">
-            <p style="margin: 0; padding: 0; color: #000000;">Denpasar, ${tanggalSurat}</p>
-            <p style="margin: 5px 0; padding: 0; font-weight: bold; color: #000000;">Perbekel</p>
-            <div style="height: 70px;"></div>
-            <p style="margin: 0; padding: 0; font-weight: bold; text-decoration: underline; color: #000000;">I PUTU YUDA</p>
+            
+            <p>
+              Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk 
+              <strong>${layanan.keperluan || '...'}</strong>.
+            </p>
           </div>
-          <div style="clear: both;"></div>
+
+          <!-- Footer -->
+          <div class="footer-section">
+            <div class="signature-box">
+              <p>Denpasar, ${tanggalSurat}</p>
+              <p class="signature-title">Perbekel Desa Dauh Puri Kaja</p>
+              <div class="signature-space"></div>
+              <p class="signature-name">I Gusti Ketut Sucipta, ST.</p>
+            </div>
+            <div class="clearfix"></div>
+          </div>
         </div>
-      </div>
       </body>
       </html>
     `;
@@ -999,17 +1185,17 @@ export default function LayananPublikAdminPage() {
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
           {/* Desktop Table View - hidden on mobile */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-max">
               <thead className="bg-gradient-to-r from-purple-600 to-pink-600">
                 <tr>
-                  <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-white uppercase tracking-wider">No</th>
-                  <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Jenis Layanan</th>
-                  <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Pemohon</th>
-                  <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-white uppercase tracking-wider">NIK</th>
-                  <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Daerah</th>
-                  <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Tanggal</th>
-                  <th className="px-4 lg:px-6 py-3 lg:py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Status</th>
-                  <th className="px-4 lg:px-6 py-3 lg:py-4 text-center text-xs font-bold text-white uppercase tracking-wider">Aksi</th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">No</th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider min-w-[180px]">Jenis Layanan</th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider min-w-[150px]">Pemohon</th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider min-w-[140px]">NIK</th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider min-w-[120px]">Daerah</th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider min-w-[100px]">Tanggal</th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider min-w-[100px]">Status</th>
+                  <th className="px-3 lg:px-4 py-3 text-center text-xs font-bold text-white uppercase tracking-wider min-w-[100px]">Aksi</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1033,36 +1219,36 @@ export default function LayananPublikAdminPage() {
                 ) : (
                   currentItems.map((layanan, index) => (
                     <tr key={layanan.id} className="hover:bg-purple-50 transition-colors">
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-sm font-bold text-gray-900">{indexOfFirstItem + index + 1}</td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 text-sm">
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">{indexOfFirstItem + index + 1}</td>
+                      <td className="px-3 lg:px-4 py-3 text-sm">
                         <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 lg:w-10 lg:h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                           </div>
-                          <span className="font-semibold text-gray-900 text-sm lg:text-base">{layanan.jenisLayanan}</span>
+                          <span className="font-semibold text-gray-900 text-sm">{layanan.jenisLayanan}</span>
                         </div>
                       </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-sm font-bold text-gray-900">{layanan.namaLengkap}</td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-sm font-mono font-bold text-gray-900">{layanan.nik}</td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">{layanan.namaLengkap}</td>
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-sm font-mono font-bold text-gray-900">{layanan.nik}</td>
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
                         {layanan.daerah ? layanan.daerah.replace(/_/g, ' ') : '-'}
                       </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
                         {layanan.createdAt ? new Date(layanan.createdAt.seconds * 1000).toLocaleDateString('id-ID') : '-'}
                       </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
-                        <span className={`px-2 lg:px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${getStatusColor(layanan.status)}`}>
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${getStatusColor(layanan.status)}`}>
                           {getStatusText(layanan.status)}
                         </span>
                       </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-center">
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
                         <button
                           onClick={() => handleDetailClick(layanan)}
-                          className="inline-flex items-center px-3 lg:px-4 py-1.5 lg:py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs lg:text-sm font-semibold rounded-lg hover:shadow-lg active:scale-95 transition-all"
+                          className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold rounded-lg hover:shadow-lg active:scale-95 transition-all"
                         >
-                          <svg className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
@@ -1224,7 +1410,7 @@ export default function LayananPublikAdminPage() {
         {/* Modern Detail Modal - Optimized for all devices */}
         {showDetailModal && selectedLayanan && (
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-2 md:p-4 overflow-y-auto"
+            className="fixed inset-0 bg-black/60 sm:backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-2 md:p-4 overflow-y-auto"
             onClick={() => setShowDetailModal(false)}
           >
             <div 
@@ -1516,6 +1702,7 @@ export default function LayananPublikAdminPage() {
                             <img 
                               src={fotoKKUrl} 
                               alt="Foto KK" 
+                              loading="lazy"
                               className="w-full h-48 sm:h-56 md:h-64 object-contain bg-gray-50 rounded-lg border-2 border-indigo-200 cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all active:scale-98"
                               onClick={() => handleImageClick(fotoKKUrl, 'Foto/Scan Kartu Keluarga (KK)')}
                             />
@@ -1567,6 +1754,7 @@ export default function LayananPublikAdminPage() {
                             <img 
                               src={fotoKTPUrl} 
                               alt="Foto KTP" 
+                              loading="lazy"
                               className="w-full h-48 sm:h-56 md:h-64 object-contain bg-gray-50 rounded-lg border-2 border-indigo-200 cursor-pointer hover:border-indigo-500 hover:shadow-lg transition-all active:scale-98"
                               onClick={() => handleImageClick(fotoKTPUrl, 'Foto/Scan KTP')}
                             />
@@ -1771,11 +1959,12 @@ export default function LayananPublikAdminPage() {
                 </button>
               </div>
 
-              {/* Modal Image - Scrollable with pinch-zoom support */}
-              <div className="flex-1 flex items-center justify-center overflow-auto rounded-lg bg-black/30 backdrop-blur-sm p-2 sm:p-4 touch-pan-x touch-pan-y">
+              {/* Modal Image - Scrollable with pinch-zoom support (optimized) */}
+              <div className="flex-1 flex items-center justify-center overflow-auto rounded-lg bg-black/30 sm:backdrop-blur-sm p-2 sm:p-4 touch-pan-x touch-pan-y">
                 <img 
                   src={modalImageUrl} 
                   alt={modalImageTitle}
+                  loading="eager"
                   className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg shadow-2xl select-none"
                   style={{ touchAction: 'pinch-zoom' }}
                   draggable={false}
@@ -1950,6 +2139,46 @@ export default function LayananPublikAdminPage() {
               </div>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Hidden Print Area for PDF Generation - CRITICAL! */}
+      <div
+        id="print-area"
+        style={{
+          position: 'fixed',
+          left: '-9999px',
+          top: '0',
+          width: '210mm',
+          minHeight: '297mm',
+          backgroundColor: '#ffffff',
+          opacity: 0,
+          pointerEvents: 'none',
+          zIndex: -1
+        }}
+      >
+        {selectedLayanan && nomorSurat && (
+          <SuratTemplate 
+            data={{
+              jenisLayanan: selectedLayanan.jenisLayanan || '',
+              nomorSurat: nomorSurat,
+              namaLengkap: selectedLayanan.namaLengkap || '',
+              nik: selectedLayanan.nik || '',
+              tempatLahir: selectedLayanan.tempatLahir || '',
+              tanggalLahir: selectedLayanan.tanggalLahir || '',
+              jenisKelamin: selectedLayanan.jenisKelamin || '',
+              agama: selectedLayanan.agama || '',
+              pekerjaan: selectedLayanan.pekerjaan || '',
+              alamat: selectedLayanan.alamat || '',
+              daerah: selectedLayanan.daerah || '',
+              keperluan: selectedLayanan.keperluan || selectedLayanan.jenisLayanan || '',
+              tanggalSurat: typeof selectedLayanan.createdAt === 'string' 
+                ? selectedLayanan.createdAt 
+                : selectedLayanan.createdAt?.toDate?.() 
+                  ? selectedLayanan.createdAt.toDate().toISOString() 
+                  : new Date().toISOString(),
+            }}
+          />
         )}
       </div>
     </AdminLayout>

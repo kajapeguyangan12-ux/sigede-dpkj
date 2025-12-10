@@ -62,6 +62,11 @@ export default function WargaLokalRegisterPage() {
   const [nikChecking, setNikChecking] = useState(false);
   const [nikMessage, setNikMessage] = useState('');
   const [verifiedData, setVerifiedData] = useState<DataDesaItem | null>(null);
+  
+  // State untuk validasi username
+  const [usernameChecking, setUsernameChecking] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [usernameMessage, setUsernameMessage] = useState('');
 
   // Extract birth date from NIK
   const extractBirthDateFromNIK = (nik: string): string => {
@@ -139,6 +144,50 @@ export default function WargaLokalRegisterPage() {
         tanggalLahir: ''
       }));
     }
+    
+    // Reset username validation when username changes
+    if (name === 'username') {
+      setUsernameAvailable(null);
+      setUsernameMessage('');
+    }
+  };
+
+  // Check username availability (real-time)
+  const handleCheckUsername = async () => {
+    if (!formData.username || formData.username.length < 3) {
+      setUsernameMessage('Username minimal 3 karakter');
+      setUsernameAvailable(false);
+      return;
+    }
+
+    setUsernameChecking(true);
+    setUsernameMessage('');
+
+    try {
+      const response = await fetch('/api/check-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: formData.username }),
+      });
+
+      const result = await response.json();
+
+      if (result.usernameExists) {
+        setUsernameAvailable(false);
+        setUsernameMessage('❌ Username sudah digunakan');
+      } else {
+        setUsernameAvailable(true);
+        setUsernameMessage('✅ Username tersedia');
+      }
+    } catch (error) {
+      console.error('Error checking username:', error);
+      setUsernameMessage('⚠️ Gagal memeriksa username');
+      setUsernameAvailable(null);
+    } finally {
+      setUsernameChecking(false);
+    }
   };
 
   // Check NIK against data-desa
@@ -212,6 +261,14 @@ export default function WargaLokalRegisterPage() {
       return false;
     }
     console.log('✅ VALIDATION: NIK verified');
+    
+    // Check username availability
+    if (usernameAvailable !== true) {
+      console.log('❌ VALIDATION: Username not available or not checked');
+      setError('Silakan pastikan username tersedia dan belum digunakan');
+      return false;
+    }
+    console.log('✅ VALIDATION: Username available');
     
     // Required fields (No KK removed)
     const requiredFields = ['namaLengkap', 'username', 'nik', 'alamat', 'tempatLahir', 'tanggalLahir', 
@@ -522,15 +579,43 @@ export default function WargaLokalRegisterPage() {
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     Username <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    className="w-full px-6 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all duration-300 text-gray-900 placeholder-gray-500"
-                    placeholder="Username untuk login"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      onBlur={handleCheckUsername}
+                      className={`w-full px-6 py-4 bg-gray-50 border rounded-2xl focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 text-gray-900 placeholder-gray-500 ${
+                        usernameAvailable === true
+                          ? 'border-green-400 bg-green-50'
+                          : usernameAvailable === false
+                          ? 'border-red-400 bg-red-50'
+                          : 'border-gray-200 focus:border-blue-400'
+                      }`}
+                      placeholder="Username untuk login"
+                      required
+                      minLength={3}
+                    />
+                    {usernameChecking && (
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                        <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {usernameMessage && (
+                    <p className={`text-xs mt-2 font-medium ${
+                      usernameAvailable === true ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {usernameMessage}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Username minimal 3 karakter dan tidak boleh sama dengan yang sudah terdaftar
+                  </p>
                 </div>
 
                 {/* Alamat */}
@@ -696,7 +781,7 @@ export default function WargaLokalRegisterPage() {
                 </div>
 
                 {/* Email */}
-                <div>
+                <div className="lg:col-span-2">
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     Email <span className="text-red-500">*</span>
                   </label>
@@ -709,6 +794,9 @@ export default function WargaLokalRegisterPage() {
                     placeholder="user@example.com"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-2">
+                    * Email harus valid dan dapat diakses.
+                  </p>
                 </div>
 
                 {/* Password */}
@@ -767,9 +855,9 @@ export default function WargaLokalRegisterPage() {
               <div className="mt-12 flex flex-col items-center space-y-6">
                 <button
                   type="submit"
-                  disabled={loading || !nikVerified}
+                  disabled={loading || !nikVerified || usernameAvailable !== true}
                   className={`w-full max-w-md px-8 py-4 font-bold text-lg rounded-2xl shadow-xl transition-all duration-300 transform flex items-center justify-center gap-3 ${
-                    nikVerified && !loading
+                    nikVerified && usernameAvailable === true && !loading
                       ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white hover:shadow-2xl hover:-translate-y-1 cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
                   }`}
@@ -786,6 +874,13 @@ export default function WargaLokalRegisterPage() {
                       </svg>
                       <span>Verifikasi NIK Terlebih Dahulu</span>
                     </>
+                  ) : usernameAvailable !== true ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span>Pastikan Username Tersedia</span>
+                    </>
                   ) : (
                     <>
                       <span>Daftar Sekarang</span>
@@ -796,16 +891,20 @@ export default function WargaLokalRegisterPage() {
                   )}
                 </button>
                 
-                {/* Info message when NIK not verified */}
-                {!nikVerified && (
+                {/* Info message when requirements not met */}
+                {(!nikVerified || usernameAvailable !== true) && (
                   <div className="w-full max-w-md p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
                     <div className="flex items-start gap-3">
                       <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
-                      <p className="text-sm text-yellow-800">
-                        <strong>Perhatian:</strong> Silakan verifikasi NIK Anda terlebih dahulu dengan mengklik tombol "Cek NIK" di atas. Pendaftaran hanya dapat dilakukan setelah NIK terverifikasi.
-                      </p>
+                      <div className="text-sm text-yellow-800">
+                        <strong>Perhatian:</strong>
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          {!nikVerified && <li>Verifikasi NIK dengan klik tombol "Cek NIK"</li>}
+                          {usernameAvailable !== true && <li>Pastikan username tersedia dan belum digunakan</li>}
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 )}

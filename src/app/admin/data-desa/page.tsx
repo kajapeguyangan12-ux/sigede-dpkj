@@ -602,6 +602,21 @@ export default function DataDesaPage() {
                       <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                       Tambah Data
                     </button>
+                    
+                    {/* Download Template Button */}
+                    <a
+                      href="/templates/template-data-warga.csv"
+                      download="template-data-warga.csv"
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-blue-600 hover:to-cyan-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      title="Download template Excel untuk upload data warga"
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="hidden sm:inline">Template</span>
+                      <span className="sm:hidden">Download</span>
+                    </a>
+                    
                     <button 
                       onClick={() => setShowUploadModal(true)}
                       className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-green-600 hover:to-emerald-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"

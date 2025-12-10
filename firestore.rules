@@ -125,6 +125,21 @@ service cloud.firestore {
     match /data-desa/{document} {
       allow read, write: if true;
     }
+    
+    // Email OTP - untuk verifikasi email registrasi
+    match /email_otps/{document} {
+      // Allow anyone to create OTP (from API)
+      allow create: if request.time < timestamp.date(2030, 1, 1)
+                    && request.resource.data.expiresAt is timestamp
+                    && request.resource.data.email is string
+                    && request.resource.data.otp is string;
+      
+      // Allow read/delete for verification (from API)
+      allow read, delete: if request.time < timestamp.date(2030, 1, 1);
+      
+      // No update allowed (OTP should be single-use)
+      allow update: if false;
+    }
 
     // Default fallback - allow all access for debugging
     match /{document=**} {

@@ -7,7 +7,6 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { handleAdminLogout } from '../../../../lib/logoutHelper';
 import { getLayananById, LayananPublik } from "../../../../lib/layananPublikService";
 import { getDataDesa } from "../../../../lib/dataDesaService";
-import Image from 'next/image';
 
 // Dynamically import html2canvas and jsPDF
 let html2canvas: any = null;
@@ -137,6 +136,55 @@ function CetakSuratContent() {
       return;
     }
     
+    // Test visibility
+    if (printRef.current) {
+      const rect = printRef.current.getBoundingClientRect();
+      const computed = window.getComputedStyle(printRef.current);
+      console.log('Element Dimensions:', rect.width, 'x', rect.height);
+      console.log('Element Display:', computed.display);
+      console.log('Element Visibility:', computed.visibility);
+      console.log('Element Opacity:', computed.opacity);
+      console.log('Element has content:', printRef.current.textContent?.length || 0, 'characters');
+      
+      if (rect.width === 0 || rect.height === 0) {
+        alert('⚠️ Error: Element surat tidak terlihat di halaman. Mohon refresh halaman dan coba lagi.');
+        return;
+      }
+    }
+    
+    // Gunakan window.print() dengan nama file custom
+    const sanitizedNomor = nomorSurat.replace(/[/\\?%*:|"<>]/g, '-');
+    const fileName = `Surat-${sanitizedNomor}-${layanan?.namaLengkap.replace(/\s+/g, '-')}`;
+    
+    // Set document title untuk nama file
+    const originalTitle = document.title;
+    document.title = fileName;
+    
+    console.log('Opening print dialog...');
+    
+    // Trigger print dialog (user can save as PDF from there)
+    window.print();
+    
+    // Restore title
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
+    
+    // Show instruction if not auto-close
+    setTimeout(() => {
+      if (!autoClose) {
+        alert('💡 Tips: Di dialog print, pilih "Save as PDF" atau "Microsoft Print to PDF" sebagai printer, lalu klik Save untuk menyimpan sebagai file PDF.');
+      }
+    }, 500);
+  };
+  
+  const handleDownloadPDFDirect = async () => {
+    if (!nomorSurat || nomorSurat.trim() === '') {
+      alert('⚠️ Mohon isi Nomor Surat terlebih dahulu sebelum menyimpan PDF!');
+      document.getElementById('nomor-surat-input')?.focus();
+      return;
+    }
+    
     setIsGeneratingPDF(true);
     
     try {
@@ -153,141 +201,74 @@ function CetakSuratContent() {
         }
       }
       
-      // Pastikan element ada dan ready
-      const generatePDFWithTimeout = async () => {
-        let attempts = 0;
-        while (attempts < 10) {
-          if (printRef.current) {
-            return printRef.current;
-          }
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
+      if (!printRef.current) {
         throw new Error('Element not found');
-      };
+      }
       
-      const element = await Promise.race([
-        generatePDFWithTimeout(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Setup timeout')), 3000) // Reduced dari 5000ms
-        )
-      ]) as HTMLElement;
+      const element = printRef.current;
       
-      console.log('🎨 Starting FAST PDF generation...');
+      console.log('🎨 Starting PDF generation...');
+      console.log('Element dimensions:', element.offsetWidth, 'x', element.offsetHeight);
+      console.log('Element display:', window.getComputedStyle(element).display);
+      console.log('Element visibility:', window.getComputedStyle(element).visibility);
       const startTime = Date.now();
-      
-      // ============================================
-      // STEP 1: CLONE & CLEAN ELEMENT
-      // ============================================
-      console.log('🔧 Cloning and cleaning element...');
-      const cleanElement = element.cloneNode(true) as HTMLElement;
-      
-      // Clean parent
-      cleanElement.style.opacity = '1';
-      cleanElement.style.filter = 'none';
-      cleanElement.style.webkitFilter = 'none';
-      cleanElement.style.backdropFilter = 'none';
-      cleanElement.style.backgroundColor = '#FFFFFF';
-      cleanElement.style.color = '#000000';
-      
-      // Clean all children
-      const allElements = cleanElement.querySelectorAll('*');
-      let cleanedCount = 0;
-      
-      allElements.forEach((el) => {
-        const htmlEl = el as HTMLElement;
-        const tagName = htmlEl.tagName.toLowerCase();
-        
-        // Skip images
-        if (tagName === 'img') return;
-        
-        // Remove efek pucat
-        htmlEl.style.opacity = '1';
-        htmlEl.style.filter = 'none';
-        htmlEl.style.webkitFilter = 'none';
-        htmlEl.style.backdropFilter = 'none';
-        htmlEl.style.boxShadow = 'none';
-        htmlEl.style.textShadow = 'none';
-        
-        // Force text hitam
-        if (['p', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'td', 'th', 'li'].includes(tagName)) {
-          htmlEl.style.color = '#000000';
-          htmlEl.style.setProperty('-webkit-text-fill-color', '#000000');
-          cleanedCount++;
-        }
-      });
-      
-      console.log(`✅ Cleaned ${cleanedCount} text elements`);
-      
-      // Append clone temporarily
-      cleanElement.style.position = 'absolute';
-      cleanElement.style.left = '-9999px';
-      cleanElement.style.top = '0';
-      cleanElement.style.width = '794px';
-      cleanElement.style.height = 'auto';
-      document.body.appendChild(cleanElement);
-      
-      // Wait untuk fonts & images load (reduced timeout)
-      await document.fonts.ready;
-      await new Promise(resolve => setTimeout(resolve, 300)); // Reduced dari 500ms
       
       // Sanitize nomor surat untuk filename
       const sanitizedNomor = nomorSurat.replace(/[/\\?%*:|"<>]/g, '-');
       const fileName = `Surat-${sanitizedNomor}-${layanan?.namaLengkap.replace(/\s+/g, '-')}.pdf`;
       
-      // ============================================
-      // STEP 2: RENDER DENGAN html2canvas
-      // ============================================
-      console.log('📸 Capturing with html2canvas (scale 2 - FAST)...');
+      // Wait untuk fonts & images load
+      await document.fonts.ready;
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const canvas = await html2canvas(cleanElement, {
-        scale: 2,                    // Reduced untuk speed (tetap tajam)
-        useCORS: true,               
-        allowTaint: true,            
-        backgroundColor: '#FFFFFF',  
-        logging: false,              
-        imageTimeout: 10000,         
-        removeContainer: true,       
-        width: 794,                  // A4 at 96 DPI
-        height: 1123,                
-        windowWidth: 794,
-        windowHeight: 1123,
-        scrollX: 0,
-        scrollY: 0,
-        x: 0,
-        y: 0,
+      // ============================================
+      // RENDER ELEMENT LANGSUNG (NO CLONING)
+      // ============================================
+      console.log('📸 Preparing to capture element directly...');
+      
+      // ============================================
+      // RENDER DENGAN html2canvas
+      // ============================================
+      console.log('📸 Capturing with html2canvas (scale 2)...');
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#FFFFFF',
+        logging: true,  // Enable untuk debug
+        imageTimeout: 15000,
         onclone: (clonedDoc: Document) => {
-          // Quick style fix
+          // Force all text to black
           const all = clonedDoc.body.querySelectorAll('*');
           all.forEach((el: Element) => {
             const htmlEl = el as HTMLElement;
             if (htmlEl.tagName.toLowerCase() !== 'img') {
               htmlEl.style.opacity = '1';
-              htmlEl.style.filter = 'none';
               htmlEl.style.color = '#000000';
+              htmlEl.style.webkitTextFillColor = '#000000';
             }
           });
+          clonedDoc.body.style.backgroundColor = '#FFFFFF';
         }
       });
       
-      // Remove temporary clone
-      document.body.removeChild(cleanElement);
-      
       console.log(`✅ Canvas created: ${canvas.width}x${canvas.height}px`);
       
+      if (canvas.width === 0 || canvas.height === 0) {
+        throw new Error('Canvas empty - check if element is visible');
+      }
+      
       // ============================================
-      // STEP 3: QUICK ENHANCE (Simplified for speed)
+      // ENHANCE CONTRAST
       // ============================================
-      console.log('🎨 Quick contrast fix...');
+      console.log('🎨 Enhancing contrast...');
       
       const ctx = canvas.getContext('2d');
       if (ctx) {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         
-        let enhanced = 0;
-        
-        // Simplified: hanya enhance pixel yang hampir hitam
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i];
           const g = data[i + 1];
@@ -296,55 +277,51 @@ function CetakSuratContent() {
           
           if (alpha < 10) continue;
           
-          // Near-black pixels (text) → pure black
-          const isNearBlack = r < 120 && g < 120 && b < 120;
-          const isGrayish = Math.abs(r - g) < 25 && Math.abs(g - b) < 25;
+          const brightness = (r + g + b) / 3;
           
-          if (isNearBlack && isGrayish) {
+          // Make text darker
+          if (brightness < 180) {
             data[i] = 0;
             data[i + 1] = 0;
             data[i + 2] = 0;
             data[i + 3] = 255;
-            enhanced++;
+          }
+          // Keep white background
+          else if (brightness > 245) {
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
           }
         }
         
         ctx.putImageData(imageData, 0, 0);
-        console.log(`✅ Quick enhanced ${enhanced.toLocaleString()} pixels`);
+        console.log('✅ Contrast enhanced');
       }
       
       // ============================================
-      // STEP 4: CONVERT TO PDF (OPTIMIZED)
+      // CONVERT TO PDF
       // ============================================
-      console.log('📄 Converting to JPEG (faster, smaller)...');
-      const imgData = canvas.toDataURL('image/jpeg', 0.98); // JPEG quality 98%
+      console.log('📄 Converting to JPEG...');
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       
       console.log('📄 Creating PDF...');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4',
-        compress: true  // Enable compression untuk file lebih kecil
+        format: 'a4'
       });
       
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      
       console.log('📄 Adding image to PDF...');
-      pdf.addImage(
-        imgData,
-        'JPEG',
-        0,
-        0,
-        210,  // A4 width
-        297,  // A4 height
-        undefined,
-        'NONE'  // NO compression
-      );
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       
       console.log('💾 Saving PDF:', fileName);
       pdf.save(fileName);
       
       const elapsed = Date.now() - startTime;
-      console.log(`✅ PDF completed in ${elapsed}ms - ${fileName}`);
-      console.log('📊 Optimized: Scale 2, JPEG 98%, A4 (210x297mm), compressed');
+      console.log(`✅ PDF completed in ${elapsed}ms`);
       
       // Auto-close window jika flag autoClose = true (tanpa alert)
       if (autoClose) {
@@ -547,38 +524,137 @@ function CetakSuratContent() {
   return (
     <>
       <style jsx global>{`
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        
         @media print {
           @page {
-            size: A4;
-            margin: 0;
+            size: A4 portrait;
+            margin: 20mm;
           }
-          body {
-            margin: 0;
-            padding: 0;
+          
+          html, body {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            overflow: visible !important;
           }
+          
+          body * {
+            visibility: hidden !important;
+          }
+          
+          .print-container,
+          .print-container * {
+            visibility: visible !important;
+            display: block !important;
+            opacity: 1 !important;
+          }
+          
+          .print-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+            box-shadow: none !important;
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          
           .no-print {
             display: none !important;
+            visibility: hidden !important;
           }
-          .print-container {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 20mm;
-            margin: 0;
-            box-shadow: none !important;
-            color: #000000 !important;
-          }
-          .print-container * {
-            color: #000000 !important;
-          }
+          
           .print-container p,
           .print-container h1,
           .print-container h2,
           .print-container h3,
           .print-container span,
-          .print-container div {
-            color: #000000 !important;
+          .print-container div,
+          .print-container strong,
+          .print-container em {
+            color: #000 !important;
+            -webkit-text-fill-color: #000 !important;
+            visibility: visible !important;
+            display: revert !important;
+            opacity: 1 !important;
           }
-        }
+          
+          .print-container img {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            max-width: 100px !important;
+            height: auto !important;
+          }
+          
+          .surat-header {
+            display: flex !important;
+            visibility: visible !important;
+            page-break-inside: avoid !important;
+          }
+          
+          .surat-logo {
+            display: block !important;
+            visibility: visible !important;
+            float: left !important;
+            width: 100px !important;
+            height: 100px !important;
+            margin-right: 15px !important;
+          }
+          
+          .surat-header-text {
+            display: block !important;
+            visibility: visible !important;
+            text-align: center !important;
+          }
+          
+          .surat-title {
+            display: block !important;
+            visibility: visible !important;
+            text-align: center !important;
+            margin: 20px 0 !important;
+          }
+          
+          .surat-body {
+            display: block !important;
+            visibility: visible !important;
+          }
+          
+          .surat-data {
+            display: block !important;
+            visibility: visible !important;
+            margin: 15px 0 15px 40px !important;
+          }
+          
+          .surat-data-row {
+            display: block !important;
+            visibility: visible !important;
+            margin-bottom: 3px !important;
+          }
+          
+          .surat-signature {
+            display: block !important;
+            visibility: visible !important;
+            text-align: right !important;
+            margin-top: 40px !important;
+          }
+          
+          .surat-signature-content {
+            display: inline-block !important;
+            visibility: visible !important;
+            text-align: center !important;
+            min-width: 180px !important;
+          }
         
         @media screen {
           html {
@@ -593,7 +669,7 @@ function CetakSuratContent() {
             padding: 20mm;
             background: white;
             box-shadow: 0 0 20px rgba(0,0,0,0.15);
-            color: #000000;
+            color: #000;
             animation: fadeInUp 0.5s ease-out;
           }
           
@@ -607,25 +683,76 @@ function CetakSuratContent() {
               transform: translateY(0);
             }
           }
-          
-          @media (max-width: 768px) {
-            .print-container {
-              padding: 10mm;
-              font-size: 12px;
-            }
-            
-            .print-container .text-lg {
-              font-size: 14px;
-            }
-            
-            .print-container .text-base {
-              font-size: 13px;
-            }
-            
-            .print-container .text-sm {
-              font-size: 11px;
-            }
-          }
+        }
+        
+        /* Base Styles for Letter Content */
+        .surat-header {
+          display: block;
+          margin-bottom: 24px;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #000;
+          overflow: hidden;
+        }
+        
+        .surat-logo {
+          float: left;
+          width: 100px;
+          height: 100px;
+          margin-right: 15px;
+        }
+        
+        .surat-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        
+        .surat-header-text {
+          overflow: hidden;
+          text-align: center;
+          padding-top: 5px;
+        }
+        
+        .surat-title {
+          text-align: center;
+          margin: 24px 0;
+        }
+        
+        .surat-body {
+          font-size: 14px;
+          line-height: 1.8;
+          font-family: 'Times New Roman', serif;
+        }
+        
+        .surat-data {
+          margin: 16px 0 16px 48px;
+        }
+        
+        .surat-data-row {
+          margin-bottom: 4px;
+          display: block;
+        }
+        
+        .surat-data-label {
+          display: inline-block;
+          width: 192px;
+          color: #000;
+        }
+        
+        .surat-data-value {
+          font-weight: 600;
+          color: #000;
+        }
+        
+        .surat-signature {
+          margin-top: 48px;
+          text-align: right;
+        }
+        
+        .surat-signature-content {
+          display: inline-block;
+          text-align: center;
+          min-width: 200px;
         }
       `}</style>
 
@@ -648,20 +775,9 @@ function CetakSuratContent() {
               </button>
               <button
                 onClick={handleDownloadPDF}
-                disabled={isGeneratingPDF}
-                className={`w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg sm:rounded-xl hover:from-green-700 hover:to-green-800 font-bold shadow-lg hover:shadow-xl transition-all text-sm sm:text-base md:text-lg flex items-center justify-center gap-2 ${isGeneratingPDF ? 'opacity-75 cursor-wait' : ''}`}
+                className="w-full sm:w-auto px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg sm:rounded-xl hover:from-green-700 hover:to-green-800 font-bold shadow-lg hover:shadow-xl transition-all text-sm sm:text-base md:text-lg flex items-center justify-center gap-2"
               >
-                {isGeneratingPDF ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="animate-pulse">Generating PDF...</span>
-                  </>
-                ) : (
-                  <>💾 Save PDF</>
-                )}
+                💾 Save as PDF
               </button>
               <button
                 onClick={() => window.close()}
@@ -696,7 +812,7 @@ function CetakSuratContent() {
           <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 rounded">
             <p className="text-xs sm:text-sm text-blue-800">
               <strong>💡 Tips:</strong> 
-              <span className="ml-1 sm:ml-2">Isi nomor surat terlebih dahulu, lalu klik <strong>"Print Surat"</strong> untuk mencetak atau <strong>"Save PDF"</strong> untuk menyimpan.</span>
+              <span className="ml-1 sm:ml-2">Isi nomor surat terlebih dahulu, lalu klik <strong>"Save as PDF"</strong> dan pilih <strong>"Save as PDF"</strong> di printer, atau klik <strong>"Print Surat"</strong> untuk mencetak langsung.</span>
             </p>
           </div>
         </div>
@@ -710,197 +826,138 @@ function CetakSuratContent() {
         </div>
 
         {/* Letter Content */}
-        <div ref={printRef} className="print-container" style={{ 
-          backgroundColor: '#FFFFFF',
-          width: '210mm',
-          height: '297mm',
-          padding: '20mm 20mm 20mm 20mm',
-          margin: '0 auto',
-          boxSizing: 'border-box',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
+        <div ref={printRef} className="print-container">
           {/* Header dengan Logo dan Text */}
-          <div className="mb-6 pb-4 border-b-2 border-black" style={{ display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
-            <div style={{ flexShrink: 0, width: '100px', height: '100px', position: 'relative' }}>
-              <Image 
+          <div className="surat-header">
+            <div className="surat-logo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
                 src="/logo/LOGO_DPKJ.png" 
-                alt="Logo" 
-                fill 
-                className="object-contain" 
-                priority
-                quality={100}
-                loading="eager"
-                unoptimized={true}
+                alt="Logo DPKJ" 
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             </div>
-            <div style={{ flex: 1, textAlign: 'center', paddingTop: '5px' }}>
-              <p style={{ 
-                fontSize: '11px', 
-                fontWeight: '400', 
-                color: '#000000', 
-                margin: '0',
-                fontFamily: 'Times New Roman, serif',
-                lineHeight: '1.3'
-              }}>
+            <div className="surat-header-text">
+              <p style={{ fontSize: '11px', fontWeight: '400', color: '#000', margin: '0', fontFamily: 'Times New Roman, serif', lineHeight: '1.3' }}>
                 ຂ້າພະເຈົ້າອິທິພົນຄວາມເປັນໄປໄດ້ອັນໃດໜຶ່ງ
               </p>
-              <h1 style={{ 
-                fontSize: '16px', 
-                fontWeight: '700', 
-                color: '#000000', 
-                margin: '2px 0',
-                fontFamily: 'Times New Roman, serif',
-                letterSpacing: '0.5px'
-              }}>
+              <h1 style={{ fontSize: '16px', fontWeight: '700', color: '#000', margin: '2px 0', fontFamily: 'Times New Roman, serif', letterSpacing: '0.5px' }}>
                 PEMERINTAH KOTA DENPASAR
               </h1>
-              <p style={{ 
-                fontSize: '11px', 
-                fontWeight: '400', 
-                color: '#000000', 
-                margin: '0',
-                fontFamily: 'Times New Roman, serif',
-                lineHeight: '1.3'
-              }}>
+              <p style={{ fontSize: '11px', fontWeight: '400', color: '#000', margin: '0', fontFamily: 'Times New Roman, serif', lineHeight: '1.3' }}>
                 ພາສາອັກສອນບາລີໝັກປະຈຳ
               </p>
-              <h2 style={{ 
-                fontSize: '14px', 
-                fontWeight: '700', 
-                color: '#000000', 
-                margin: '2px 0',
-                fontFamily: 'Times New Roman, serif',
-                letterSpacing: '0.3px'
-              }}>
+              <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#000', margin: '2px 0', fontFamily: 'Times New Roman, serif', letterSpacing: '0.3px' }}>
                 KECAMATAN DENPASAR UTARA
               </h2>
-              <p style={{ 
-                fontSize: '11px', 
-                fontWeight: '400', 
-                color: '#000000', 
-                margin: '0',
-                fontFamily: 'Times New Roman, serif',
-                lineHeight: '1.3'
-              }}>
+              <p style={{ fontSize: '11px', fontWeight: '400', color: '#000', margin: '0', fontFamily: 'Times New Roman, serif', lineHeight: '1.3' }}>
                 ນະຄອນປາດາຕາຄາ
               </p>
-              <h2 style={{ 
-                fontSize: '14px', 
-                fontWeight: '700', 
-                color: '#000000', 
-                margin: '2px 0 4px 0',
-                fontFamily: 'Times New Roman, serif',
-                letterSpacing: '0.3px'
-              }}>
+              <h2 style={{ fontSize: '14px', fontWeight: '700', color: '#000', margin: '2px 0 4px 0', fontFamily: 'Times New Roman, serif', letterSpacing: '0.3px' }}>
                 DESA DAUH PURI KAJA
               </h2>
-              <p style={{ 
-                fontSize: '9px', 
-                color: '#000000', 
-                margin: '4px 0 0 0',
-                fontFamily: 'Times New Roman, serif',
-                lineHeight: '1.4'
-              }}>
-                <span style={{ fontStyle: 'italic' }}>Alamat: Jalan Gatot Subroto VI J No. 14 DENPASAR Telpon (0361) 419973 kode Pos 80111</span>
+              <p style={{ fontSize: '9px', color: '#000', margin: '4px 0 0 0', fontFamily: 'Times New Roman, serif', lineHeight: '1.4' }}>
+                <em>Alamat: Jalan Gatot Subroto VI J No. 14 DENPASAR Telpon (0361) 419973 kode Pos 80111</em>
               </p>
-              <p style={{ 
-                fontSize: '9px', 
-                fontStyle: 'italic', 
-                color: '#000000', 
-                margin: '2px 0 0 0',
-                fontFamily: 'Times New Roman, serif'
-              }}>
-                website: <span style={{ textDecoration: 'underline' }}>http://dauhpurikaja.denpasarkota.go.id</span> Email: <span style={{ textDecoration: 'underline' }}>desa_dauhpurikdja@yahoo.com</span>
+              <p style={{ fontSize: '9px', fontStyle: 'italic', color: '#000', margin: '2px 0 0 0', fontFamily: 'Times New Roman, serif' }}>
+                website: <u>http://dauhpurikaja.denpasarkota.go.id</u> Email: <u>desa_dauhpurikdja@yahoo.com</u>
               </p>
             </div>
           </div>
 
           {/* Title */}
-          <div className="text-center mb-6">
-            <h3 className="font-bold text-base underline text-black" style={{color: '#000000'}}>{getJudulSurat(layanan.jenisLayanan)}</h3>
-            <p className="text-sm mt-1 text-black" style={{color: '#000000'}}>
-              Nomor : <span className={nomorSurat ? 'font-bold text-black' : 'text-gray-400'} style={{color: '#000000'}}>{nomorSurat || '..............................................'}</span>
+          <div className="surat-title">
+            <h3 style={{ fontWeight: '700', fontSize: '14px', textDecoration: 'underline', color: '#000', margin: '0 0 8px 0', fontFamily: 'Times New Roman, serif' }}>
+              {getJudulSurat(layanan.jenisLayanan)}
+            </h3>
+            <p style={{ fontSize: '13px', margin: '0', color: '#000', fontFamily: 'Times New Roman, serif' }}>
+              Nomor : <strong>{nomorSurat || '..............................................'}</strong>
             </p>
           </div>
 
           {/* Body */}
-          <div className="text-sm leading-relaxed space-y-4 text-black" style={{color: '#000000'}}>
-            <p className="text-justify indent-12 text-black" style={{color: '#000000'}}>
+          <div className="surat-body">
+            <p style={{ textAlign: 'justify', textIndent: '48px', marginBottom: '16px', color: '#000', fontFamily: 'Times New Roman, serif' }}>
               {isiSurat.paragraf1}
             </p>
 
             {/* Data Pemohon */}
-            <div className="ml-12 space-y-1 text-black" style={{color: '#000000'}}>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>Nama</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>{userData?.namaLengkap || layanan.namaLengkap}</span>
+            <div className="surat-data">
+              <div className="surat-data-row">
+                <span className="surat-data-label">Nama</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">{userData?.namaLengkap || layanan.namaLengkap}</span>
               </div>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>Tempat/tanggal lahir</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>
+              <div className="surat-data-row">
+                <span className="surat-data-label">NIK</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">{userData?.nik || layanan.nik}</span>
+              </div>
+              <div className="surat-data-row">
+                <span className="surat-data-label">Tempat/Tgl Lahir</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">
                   {(() => {
-                    const tempatLahir = userData?.tempatLahir || layanan.tempatLahir || '.......';
+                    const tempatLahir = userData?.tempatLahir || layanan.tempatLahir || 'Denpasar';
                     const tanggalLahir = userData?.tanggalLahir || layanan.tanggalLahir;
-                    const formattedTanggal = tanggalLahir ? formatDate(tanggalLahir) : '.......';
+                    const formattedTanggal = tanggalLahir ? formatDate(tanggalLahir) : '...';
                     return `${tempatLahir} / ${formattedTanggal}`;
                   })()}
                 </span>
               </div>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>Kewarganegaraan</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>{userData?.kewarganegaraan || layanan.kewarganegaraan || 'Indonesia'}</span>
+              <div className="surat-data-row">
+                <span className="surat-data-label">Jenis Kelamin</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">{userData?.jenisKelamin || layanan.jenisKelamin || '...'}</span>
               </div>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>Agama</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>{userData?.agama || layanan.agama || '.......'}</span>
+              <div className="surat-data-row">
+                <span className="surat-data-label">Kewarganegaraan</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">{userData?.kewarganegaraan || layanan.kewarganegaraan || 'Indonesia'}</span>
               </div>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>Pekerjaan</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>{userData?.pekerjaan || layanan.pekerjaan || '.......'}</span>
+              <div className="surat-data-row">
+                <span className="surat-data-label">Agama</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">{userData?.agama || layanan.agama || 'Hindu'}</span>
               </div>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>NIK</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>{userData?.nik || layanan.nik}</span>
+              <div className="surat-data-row">
+                <span className="surat-data-label">Pekerjaan</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">{userData?.pekerjaan || layanan.pekerjaan || 'Polri'}</span>
               </div>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>No. KK</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>{userData?.noKK || layanan.noKK}</span>
+              <div className="surat-data-row">
+                <span className="surat-data-label">Alamat</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">{userData?.alamat || layanan.alamat}</span>
               </div>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>Alamat</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>{userData?.alamat || layanan.alamat}</span>
-              </div>
-              <div className="flex text-black" style={{color: '#000000'}}>
-                <span className="w-48 text-black" style={{color: '#000000'}}>Daerah/Banjar</span>
-                <span className="mr-2 text-black" style={{color: '#000000'}}>:</span>
-                <span className="font-semibold text-black" style={{color: '#000000'}}>{(userData?.daerah || layanan.daerah || '.......').replace(/_/g, ' ')}</span>
+              <div className="surat-data-row">
+                <span className="surat-data-label">Daerah/Banjar</span>
+                <span style={{ marginRight: '8px', color: '#000' }}>:</span>
+                <span className="surat-data-value">{(userData?.daerah || layanan.daerah || 'WANGAYA KAJA').replace(/_/g, ' ')}</span>
               </div>
             </div>
 
-            <p className="text-justify indent-12 text-black" style={{color: '#000000'}}>
+            <p style={{ textAlign: 'justify', textIndent: '48px', marginBottom: '16px', color: '#000', fontFamily: 'Times New Roman, serif' }}>
               {isiSurat.paragraf2}
             </p>
 
-            <p className="text-justify indent-12 text-black" style={{color: '#000000'}}>
+            <p style={{ textAlign: 'justify', textIndent: '48px', marginBottom: '16px', color: '#000', fontFamily: 'Times New Roman, serif' }}>
               {isiSurat.paragraf3}
             </p>
           </div>
 
           {/* Signature */}
-          <div className="mt-12 flex justify-end">
-            <div className="text-center text-black" style={{ minWidth: '200px', color: '#000000' }}>
-              <p className="text-sm mb-1 text-black" style={{color: '#000000'}}>Denpasar, {getTanggalSurat()}</p>
-              <p className="text-sm font-semibold mb-16 text-black" style={{color: '#000000'}}>Perbekel Desa Dauh Puri Kaja</p>
-              <p className="text-sm font-bold underline text-black" style={{color: '#000000'}}>I Gusti Ketut Sucipta, ST.</p>
+          <div className="surat-signature">
+            <div className="surat-signature-content">
+              <p style={{ fontSize: '13px', marginBottom: '4px', color: '#000', fontFamily: 'Times New Roman, serif' }}>
+                Denpasar, {getTanggalSurat()}
+              </p>
+              <p style={{ fontSize: '13px', fontWeight: '600', marginBottom: '64px', color: '#000', fontFamily: 'Times New Roman, serif' }}>
+                Perbekel Desa Dauh Puri Kaja
+              </p>
+              <p style={{ fontSize: '13px', fontWeight: '700', textDecoration: 'underline', color: '#000', margin: '0', fontFamily: 'Times New Roman, serif' }}>
+                I Gusti Ketut Sucipta, ST.
+              </p>
             </div>
           </div>
         </div>
