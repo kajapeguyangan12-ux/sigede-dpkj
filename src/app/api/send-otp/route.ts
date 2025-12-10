@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { generateOTP, saveOTPToFirestore } from '@/lib/otpService';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function POST(request: NextRequest) {
   console.log('\n========================================');
@@ -200,6 +204,20 @@ export async function POST(request: NextRequest) {
 
     // Kirim email via Resend
     console.log('📤 Sending email via Resend...');
+    
+    // Check if Resend API key is configured
+    if (!resend) {
+      console.error('❌ RESEND_API_KEY not configured');
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Email service tidak tersedia. Hubungi administrator.',
+          error_type: 'EMAIL_SERVICE_UNAVAILABLE'
+        },
+        { status: 503 }
+      );
+    }
+    
     try {
       // Email sender configuration
       // Default: onboarding@resend.dev (for testing)
