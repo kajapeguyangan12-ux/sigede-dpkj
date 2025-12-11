@@ -21,6 +21,19 @@ export default function ENewsPage() {
         setLoading(true);
         const data = await getPublishedENewsItems();
         console.log('E-news data loaded:', data);
+        
+        // Debug: Log image URLs
+        data.forEach((item, index) => {
+          console.log(`📸 E-News #${index + 1}:`, {
+            id: item.id,
+            jenis: item.jenis,
+            judul: item.judul,
+            gambar: item.gambar,
+            hasImage: !!item.gambar,
+            isDefaultImage: item.gambar === '/logo/default.png'
+          });
+        });
+        
         setNewsData(data);
         setError(null);
       } catch (error) {
@@ -110,27 +123,46 @@ export default function ENewsPage() {
                   {/* Image Container */}
                   <div className="relative h-40 sm:h-48 md:h-52 lg:h-56 xl:h-60 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden flex-shrink-0">
                     {item.gambar && item.gambar !== '/logo/default.png' ? (
-                      <img
-                        src={item.gambar}
-                        alt={item.judul}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          // Fallback if image fails to load
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.parentElement!.innerHTML = `
-                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-50">
-                              <div class="text-4xl sm:text-5xl">
-                                ${item.jenis === 'berita' ? '📰' : '📢'}
-                              </div>
+                      <>
+                        <img
+                          src={item.gambar}
+                          alt={item.judul}
+                          loading="eager"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.classList.add('show-fallback-enews');
+                            }
+                          }}
+                        />
+                        {/* Fallback icon - shown if image fails to load */}
+                        <div className="fallback-icon-enews w-full h-full hidden items-center justify-center bg-gradient-to-br from-blue-100 to-blue-50">
+                          <div className="text-center">
+                            <div className="text-5xl sm:text-6xl mb-2">
+                              {item.jenis === 'berita' ? '📰' : '📢'}
                             </div>
-                          `;
-                        }}
-                      />
+                            <p className={`text-sm font-semibold ${
+                              item.jenis === 'berita' ? 'text-red-600' : 'text-purple-600'
+                            }`}>
+                              {item.jenis === 'berita' ? 'Berita' : 'Pengumuman'}
+                            </p>
+                          </div>
+                        </div>
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-50">
-                        <div className="text-4xl sm:text-5xl">
-                          {item.jenis === 'berita' ? '📰' : '📢'}
+                        <div className="text-center">
+                          <div className="text-5xl sm:text-6xl mb-2">
+                            {item.jenis === 'berita' ? '📰' : '📢'}
+                          </div>
+                          <p className={`text-sm font-semibold ${
+                            item.jenis === 'berita' ? 'text-red-600' : 'text-purple-600'
+                          }`}>
+                            {item.jenis === 'berita' ? 'Berita' : 'Pengumuman'}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -219,6 +251,13 @@ export default function ENewsPage() {
       </div>
 
       <BottomNavigation />
+      
+      {/* CSS for fallback handling */}
+      <style jsx>{`
+        .show-fallback-enews .fallback-icon-enews {
+          display: flex !important;
+        }
+      `}</style>
     </main>
   );
 }

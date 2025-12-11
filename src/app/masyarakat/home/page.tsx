@@ -225,6 +225,7 @@ export default function MasyarakatHomePage(): JSX.Element {
   const [showPopup, setShowPopup] = useState(false);
   const [currentSlideshowIndex, setCurrentSlideshowIndex] = useState(0);
   const [isBeritaHovered, setIsBeritaHovered] = useState(false);
+  const [isUmkmHovered, setIsUmkmHovered] = useState(false);
 
   // Memoize slideshow data to prevent unnecessary re-renders
   const slideshowData = useMemo(() => {
@@ -273,32 +274,44 @@ export default function MasyarakatHomePage(): JSX.Element {
     }
   }, [pengaturan]);
 
-  // Auto slide berita setiap 10 detik (pause on hover)
+  // Debug: Log berita list when loaded
   useEffect(() => {
-    if (beritaList.length > 0 && !isBeritaHovered) {
+    if (beritaList.length > 0) {
+      console.log('📰 Berita List Loaded:', beritaList.map(b => ({
+        id: b.id,
+        judul: b.judul,
+        foto: b.foto,
+        hasFoto: !!b.foto
+      })));
+    }
+  }, [beritaList]);
+
+  // Auto slide berita setiap 5 detik (pause on hover) - Profesional timing
+  useEffect(() => {
+    if (beritaList.length > 1 && !isBeritaHovered) {
       const interval = setInterval(() => {
         setCurrentBeritaIndex((prev) => (prev + 1) % beritaList.length);
-      }, 10000); // 10 seconds
+      }, 5000); // 5 seconds - optimal for reading
       return () => clearInterval(interval);
     }
-  }, [beritaList.length, isBeritaHovered]); // Use length instead of full array
+  }, [beritaList.length, isBeritaHovered]);
 
-  // Auto slide UMKM setiap 3 detik
+  // Auto slide UMKM setiap 4 detik - Profesional timing (pause on hover)
   useEffect(() => {
-    if (umkmList.length > 0) {
+    if (umkmList.length > 1 && !isUmkmHovered) {
       const interval = setInterval(() => {
         setCurrentUmkmIndex((prev) => (prev + 1) % umkmList.length);
-      }, 3000);
+      }, 4000); // 4 seconds - smooth transition
       return () => clearInterval(interval);
     }
-  }, [umkmList.length]); // Use length instead of full array
+  }, [umkmList.length, isUmkmHovered]);
 
-  // Auto slide slideshow setiap 4 detik
+  // Auto slide slideshow setiap 5 detik - Consistent timing
   useEffect(() => {
-    if (slideshowData.hasSlideshow) {
+    if (slideshowData.hasSlideshow && slideshowData.length > 1) {
       const interval = setInterval(() => {
         setCurrentSlideshowIndex((prev) => (prev + 1) % slideshowData.length);
-      }, 4000);
+      }, 5000); // 5 seconds - consistent with berita
       return () => clearInterval(interval);
     }
   }, [slideshowData.hasSlideshow, slideshowData.length]);
@@ -328,12 +341,23 @@ export default function MasyarakatHomePage(): JSX.Element {
             
             // Only add if status is published
             if (data.status === "published") {
+              const fotoUrl = data.imageUrl || data.foto || data.gambar || data.image;
+              console.log('📸 Berita foto URL:', {
+                id: doc.id,
+                title: data.title || data.judul,
+                imageUrl: data.imageUrl,
+                foto: data.foto,
+                gambar: data.gambar,
+                image: data.image,
+                finalUrl: fotoUrl
+              });
+              
               allBerita.push({ 
                 id: doc.id, 
                 ...data,
                 // Map field names dari e-news_berita ke interface Berita
                 judul: data.title || data.judul || 'Berita Terbaru',
-                foto: data.imageUrl || data.foto || data.gambar || data.image,
+                foto: fotoUrl,
                 createdAt: data.createdAt,
                 createdBy: data.createdBy,
                 authorRole: data.authorRole,
@@ -859,30 +883,48 @@ export default function MasyarakatHomePage(): JSX.Element {
             >
               {/* Slider Container */}
               <div className="relative h-44 xs:h-48 sm:h-56 md:h-64 lg:h-80 overflow-hidden">
-                {/* Slides Wrapper */}
-                <div 
-                  className="flex h-full transition-transform duration-[800ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
-                  style={{
-                    transform: `translateX(-${currentBeritaIndex * 100}%)`,
-                    width: `${beritaList.length * 100}%`
-                  }}
-                >
-                  {beritaList.map((berita, index) => (
-                    <div 
-                      key={berita.id}
-                      onClick={() => router.push(`/masyarakat/e-news/detail/berita/${berita.id}`)}
-                      className="relative w-full h-full flex-shrink-0 cursor-pointer bg-gradient-to-br from-red-50 to-red-100 slide-item hover:shadow-lg transition-shadow duration-300"
-                      style={{ width: `${100 / beritaList.length}%` }}
-                    >
+                {beritaList.map((berita, index) => (
+                  <div 
+                    key={berita.id}
+                    onClick={() => router.push(`/masyarakat/e-news/detail/berita/${berita.id}`)}
+                    className="absolute inset-0 w-full h-full cursor-pointer bg-gradient-to-br from-red-50 to-red-100 transition-all duration-[800ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
+                    style={{
+                      opacity: index === currentBeritaIndex ? 1 : 0,
+                      transform: index === currentBeritaIndex ? 'translateX(0) scale(1)' : index < currentBeritaIndex ? 'translateX(-100%) scale(0.95)' : 'translateX(100%) scale(0.95)',
+                      pointerEvents: index === currentBeritaIndex ? 'auto' : 'none',
+                      zIndex: index === currentBeritaIndex ? 10 : 0
+                    }}
+                  >
                       {berita.foto ? (
-                        <img
-                          src={berita.foto}
-                          alt={berita.judul}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 ease-out"
-                        />
+                        <>
+                          <img
+                            src={berita.foto}
+                            alt={berita.judul}
+                            loading="eager"
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 ease-out"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.classList.add('show-fallback');
+                              }
+                            }}
+                          />
+                          {/* Fallback icon - shown if image fails to load */}
+                          <div className="fallback-icon w-full h-full hidden items-center justify-center bg-gradient-to-br from-red-100 to-rose-100">
+                            <div className="text-center">
+                              <Newspaper className="h-16 w-16 sm:h-20 sm:w-20 text-red-600 mx-auto mb-2" />
+                              <p className="text-red-600 font-semibold text-sm">📰 Berita Terkini</p>
+                            </div>
+                          </div>
+                        </>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Newspaper className="h-16 w-16 text-red-600" />
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-100 to-rose-100">
+                          <div className="text-center">
+                            <Newspaper className="h-16 w-16 sm:h-20 sm:w-20 text-red-600 mx-auto mb-2" />
+                            <p className="text-red-600 font-semibold text-sm">📰 Berita Terkini</p>
+                          </div>
                         </div>
                       )}
                       
@@ -933,7 +975,6 @@ export default function MasyarakatHomePage(): JSX.Element {
                       </div>
                     </div>
                   ))}
-                </div>
                 
                 {/* Navigation Arrows */}
                 <button
@@ -970,15 +1011,59 @@ export default function MasyarakatHomePage(): JSX.Element {
                         e.stopPropagation();
                         setCurrentBeritaIndex(index);
                       }}
-                      className={`h-2 sm:h-2.5 lg:h-3 rounded-full transition-all duration-300 cursor-pointer touch-manipulation ${
+                      className={`relative h-2 sm:h-2.5 lg:h-3 rounded-full transition-all duration-500 cursor-pointer touch-manipulation overflow-hidden ${
                         index === currentBeritaIndex 
                           ? 'w-8 sm:w-10 lg:w-12 bg-gradient-to-r from-red-600 to-rose-600 shadow-lg' 
                           : 'w-2 sm:w-2.5 lg:w-3 bg-red-300 hover:bg-red-500 active:scale-110'
                       }`}
-                    />
+                    >
+                      {/* Progress bar animation for active slide */}
+                      {index === currentBeritaIndex && !isBeritaHovered && (
+                        <div 
+                          className="absolute top-0 left-0 h-full bg-white/30 rounded-full"
+                          style={{
+                            animation: 'progressBar 5s linear infinite'
+                          }}
+                        />
+                      )}
+                    </button>
                   ))}
                 </div>
+                
+                {/* Auto-play indicator */}
+                <div className="flex items-center justify-center gap-2 text-xs text-red-600/70">
+                  {isBeritaHovered ? (
+                    <>
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                      </svg>
+                      <span className="font-medium">Dijeda</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                      <span className="font-medium">Auto-slide aktif</span>
+                    </>
+                  )}
+                </div>
               </div>
+              
+              {/* CSS for progress animation and fallback handling */}
+              <style jsx>{`
+                @keyframes progressBar {
+                  from {
+                    width: 0%;
+                  }
+                  to {
+                    width: 100%;
+                  }
+                }
+                
+                /* Show fallback when image fails */
+                .show-fallback .fallback-icon {
+                  display: flex !important;
+                }
+              `}</style>
             </div>
           ) : (
             <div className="rounded-2xl sm:rounded-3xl bg-white/95 p-6 sm:p-8 lg:p-10 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20 text-center">
@@ -1007,23 +1092,54 @@ export default function MasyarakatHomePage(): JSX.Element {
             </div>
           ) : umkmList.length > 0 ? (
             <div 
+              onMouseEnter={() => setIsUmkmHovered(true)}
+              onMouseLeave={() => setIsUmkmHovered(false)}
               onClick={handleUmkmClick}
-              className="rounded-2xl sm:rounded-3xl bg-white/90 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 group"
+              className="rounded-2xl sm:rounded-3xl bg-white/90 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm overflow-hidden cursor-pointer hover:shadow-2xl hover:ring-2 hover:ring-amber-300/70 transition-all duration-500 group"
             >
-              <div className="relative h-44 xs:h-48 sm:h-56 md:h-64 lg:h-80 bg-gradient-to-br from-amber-100 to-amber-200">
+              <div className="relative h-44 xs:h-48 sm:h-56 md:h-64 lg:h-80 bg-gradient-to-br from-amber-100 to-amber-200 overflow-hidden">
                 {umkmList[currentUmkmIndex]?.fotoUsaha?.[0] ? (
-                  <img
-                    src={umkmList[currentUmkmIndex].fotoUsaha[0]}
-                    alt={umkmList[currentUmkmIndex].namaUsaha}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  <>
+                    <img
+                      src={umkmList[currentUmkmIndex].fotoUsaha[0]}
+                      alt={umkmList[currentUmkmIndex].namaUsaha}
+                      loading="eager"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.classList.add('show-fallback-umkm');
+                        }
+                      }}
+                    />
+                    {/* Fallback icon - shown if image fails to load */}
+                    <div className="fallback-icon-umkm w-full h-full hidden items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
+                      <div className="text-center">
+                        <Store className="h-16 w-16 sm:h-20 sm:w-20 text-amber-600 mx-auto mb-2" />
+                        <p className="text-amber-600 font-semibold text-sm">🏪 UMKM</p>
+                      </div>
+                    </div>
+                  </>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Store className="h-16 w-16 text-amber-600" />
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
+                    <div className="text-center">
+                      <Store className="h-16 w-16 sm:h-20 sm:w-20 text-amber-600 mx-auto mb-2" />
+                      <p className="text-amber-600 font-semibold text-sm">🏪 UMKM</p>
+                    </div>
                   </div>
                 )}
                 {/* Overlay gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                
+                {/* UMKM counter badge */}
+                <div className="absolute top-2 sm:top-3 lg:top-4 left-2 sm:left-3 lg:left-4 bg-white/90 backdrop-blur-sm rounded-full px-2 py-0.5 sm:px-3 sm:py-1 lg:px-4 lg:py-1.5 flex items-center gap-1">
+                  <Store className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-amber-500" />
+                  <span className="text-xs sm:text-sm lg:text-base font-bold text-gray-800">
+                    {currentUmkmIndex + 1} / {umkmList.length}
+                  </span>
+                </div>
                 
                 {/* Rating badge */}
                 <div className="absolute top-2 right-2 sm:top-3 sm:right-3 lg:top-4 lg:right-4 bg-white/90 backdrop-blur-sm rounded-full px-2 py-0.5 sm:px-3 sm:py-1 lg:px-4 lg:py-1.5 flex items-center gap-1">
@@ -1033,21 +1149,54 @@ export default function MasyarakatHomePage(): JSX.Element {
                   </span>
                 </div>
                 
+                {/* Navigation Arrows */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentUmkmIndex((prev) => prev === 0 ? umkmList.length - 1 : prev - 1);
+                  }}
+                  className="absolute left-1.5 sm:left-2 lg:left-3 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2 lg:p-3 text-white hover:bg-black/50 hover:scale-110 active:scale-95 transition-all duration-300 opacity-60 sm:opacity-0 group-hover:opacity-100 shadow-lg touch-manipulation"
+                >
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentUmkmIndex((prev) => (prev + 1) % umkmList.length);
+                  }}
+                  className="absolute right-1.5 sm:right-2 lg:right-3 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-sm rounded-full p-1.5 sm:p-2 lg:p-3 text-white hover:bg-black/50 hover:scale-110 active:scale-95 transition-all duration-300 opacity-60 sm:opacity-0 group-hover:opacity-100 shadow-lg touch-manipulation"
+                >
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                
                 {/* Title overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-5">
-                  <h4 className="text-white font-bold text-xs sm:text-sm md:text-base lg:text-lg line-clamp-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                    <span className="inline-flex items-center px-1.5 py-0.5 sm:px-2 sm:py-1 lg:px-3 lg:py-1 rounded-full text-[10px] sm:text-xs lg:text-sm font-medium bg-amber-500/90 text-white">
+                      🏆 UMKM Terbaik
+                    </span>
+                  </div>
+                  <h4 className="text-white font-bold text-xs sm:text-sm md:text-base lg:text-lg line-clamp-2 mb-1">
                     {umkmList[currentUmkmIndex]?.namaUsaha || 'UMKM Terbaik'}
                   </h4>
                   {umkmList[currentUmkmIndex]?.kategori && (
-                    <p className="text-white/80 text-[10px] sm:text-xs lg:text-sm mt-1">
+                    <p className="text-white/80 text-[10px] sm:text-xs lg:text-sm">
                       {umkmList[currentUmkmIndex].kategori}
                     </p>
                   )}
+                  <p className="text-white/80 text-[10px] sm:text-xs lg:text-sm flex items-center gap-1 mt-1">
+                    <span>👆</span> Klik untuk melihat detail
+                  </p>
                 </div>
               </div>
               
-              <div className="p-3 sm:p-4 lg:p-5 text-center">
-                <div className="flex justify-center gap-1.5 sm:gap-2">
+              <div className="p-3 sm:p-4 lg:p-5 text-center bg-gradient-to-r from-amber-50/80 to-orange-50/80 border-t border-amber-100/50">
+                <div className="flex justify-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                   {umkmList.map((_, index) => (
                     <button
                       key={index}
@@ -1055,15 +1204,59 @@ export default function MasyarakatHomePage(): JSX.Element {
                         e.stopPropagation();
                         setCurrentUmkmIndex(index);
                       }}
-                      className={`h-1.5 sm:h-2 lg:h-2.5 rounded-full transition-all duration-300 touch-manipulation ${
+                      className={`relative h-1.5 sm:h-2 lg:h-2.5 rounded-full transition-all duration-500 touch-manipulation overflow-hidden ${
                         index === currentUmkmIndex 
-                          ? 'w-6 sm:w-8 lg:w-10 bg-amber-600' 
+                          ? 'w-6 sm:w-8 lg:w-10 bg-gradient-to-r from-amber-600 to-orange-600 shadow-lg' 
                           : 'w-1.5 sm:w-2 lg:w-2.5 bg-amber-300 hover:bg-amber-400 active:scale-110'
                       }`}
-                    />
+                    >
+                      {/* Progress bar animation for active slide */}
+                      {index === currentUmkmIndex && !isUmkmHovered && (
+                        <div 
+                          className="absolute top-0 left-0 h-full bg-white/30 rounded-full"
+                          style={{
+                            animation: 'progressBarUMKM 4s linear infinite'
+                          }}
+                        />
+                      )}
+                    </button>
                   ))}
                 </div>
+                
+                {/* Auto-play indicator */}
+                <div className="flex items-center justify-center gap-2 text-xs text-amber-600/70">
+                  {isUmkmHovered ? (
+                    <>
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                      </svg>
+                      <span className="font-medium">Dijeda</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-amber-600 rounded-full animate-pulse" />
+                      <span className="font-medium">Auto-slide aktif</span>
+                    </>
+                  )}
+                </div>
               </div>
+              
+              {/* CSS for progress animation and fallback handling */}
+              <style jsx>{`
+                @keyframes progressBarUMKM {
+                  from {
+                    width: 0%;
+                  }
+                  to {
+                    width: 100%;
+                  }
+                }
+                
+                /* Show fallback when image fails */
+                .show-fallback-umkm .fallback-icon-umkm {
+                  display: flex !important;
+                }
+              `}</style>
             </div>
           ) : (
             <div className="rounded-2xl sm:rounded-3xl bg-white/90 p-6 sm:p-8 lg:p-10 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm text-center text-gray-500 text-sm sm:text-base lg:text-lg">

@@ -16,6 +16,8 @@ interface SuratData {
   daerah: string;
   keperluan: string;
   tanggalSurat: string;
+  nomorSuratKadus?: string; // Nomor pengantar dari Kepala Dusun
+  tanggalPengantar?: string; // Tanggal pengantar
   [key: string]: any;
 }
 
@@ -33,55 +35,125 @@ export default function SuratTemplate({ data }: SuratTemplateProps) {
       const date = new Date(dateString);
       const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-      return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+      // Handle timezone offset by adding 1 day to compensate
+      const day = date.getDate();
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day} ${month} ${year}`;
     } catch {
       return dateString;
     }
   };
 
   const getJudulSurat = (jenisLayanan: string) => {
-    const judulMap: { [key: string]: string } = {
-      "Surat Kelakuan Baik": "SURAT KETERANGAN KELAKUAN BAIK",
-      "Surat Keterangan Belum Nikah/Kawin": "SURAT KETERANGAN BELUM PERNAH KAWIN/MENIKAH",
-      "Surat Keterangan Belum Bekerja": "SURAT KETERANGAN BELUM BEKERJA",
-      "Surat Keterangan Kematian": "SURAT KETERANGAN KEMATIAN",
-      "Surat Keterangan Berpergian": "SURAT KETERANGAN BERPERGIAN/JALAN",
-    };
-    return judulMap[jenisLayanan] || "SURAT KETERANGAN";
+    const jenis = jenisLayanan.toLowerCase();
+    if (jenis.includes('kelakuan baik')) return 'SURAT KETERANGAN KELAKUAN BAIK';
+    if (jenis.includes('belum nikah') || jenis.includes('belum kawin')) return 'SURAT KETERANGAN BELUM PERNAH KAWIN/MENIKAH';
+    if (jenis.includes('belum bekerja')) return 'SURAT KETERANGAN BELUM BEKERJA';
+    if (jenis.includes('kawin') || jenis.includes('menikah')) return 'SURAT KETERANGAN KAWIN/MENIKAH';
+    if (jenis.includes('kematian') || jenis.includes('meninggal')) return 'SURAT KETERANGAN KEMATIAN';
+    if (jenis.includes('perjalanan') || jenis.includes('berpergian')) return 'SURAT KETERANGAN PERJALANAN';
+    if (jenis.includes('domisili') || jenis.includes('tinggal')) return 'SURAT KETERANGAN DOMISILI';
+    if (jenis.includes('usaha')) return 'SURAT KETERANGAN USAHA';
+    if (jenis.includes('tidak mampu') || jenis.includes('kurang mampu')) return 'SURAT KETERANGAN TIDAK MAMPU';
+    return 'SURAT KETERANGAN';
   };
 
   const getIsiSurat = (jenisLayanan: string) => {
     const daerah = data.daerah?.replace(/_/g, ' ') || 'WANGAYA KAJA';
     const keperluan = data.keperluan || 'keperluan yang bersangkutan';
+    const nomorPengantar = data.nomorSuratKadus || '';
+    const tanggalPengantar = data.tanggalPengantar ? formatDate(data.tanggalPengantar) : '';
+    
+    // Format pembuka surat yang sama untuk semua jenis dengan nomor BOLD
+    const pembukaSurat = nomorPengantar
+      ? (
+          <>
+            Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun {daerah}, Nomor <strong>{nomorPengantar}</strong>, Tanggal : {tanggalPengantar}, bahwa :
+          </>
+        )
+      : `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerah}, pengantar Kepala Dusun, bahwa :`;
     
     const isiMap: { [key: string]: { paragraf1: JSX.Element | string, paragraf2: string, paragraf3: string } } = {
       "Surat Kelakuan Baik": {
-        paragraf1: (
-          <>
-            Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun {daerah}, Nomor <strong>{data.nomorPengantar || '02/SKKB/WAJA/XII/2025'}</strong>, Tanggal : {data.tanggalPengantar ? formatDate(data.tanggalPengantar) : '3 Desember 2025'}, bahwa :
-          </>
-        ),
+        paragraf1: pembukaSurat,
         paragraf2: "Sepanjang pengetahuan kami orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berkelakuan baik, tidak pernah tersangkut dalam tindakan kriminal/kejahatan.",
         paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
       },
+      "Surat Keterangan Belum Nikah/Kawin": {
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan data yang ada, orang tersebut belum pernah kawin/menikah sampai saat ini.",
+        paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
+      },
       "Surat Keterangan Belum Bekerja": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerah}, bahwa :`,
-        paragraf2: "Sepanjang pengetahuan kami orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan sampai saat ini belum bekerja atau belum mempunyai pekerjaan tetap.",
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan data yang ada, orang tersebut belum bekerja dan tidak terikat kontrak kerja dengan perusahaan/instansi manapun.",
+        paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
+      },
+      "Surat Keterangan Kawin/Menikah": {
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah melangsungkan perkawinan serta berstatus sebagai suami/istri yang sah.",
         paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
       },
       "Surat Keterangan Kematian": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerah}, bahwa :`,
-        paragraf2: `Orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah meninggal dunia pada tanggal ${data.tanggalMeninggal ? formatDate(data.tanggalMeninggal) : '.....................'} di ${data.tempatMeninggal || '.....................'} yang disebabkan karena ${data.sebabMeninggal || '.....................'}`,
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan telah meninggal dunia.",
         paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
       },
+      "Surat Keterangan Perjalanan": {
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan melakukan perjalanan untuk keperluan sebagaimana dimaksud dalam surat ini.",
+        paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk berpergian.`
+      },
       "Surat Keterangan Berpergian": {
-        paragraf1: `Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun ${daerah}, bahwa :`,
-        paragraf2: `Orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan berpergian/berjalan dari ${data.dariTempat || 'Denpasar'} menuju ${data.tujuan || '.....................'} dengan tujuan untuk ${keperluan}.`,
-        paragraf3: `Demikian surat keterangan berpergian/jalan ini kami buat dengan sebenarnya agar dapat dipergunakan sebagaimana mestinya.`
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan akan melakukan perjalanan untuk keperluan sebagaimana dimaksud dalam surat ini.",
+        paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk berpergian.`
       },
     };
     
-    return isiMap[jenisLayanan] || isiMap["Surat Kelakuan Baik"];
+    // Fallback logic - check by lowercase keywords if exact match not found
+    const jenis = jenisLayanan.toLowerCase();
+    if (isiMap[jenisLayanan]) {
+      return isiMap[jenisLayanan];
+    } else if (jenis.includes('kelakuan baik')) {
+      return isiMap["Surat Kelakuan Baik"];
+    } else if (jenis.includes('belum nikah') || jenis.includes('belum kawin')) {
+      return isiMap["Surat Keterangan Belum Nikah/Kawin"];
+    } else if (jenis.includes('belum bekerja')) {
+      return isiMap["Surat Keterangan Belum Bekerja"];
+    } else if (jenis.includes('kawin') || jenis.includes('menikah')) {
+      return isiMap["Surat Keterangan Kawin/Menikah"];
+    } else if (jenis.includes('kematian') || jenis.includes('meninggal')) {
+      return isiMap["Surat Keterangan Kematian"];
+    } else if (jenis.includes('perjalanan') || jenis.includes('berpergian')) {
+      return isiMap["Surat Keterangan Perjalanan"];
+    } else if (jenis.includes('domisili') || jenis.includes('tinggal')) {
+      return {
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan bertempat tinggal di alamat sebagaimana tercantum dalam surat ini.",
+        paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
+      };
+    } else if (jenis.includes('usaha')) {
+      return {
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan memiliki usaha sebagaimana dimaksud dalam surat ini.",
+        paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
+      };
+    } else if (jenis.includes('tidak mampu') || jenis.includes('kurang mampu')) {
+      return {
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja dan berdasarkan data yang ada, orang tersebut tergolong kurang mampu secara ekonomi.",
+        paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
+      };
+    } else {
+      // Default fallback
+      return {
+        paragraf1: pembukaSurat,
+        paragraf2: "Menerangkan bahwa orang tersebut diatas adalah benar-benar penduduk Desa Dauh Puri Kaja.",
+        paragraf3: `Demikian surat keterangan ini kami buat dengan sebenarnya agar dapat dipergunakan untuk ${keperluan}.`
+      };
+    }
   };
 
   const isiSurat = getIsiSurat(data.jenisLayanan);

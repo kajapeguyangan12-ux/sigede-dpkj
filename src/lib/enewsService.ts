@@ -99,8 +99,17 @@ const normalizeENewsItem = (data: any, id: string, jenis: 'berita' | 'pengumuman
   const lokasi = data.lokasi || data.location;
   let gambar = data.imageUrl || data.gambar || data.image;
   
+  // Debug: Log all image-related fields
+  console.log(`🖼️ Image fields for ${jenis} (${id.substring(0, 8)}):`, {
+    imageUrl: data.imageUrl,
+    gambar: data.gambar,
+    image: data.image,
+    finalGambar: gambar
+  });
+  
   // If gambar is empty string, use fallback
   if (!gambar || gambar.trim() === '') {
+    console.log(`⚠️ No image found, using fallback for ${jenis} (${id.substring(0, 8)})`);
     gambar = '/logo/default.png';
   }
   

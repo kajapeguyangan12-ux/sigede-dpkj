@@ -124,6 +124,63 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
     return value.replace(/[^0-9]/g, '');
   };
 
+  // Helper function untuk validasi data wajib
+  const validateRequiredFields = (data: any, rowNumber: number): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    // Validasi No KK
+    if (!data.noKK || String(data.noKK).trim() === '') {
+      errors.push(`Baris ${rowNumber}: No KK tidak boleh kosong`);
+    } else if (data.noKK.length !== 16) {
+      errors.push(`Baris ${rowNumber}: No KK harus 16 digit (sekarang: ${data.noKK.length} digit)`);
+    } else if (!/^\d+$/.test(data.noKK)) {
+      errors.push(`Baris ${rowNumber}: No KK harus berupa angka`);
+    }
+    
+    // Validasi NIK
+    if (!data.nik || String(data.nik).trim() === '') {
+      errors.push(`Baris ${rowNumber}: NIK tidak boleh kosong`);
+    } else if (data.nik.length !== 16) {
+      errors.push(`Baris ${rowNumber}: NIK harus 16 digit (sekarang: ${data.nik.length} digit)`);
+    } else if (!/^\d+$/.test(data.nik)) {
+      errors.push(`Baris ${rowNumber}: NIK harus berupa angka`);
+    }
+    
+    // Validasi Nama Lengkap
+    if (!data.namaLengkap || String(data.namaLengkap).trim() === '') {
+      errors.push(`Baris ${rowNumber}: Nama Lengkap tidak boleh kosong`);
+    } else if (data.namaLengkap.trim().length < 3) {
+      errors.push(`Baris ${rowNumber}: Nama Lengkap minimal 3 karakter`);
+    }
+    
+    // Validasi format tanggal lahir jika ada
+    if (data.tanggalLahir && data.tanggalLahir !== '') {
+      const datePattern = /^\d{2}-\d{2}-\d{4}$/;
+      if (!datePattern.test(data.tanggalLahir)) {
+        errors.push(`Baris ${rowNumber}: Format tanggal lahir harus DD-MM-YYYY (contoh: 25-05-1964)`);
+      }
+    }
+    
+    // Validasi daerah jika ada
+    const validDaerah = ['WANGAYA_KAJA', 'WANGAYA_TENGAH', 'WANGAYA_TIMUR', 'DAUH_PURI', 'LUAR_DPKJ'];
+    if (data.daerah && data.daerah !== '' && !validDaerah.includes(data.daerah)) {
+      errors.push(`Baris ${rowNumber}: Daerah tidak valid. Pilihan: ${validDaerah.join(', ')}`);
+    }
+    
+    // Validasi jenis kelamin jika ada
+    if (data.jenisKelamin && data.jenisKelamin !== '') {
+      const validJK = ['Laki-laki', 'Perempuan'];
+      if (!validJK.includes(data.jenisKelamin)) {
+        errors.push(`Baris ${rowNumber}: Jenis Kelamin harus "Laki-laki" atau "Perempuan"`);
+      }
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  };
+
   // Helper function untuk konversi format tanggal
   const convertDateFormat = (dateValue: any): string => {
     if (!dateValue) return '';
@@ -203,6 +260,8 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
           };
 
           const parsedData: ParsedData[] = [];
+          const validationErrors: string[] = [];
+          let skippedCount = 0;
 
           for (let i = 1; i < jsonData.length; i++) {
             const row = jsonData[i];
@@ -248,18 +307,39 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
               console.log(`📅 Date conversion: ${originalDate} → ${rowData.tanggalLahir}`);
             }
             
-            // Validasi data wajib - log baris yang di-skip
-            if (rowData.noKK && rowData.nik && rowData.namaLengkap) {
+            // Validasi data dengan fungsi yang lebih ketat
+            const validation = validateRequiredFields(rowData, i + 1);
+            
+            if (validation.valid && rowData.noKK && rowData.nik && rowData.namaLengkap) {
               parsedData.push(rowData as ParsedData);
             } else {
+              skippedCount++;
+              // Simpan error untuk ditampilkan ke user
+              if (validation.errors.length > 0) {
+                validationErrors.push(...validation.errors);
+              }
+              
               // Log baris yang di-skip untuk debugging
-              console.warn(`Baris ${i + 1} di-skip:`, {
+              console.warn(`Baris ${i + 1} di-skip (INVALID):`, {
                 noKK: rowData.noKK || '(kosong)',
                 nik: rowData.nik || '(kosong)',
                 namaLengkap: rowData.namaLengkap || '(kosong)',
+                errors: validation.errors,
                 rawData: row
               });
             }
+          }
+
+          // Tampilkan peringatan jika ada data yang di-skip
+          if (skippedCount > 0) {
+            console.warn(`⚠️ Total ${skippedCount} baris di-skip karena data tidak valid`);
+            console.warn('Error detail:', validationErrors.slice(0, 10)); // Tampilkan 10 error pertama
+          }
+
+          // Jika terlalu banyak error, tampilkan alert
+          if (validationErrors.length > 0 && validationErrors.length > parsedData.length * 0.1) {
+            const errorSummary = validationErrors.slice(0, 5).join('\n');
+            alert(`⚠️ Ditemukan ${validationErrors.length} error validasi!\n\nContoh error:\n${errorSummary}\n\n... dan ${validationErrors.length - 5} error lainnya.\n\nSilakan periksa template dan perbaiki data Anda.`);
           }
 
           if (parsedData.length === 0) {
@@ -898,32 +978,33 @@ interface SelectFileStepProps {
 function SelectFileStep({ file, uploading, uploadMode, onModeChange, onFileChange, onCancel, onNext }: SelectFileStepProps) {
   return (
     <div className="space-y-6">
-      {/* Help Banner with Template Download */}
-      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3 flex-1">
-            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+      {/* Download Template Banner */}
+      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-blue-900 mb-1">Butuh Template Excel?</h4>
-              <p className="text-sm text-blue-700 leading-relaxed">
-                Download template dengan format yang benar untuk menghindari error saat upload. Template sudah berisi contoh data dan format yang sesuai.
-              </p>
-            </div>
           </div>
-          <a
-            href="/templates/template-data-warga.csv"
-            download="template-data-warga.csv"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all hover:shadow-lg active:scale-95 whitespace-nowrap flex-shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Download Template
-          </a>
+          <div className="flex-1">
+            <h4 className="font-bold text-blue-900 mb-2 text-lg">Butuh Template Excel?</h4>
+            <p className="text-sm text-blue-700 mb-4">
+              Download template Excel dengan format yang sudah benar untuk memudahkan upload data warga. 
+              Template ini sudah dilengkapi dengan contoh data dan panduan pengisian.
+            </p>
+            <a
+              href="/templates/template-data-warga.xlsx"
+              download="template-data-warga.xlsx"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-emerald-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Template Excel
+            </a>
+          </div>
         </div>
       </div>
 
@@ -933,24 +1014,24 @@ function SelectFileStep({ file, uploading, uploadMode, onModeChange, onFileChang
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
-          Tips Cepat
+          Tips Penting - Baca Sebelum Upload
         </h4>
         <ul className="text-sm text-amber-800 space-y-1.5">
           <li className="flex items-start gap-2">
-            <span className="text-amber-600 font-bold flex-shrink-0">•</span>
-            <span><strong>Field Wajib:</strong> noKK, nik, namaLengkap (HARUS diisi)</span>
+            <span className="text-amber-600 font-bold flex-shrink-0">📋</span>
+            <span><strong>Field Wajib:</strong> No KK (16 digit), NIK (16 digit), Nama Lengkap (HARUS diisi, tidak boleh kosong)</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-amber-600 font-bold flex-shrink-0">•</span>
-            <span><strong>Format Tanggal:</strong> YYYY-MM-DD (contoh: 1964-05-25)</span>
+            <span className="text-amber-600 font-bold flex-shrink-0">📅</span>
+            <span><strong>Format Tanggal:</strong> DD-MM-YYYY (contoh: 25-05-1964) atau DD/MM/YYYY</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-amber-600 font-bold flex-shrink-0">•</span>
-            <span><strong>Daerah:</strong> Gunakan underscore (contoh: WANGAYA_KAJA)</span>
+            <span className="text-amber-600 font-bold flex-shrink-0">📍</span>
+            <span><strong>Daerah:</strong> WANGAYA_KAJA, WANGAYA_TENGAH, WANGAYA_TIMUR, DAUH_PURI, atau LUAR_DPKJ</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-amber-600 font-bold flex-shrink-0">•</span>
-            <span><strong>File:</strong> Maksimal 20,000 baris untuk performa optimal</span>
+            <span className="text-amber-600 font-bold flex-shrink-0">⚠️</span>
+            <span><strong>Gunakan Template:</strong> Download template di atas untuk menghindari error format!</span>
           </li>
         </ul>
       </div>

@@ -55,6 +55,7 @@ export interface LayananPublik {
   catatanKadus?: string;
   catatanKades?: string;
   nomorSuratKadus?: string; // Nomor surat pengantar kepala dusun
+  nomorSurat?: string; // Nomor surat dari admin desa
   approvedByAdmin?: boolean;
   approvedByKadus?: boolean;
   approvedByKades?: boolean;

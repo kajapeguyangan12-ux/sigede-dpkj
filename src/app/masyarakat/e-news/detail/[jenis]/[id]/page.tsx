@@ -22,6 +22,30 @@ export default function ENewsDetailPage() {
   const [newsItem, setNewsItem] = useState<ENewsItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showImagePopup, setShowImagePopup] = useState(false);
+
+  // Handle ESC key and body scroll lock
+  useEffect(() => {
+    if (showImagePopup) {
+      // Prevent body scroll when modal is open
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+
+      // Handle ESC key
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setShowImagePopup(false);
+        }
+      };
+
+      document.addEventListener('keydown', handleEscape);
+
+      return () => {
+        document.body.style.overflow = originalStyle;
+        document.removeEventListener('keydown', handleEscape);
+      };
+    }
+  }, [showImagePopup]);
 
   useEffect(() => {
     const loadNewsItem = async () => {
@@ -108,7 +132,9 @@ export default function ENewsDetailPage() {
         <img
           src={newsItem.gambar}
           alt={newsItem.judul}
-          className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
         />
       );
     }
@@ -159,8 +185,17 @@ export default function ENewsDetailPage() {
         ) : newsItem ? (
           <div className="space-y-6 sm:space-y-8 lg:space-y-10 max-w-6xl mx-auto">
             {/* Hero Image */}
-            <div className="relative h-64 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem] w-full overflow-hidden rounded-2xl sm:rounded-3xl bg-gray-200 shadow-lg sm:shadow-xl">
+            <div 
+              className="relative h-64 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem] w-full overflow-hidden rounded-2xl sm:rounded-3xl bg-gray-200 shadow-lg sm:shadow-xl cursor-pointer hover:opacity-95 transition-opacity"
+              onClick={() => newsItem?.gambar && setShowImagePopup(true)}
+              title="Klik untuk melihat gambar penuh"
+            >
               {renderHero()}
+              {newsItem?.gambar && (
+                <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium backdrop-blur-sm">
+                  🔍 Klik untuk memperbesar
+                </div>
+              )}
             </div>
 
             {/* Desktop: 2 Column Layout, Mobile: Stack */}
@@ -239,6 +274,151 @@ export default function ENewsDetailPage() {
           </div>
         ) : null}
       </div>
+
+      {/* Image Popup Modal - Professional & Optimized */}
+      {showImagePopup && newsItem?.gambar && (
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/96 flex items-center justify-center overflow-hidden"
+          style={{ 
+            animation: 'fadeIn 0.2s ease-out',
+            WebkitTapHighlightColor: 'transparent'
+          }}
+          onClick={() => setShowImagePopup(false)}
+        >
+          {/* Header Bar - Desktop & Mobile */}
+          <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm">
+            <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+              {/* Title - Hidden on small mobile */}
+              <div className="hidden sm:flex items-center gap-3 flex-1 min-w-0">
+                <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm md:text-base truncate">
+                    {newsItem.judul}
+                  </p>
+                  <p className="text-white/60 text-xs hidden md:block">
+                    Klik di luar atau tekan ESC untuk menutup
+                  </p>
+                </div>
+              </div>
+              
+              {/* Mobile only - Simple title */}
+              <div className="flex sm:hidden items-center gap-2 flex-1">
+                <svg className="w-4 h-4 text-white/80 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-white text-sm font-medium truncate">Preview Gambar</span>
+              </div>
+
+              {/* Close Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowImagePopup(false);
+                }}
+                className="p-2 sm:p-2.5 md:p-3 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-white backdrop-blur-sm transition-all duration-200 hover:scale-105 active:scale-95 ml-3"
+                aria-label="Tutup"
+              >
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Image Container - Centered & Optimized */}
+          <div 
+            className="relative w-full h-full flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 py-16 sm:py-20 md:py-24"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative max-w-7xl w-full h-full flex items-center justify-center">
+              {/* Loading Overlay - For smoother experience */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+              </div>
+
+              {/* Image */}
+              {newsItem.gambar.startsWith("/logo/") ? (
+                <Image
+                  src={newsItem.gambar}
+                  alt={newsItem.judul}
+                  width={1200}
+                  height={1200}
+                  quality={95}
+                  priority
+                  className="relative z-10 object-contain w-full h-full max-h-[calc(100vh-8rem)] sm:max-h-[calc(100vh-10rem)] rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl"
+                  style={{
+                    animation: 'scaleIn 0.3s ease-out'
+                  }}
+                />
+              ) : (
+                <img
+                  src={newsItem.gambar}
+                  alt={newsItem.judul}
+                  loading="eager"
+                  className="relative z-10 object-contain w-full h-full max-h-[calc(100vh-8rem)] sm:max-h-[calc(100vh-10rem)] rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl"
+                  style={{
+                    animation: 'scaleIn 0.3s ease-out'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Instructions - Desktop Only */}
+          <div className="hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md text-white px-6 py-3 rounded-full text-sm font-medium shadow-lg">
+            <div className="flex items-center gap-3">
+              <kbd className="px-2 py-1 bg-white/20 rounded text-xs font-mono">ESC</kbd>
+              <span>untuk menutup</span>
+            </div>
+          </div>
+
+          {/* Mobile Swipe Indicator */}
+          <div className="md:hidden absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+            <div className="w-12 h-1 bg-white/30 rounded-full" />
+            <p className="text-white/60 text-xs font-medium">Ketuk di luar untuk menutup</p>
+          </div>
+
+          {/* Inline Styles for Animations */}
+          <style jsx>{`
+            @keyframes fadeIn {
+              from {
+                opacity: 0;
+              }
+              to {
+                opacity: 1;
+              }
+            }
+            
+            @keyframes scaleIn {
+              from {
+                opacity: 0;
+                transform: scale(0.95);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1);
+              }
+            }
+
+            /* Prevent body scroll when modal is open */
+            body {
+              overflow: hidden;
+            }
+
+            /* Smooth scrolling and better mobile UX */
+            @media (max-width: 768px) {
+              * {
+                -webkit-tap-highlight-color: transparent;
+              }
+            }
+          `}</style>
+        </div>
+      )}
 
       <BottomNavigation />
     </main>

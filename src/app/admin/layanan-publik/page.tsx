@@ -17,8 +17,9 @@ import {
 import { getDataDesa } from "../../../lib/dataDesaService";
 import { getMasyarakatByNIK } from "../../../lib/masyarakatService";
 import { getKependudukanPhotoURL } from "../../../lib/kependudukanPhotoService";
-import { storage } from "../../../lib/firebase";
+import { storage, db } from "../../../lib/firebase";
 import { ref, getBlob } from "firebase/storage";
+import { doc, updateDoc } from "firebase/firestore";
 import generateSuratPDF from "../../utils/generateSuratPDF";
 import SuratTemplate from "../../../components/SuratTemplate";
 
@@ -262,6 +263,12 @@ export default function LayananPublikAdminPage() {
     setSelectedLayanan(layanan);
     setShowDetailModal(true);
     
+    // Reset nomor surat untuk modal baru
+    // Jika layanan sudah punya nomorSurat tersimpan, gunakan itu
+    // Jika belum, kosongkan untuk diisi baru
+    setNomorSurat(layanan.nomorSurat || '');
+    setNomorSuratKadus(layanan.nomorSuratKadus || '');
+    
     // Load photos from layanan data (already uploaded to Firebase Storage)
     setLoadingPhotos(true);
     try {
@@ -433,6 +440,27 @@ export default function LayananPublikAdminPage() {
     }
 
     setIsGeneratingPDF(true);
+    
+    // Simpan nomor surat ke database
+    try {
+      if (selectedLayanan.id) {
+        const docRef = doc(db, 'layanan-publik', selectedLayanan.id);
+        await updateDoc(docRef, {
+          nomorSurat: nomorSurat,
+          updatedAt: new Date()
+        });
+        console.log('✅ Nomor surat berhasil disimpan:', nomorSurat);
+        
+        // Update selectedLayanan state agar nomor surat tetap tersimpan
+        setSelectedLayanan({
+          ...selectedLayanan,
+          nomorSurat: nomorSurat
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error saving nomor surat:', error);
+      // Continue with download even if save fails
+    }
 
     // Use setTimeout to allow UI to update before heavy processing
     setTimeout(async () => {
@@ -446,7 +474,10 @@ export default function LayananPublikAdminPage() {
         }
 
         const zip = new JSZip();
-        const folderName = `Layanan_${selectedLayanan.namaLengkap}_${selectedLayanan.nik}`;
+        // Format nama file: Jenis Surat Nama - Nomor Surat
+        const jenisLayananClean = selectedLayanan.jenisLayanan.replace(/^Surat\s+/i, 'Surat ');
+        const namaClean = selectedLayanan.namaLengkap.replace(/\s+/g, ' ');
+        const folderName = `${jenisLayananClean} ${namaClean} - ${nomorSurat}`;
         const folder = zip.folder(folderName);
 
         if (!folder) {
@@ -475,6 +506,8 @@ export default function LayananPublikAdminPage() {
             : selectedLayanan.createdAt?.toDate?.() 
               ? selectedLayanan.createdAt.toDate().toISOString() 
               : new Date().toISOString(),
+          nomorSuratKadus: selectedLayanan.nomorSuratKadus || '',
+          tanggalPengantar: selectedLayanan.tanggalPermohonan || '',
         };
         
         // Generate PDF
@@ -597,6 +630,9 @@ export default function LayananPublikAdminPage() {
         }
         
         alert(message);
+        
+        // Refresh data setelah download berhasil agar nomor surat tersimpan di list
+        await fetchData();
         
       } catch (error) {
         console.error('❌ Error generating download package:', error);
@@ -1567,7 +1603,7 @@ export default function LayananPublikAdminPage() {
                       <p className="text-justify leading-relaxed text-gray-900">
                         Yang bertanda tangan dibawah ini, Perbekel Desa Dauh Puri Kaja, Kecamatan Denpasar Utara, Kota Denpasar, 
                         menerangkan dengan sebenarnya sesuai dengan pengantar Kepala Dusun {selectedLayanan.daerah?.replace(/_/g, ' ') || '...........'}, 
-                        Nomor <span className="font-bold text-blue-600">{selectedLayanan.nomorSuratKadus || '.............................'}</span>, 
+                        Nomor <span className="font-bold text-blue-600">{nomorSuratKadus || selectedLayanan.nomorSuratKadus || '.............................'}</span>, 
                         Tanggal : {selectedLayanan.createdAt ? new Date(selectedLayanan.createdAt.seconds * 1000).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'long',
@@ -2177,6 +2213,8 @@ export default function LayananPublikAdminPage() {
                 : selectedLayanan.createdAt?.toDate?.() 
                   ? selectedLayanan.createdAt.toDate().toISOString() 
                   : new Date().toISOString(),
+              nomorSuratKadus: nomorSuratKadus || selectedLayanan.nomorSuratKadus || '',
+              tanggalPengantar: selectedLayanan.tanggalPermohonan || '',
             }}
           />
         )}
