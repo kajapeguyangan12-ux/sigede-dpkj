@@ -124,56 +124,29 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
     return value.replace(/[^0-9]/g, '');
   };
 
-  // Helper function untuk validasi data wajib
+  // Helper function untuk validasi data wajib - FLEKSIBEL, hanya cek field penting saja
   const validateRequiredFields = (data: any, rowNumber: number): { valid: boolean; errors: string[] } => {
     const errors: string[] = [];
     
-    // Validasi No KK
+    // Validasi No KK - hanya wajib ada isi, tidak strict 16 digit
     if (!data.noKK || String(data.noKK).trim() === '') {
       errors.push(`Baris ${rowNumber}: No KK tidak boleh kosong`);
-    } else if (data.noKK.length !== 16) {
-      errors.push(`Baris ${rowNumber}: No KK harus 16 digit (sekarang: ${data.noKK.length} digit)`);
-    } else if (!/^\d+$/.test(data.noKK)) {
-      errors.push(`Baris ${rowNumber}: No KK harus berupa angka`);
     }
     
-    // Validasi NIK
+    // Validasi NIK - hanya wajib ada isi, tidak strict 16 digit
     if (!data.nik || String(data.nik).trim() === '') {
       errors.push(`Baris ${rowNumber}: NIK tidak boleh kosong`);
-    } else if (data.nik.length !== 16) {
-      errors.push(`Baris ${rowNumber}: NIK harus 16 digit (sekarang: ${data.nik.length} digit)`);
-    } else if (!/^\d+$/.test(data.nik)) {
-      errors.push(`Baris ${rowNumber}: NIK harus berupa angka`);
     }
     
-    // Validasi Nama Lengkap
+    // Validasi Nama Lengkap - minimal 2 karakter saja
     if (!data.namaLengkap || String(data.namaLengkap).trim() === '') {
       errors.push(`Baris ${rowNumber}: Nama Lengkap tidak boleh kosong`);
-    } else if (data.namaLengkap.trim().length < 3) {
-      errors.push(`Baris ${rowNumber}: Nama Lengkap minimal 3 karakter`);
+    } else if (data.namaLengkap.trim().length < 2) {
+      errors.push(`Baris ${rowNumber}: Nama Lengkap minimal 2 karakter`);
     }
     
-    // Validasi format tanggal lahir jika ada
-    if (data.tanggalLahir && data.tanggalLahir !== '') {
-      const datePattern = /^\d{2}-\d{2}-\d{4}$/;
-      if (!datePattern.test(data.tanggalLahir)) {
-        errors.push(`Baris ${rowNumber}: Format tanggal lahir harus DD-MM-YYYY (contoh: 25-05-1964)`);
-      }
-    }
-    
-    // Validasi daerah jika ada
-    const validDaerah = ['WANGAYA_KAJA', 'WANGAYA_TENGAH', 'WANGAYA_TIMUR', 'DAUH_PURI', 'LUAR_DPKJ'];
-    if (data.daerah && data.daerah !== '' && !validDaerah.includes(data.daerah)) {
-      errors.push(`Baris ${rowNumber}: Daerah tidak valid. Pilihan: ${validDaerah.join(', ')}`);
-    }
-    
-    // Validasi jenis kelamin jika ada
-    if (data.jenisKelamin && data.jenisKelamin !== '') {
-      const validJK = ['Laki-laki', 'Perempuan'];
-      if (!validJK.includes(data.jenisKelamin)) {
-        errors.push(`Baris ${rowNumber}: Jenis Kelamin harus "Laki-laki" atau "Perempuan"`);
-      }
-    }
+    // TIDAK ada validasi strict untuk field lainnya - terima apa adanya dari Excel
+    // Biarkan sistem yang normalize otomatis
     
     return {
       valid: errors.length === 0,
@@ -233,63 +206,203 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+          
+          // Parse dengan header:1 untuk mendapatkan array of arrays
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
+
+          console.log('📊 Excel Data Summary:', {
+            totalRows: jsonData.length,
+            firstRow: jsonData[0],
+            secondRow: jsonData[1]
+          });
 
           if (jsonData.length < 2) {
-            reject(new Error("File Excel kosong atau tidak memiliki data"));
+            reject(new Error("File Excel kosong atau tidak memiliki data. Minimal harus ada header (baris 1) dan 1 baris data."));
             return;
           }
 
-          const headers = jsonData[0].map((h: any) => String(h).trim());
-          const normalizedHeaders = headers.map(normalizeColumnName);
+          // HANYA ambil row pertama sebagai HEADER
+          const headerRow = jsonData[0];
+          if (!headerRow || headerRow.length === 0) {
+            reject(new Error("Baris header (baris 1) kosong. Pastikan baris pertama berisi judul kolom."));
+            return;
+          }
 
+          const headers = headerRow.map((h: any) => String(h || '').trim()).filter(h => h !== '');
+          const normalizedHeaders = headers.map(normalizeColumnName);
+          
+          console.log('📋 Detected Headers:', {
+            original: headers,
+            normalized: normalizedHeaders
+          });
+
+          // Mapping kolom Excel ke field database - Semua kolom akan otomatis ter-detect
           const columnMap: { [key: string]: string } = {
-            'nokk': 'noKK', 'kartukeluarga': 'noKK', 'nik': 'nik',
-            'namalengkap': 'namaLengkap', 'nama': 'namaLengkap',
-            'jeniskelamin': 'jenisKelamin', 'jk': 'jenisKelamin',
-            'tempatlahir': 'tempatLahir', 'tanggallahir': 'tanggalLahir', 'tgllahir': 'tanggalLahir',
-            'alamat': 'alamat', 'daerah': 'daerah', 'banjar': 'daerah',
-            'statusnikah': 'statusNikah', 'statusperkawinan': 'statusNikah',
-            'agama': 'agama', 'sukubangsa': 'sukuBangsa', 'suku': 'sukuBangsa',
+            // No KK
+            'nokk': 'noKK', 
+            'kartukeluarga': 'noKK', 
+            'nomorkartukeluarga': 'noKK',
+            
+            // NIK
+            'nik': 'nik',
+            'nomorindukependudukan': 'nik',
+            
+            // Nama Lengkap
+            'namalengkap': 'namaLengkap', 
+            'nama': 'namaLengkap',
+            
+            // Jenis Kelamin
+            'jeniskelamin': 'jenisKelamin', 
+            'jk': 'jenisKelamin',
+            'kelamin': 'jenisKelamin',
+            
+            // Tempat Lahir
+            'tempatlahir': 'tempatLahir', 
+            'tmplahir': 'tempatLahir',
+            
+            // Tanggal Lahir
+            'tanggallahir': 'tanggalLahir', 
+            'tgllahir': 'tanggalLahir',
+            'tgllhr': 'tanggalLahir',
+            
+            // Alamat
+            'alamat': 'alamat', 
+            'alamatlengkap': 'alamat',
+            
+            // Daerah
+            'daerah': 'daerah', 
+            'banjar': 'daerah',
+            'wilayah': 'daerah',
+            
+            // Status Nikah
+            'statusnikah': 'statusNikah', 
+            'statusperkawinan': 'statusNikah',
+            'perkawinan': 'statusNikah',
+            
+            // Agama
+            'agama': 'agama',
+            
+            // Suku Bangsa
+            'sukubangsa': 'sukuBangsa', 
+            'suku': 'sukuBangsa',
+            'bangsa': 'sukuBangsa',
+            
+            // Kewarganegaraan
             'kewarganegaraan': 'kewarganegaraan',
-            'pendidikanterakhir': 'pendidikanTerakhir', 'pendidikan': 'pendidikanTerakhir',
-            'pekerjaan': 'pekerjaan', 'penghasilan': 'penghasilan',
-            'golongandarah': 'golonganDarah', 'goldarah': 'golonganDarah',
-            'shdk': 'shdk', 'statusdalamkeluarga': 'shdk', 'hubungan': 'shdk',
-            'desil': 'desil'
+            'warganegaraan': 'kewarganegaraan',
+            'wni': 'kewarganegaraan',
+            
+            // Pendidikan Terakhir
+            'pendidikanterakhir': 'pendidikanTerakhir', 
+            'pendidikan': 'pendidikanTerakhir',
+            'pddkn': 'pendidikanTerakhir',
+            
+            // Pekerjaan
+            'pekerjaan': 'pekerjaan',
+            'kerja': 'pekerjaan',
+            
+            // Penghasilan
+            'penghasilan': 'penghasilan',
+            'gaji': 'penghasilan',
+            'income': 'penghasilan',
+            
+            // Golongan Darah
+            'golongandarah': 'golonganDarah', 
+            'goldarah': 'golonganDarah',
+            'goldar': 'golonganDarah',
+            
+            // SHDK (Status Hubungan Dalam Keluarga)
+            'shdk': 'shdk', 
+            'statusdalamkeluarga': 'shdk', 
+            'hubungan': 'shdk',
+            'hubungankeluarga': 'shdk',
+            
+            // Desil
+            'desil': 'desil',
+            'kesejahteraan': 'desil'
           };
 
           const parsedData: ParsedData[] = [];
           const validationErrors: string[] = [];
+          const seenNIKs = new Set<string>(); // Track NIK duplikat dalam file Excel
           let skippedCount = 0;
+          let emptyRowCount = 0;
 
+          // Loop mulai dari row 2 (index 1) karena row 1 (index 0) adalah HEADER
           for (let i = 1; i < jsonData.length; i++) {
             const row = jsonData[i];
-            if (!row || row.length === 0) continue;
+            
+            // Skip row yang benar-benar kosong (semua cell kosong)
+            const isEmptyRow = !row || row.length === 0 || row.every((cell: any) => {
+              return cell === undefined || cell === null || String(cell).trim() === '';
+            });
+            
+            if (isEmptyRow) {
+              emptyRowCount++;
+              console.log(`ℹ️ Baris ${i + 1} kosong, di-skip`);
+              continue;
+            }
 
             const rowData: any = {};
             
-            headers.forEach((header, index) => {
-              const normalizedHeader = normalizedHeaders[index];
+            // Map data dari Excel ke field database
+            for (let colIndex = 0; colIndex < headers.length; colIndex++) {
+              const normalizedHeader = normalizedHeaders[colIndex];
               const mappedKey = columnMap[normalizedHeader];
+              const cellValue = row[colIndex];
               
-              if (mappedKey && row[index] !== undefined && row[index] !== null && String(row[index]).trim() !== '') {
-                rowData[mappedKey] = String(row[index]).trim();
+              // Hanya ambil data yang ada mapping dan tidak kosong
+              if (mappedKey && cellValue !== undefined && cellValue !== null) {
+                const trimmedValue = String(cellValue).trim();
+                if (trimmedValue !== '') {
+                  rowData[mappedKey] = trimmedValue;
+                }
               }
-            });
+            }
 
-            // Normalisasi nilai SHDK untuk konsistensi
+            // AUTO-NORMALISASI untuk konsistensi data
+            
+            // Normalisasi Daerah - terima berbagai format
+            if (rowData.daerah) {
+              const daerahLower = rowData.daerah.toLowerCase().trim();
+              if (daerahLower.includes('kaja') || daerahLower.includes('wangaya kaja')) {
+                rowData.daerah = 'WANGAYA_KAJA';
+              } else if (daerahLower.includes('tengah') || daerahLower.includes('wangaya tengah')) {
+                rowData.daerah = 'WANGAYA_TENGAH';
+              } else if (daerahLower.includes('timur') || daerahLower.includes('wangaya timur')) {
+                rowData.daerah = 'WANGAYA_TIMUR';
+              } else if (daerahLower.includes('dauh') || daerahLower.includes('puri') || daerahLower.includes('dauh puri')) {
+                rowData.daerah = 'DAUH_PURI';
+              } else if (daerahLower.includes('luar') || daerahLower.includes('dpkj') || daerahLower.includes('luar dpkj')) {
+                rowData.daerah = 'LUAR_DPKJ';
+              }
+              // Jika tidak match, biarkan apa adanya - sistem akan terima
+            }
+            
+            // Normalisasi Jenis Kelamin - terima berbagai format
+            if (rowData.jenisKelamin) {
+              const jkLower = rowData.jenisKelamin.toLowerCase().trim();
+              if (jkLower.includes('laki') || jkLower === 'l' || jkLower === 'p' || jkLower === 'male') {
+                rowData.jenisKelamin = 'Laki-laki';
+              } else if (jkLower.includes('perempuan') || jkLower === 'w' || jkLower === 'female') {
+                rowData.jenisKelamin = 'Perempuan';
+              }
+              // Jika tidak match, biarkan apa adanya
+            }
+            
+            // Normalisasi SHDK - terima berbagai format
             if (rowData.shdk) {
-              const shdkLower = rowData.shdk.toLowerCase();
-              if (shdkLower.includes('kepala') || shdkLower === 'kk') {
+              const shdkLower = rowData.shdk.toLowerCase().trim();
+              if (shdkLower.includes('kepala') || shdkLower === 'kk' || shdkLower.includes('kepala keluarga')) {
                 rowData.shdk = 'Kepala Keluarga';
-              } else if (shdkLower.includes('istri')) {
+              } else if (shdkLower.includes('istri') || shdkLower.includes('isteri')) {
                 rowData.shdk = 'Istri';
               } else if (shdkLower.includes('suami')) {
                 rowData.shdk = 'Suami';
               } else if (shdkLower.includes('anak')) {
                 rowData.shdk = 'Anak';
               }
+              // Jika tidak match, biarkan apa adanya
             }
             
             // Bersihkan NIK dan No KK dari karakter non-numeric (hapus tanda kutip, spasi, dll)
@@ -304,14 +417,32 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
             if (rowData.tanggalLahir) {
               const originalDate = rowData.tanggalLahir;
               rowData.tanggalLahir = convertDateFormat(rowData.tanggalLahir);
-              console.log(`📅 Date conversion: ${originalDate} → ${rowData.tanggalLahir}`);
+              console.log(`📅 Date conversion baris ${i + 1}: ${originalDate} → ${rowData.tanggalLahir}`);
             }
             
             // Validasi data dengan fungsi yang lebih ketat
             const validation = validateRequiredFields(rowData, i + 1);
             
+            // Check apakah data valid dan memiliki field wajib
             if (validation.valid && rowData.noKK && rowData.nik && rowData.namaLengkap) {
+              // Check NIK duplikat dalam file Excel
+              if (seenNIKs.has(rowData.nik)) {
+                skippedCount++;
+                validationErrors.push(`Baris ${i + 1}: NIK ${rowData.nik} duplikat dalam file Excel (sudah ada di baris sebelumnya)`);
+                console.warn(`⚠️ Baris ${i + 1} di-skip - NIK ${rowData.nik} duplikat dalam file`);
+                continue;
+              }
+              
+              // Tambahkan ke set NIK yang sudah dilihat
+              seenNIKs.add(rowData.nik);
+              
+              // Data valid, tambahkan ke parsedData
               parsedData.push(rowData as ParsedData);
+              console.log(`✅ Baris ${i + 1} valid:`, {
+                nik: rowData.nik,
+                nama: rowData.namaLengkap,
+                noKK: rowData.noKK
+              });
             } else {
               skippedCount++;
               // Simpan error untuk ditampilkan ke user
@@ -320,15 +451,22 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
               }
               
               // Log baris yang di-skip untuk debugging
-              console.warn(`Baris ${i + 1} di-skip (INVALID):`, {
+              console.warn(`❌ Baris ${i + 1} di-skip (INVALID):`, {
                 noKK: rowData.noKK || '(kosong)',
                 nik: rowData.nik || '(kosong)',
                 namaLengkap: rowData.namaLengkap || '(kosong)',
-                errors: validation.errors,
-                rawData: row
+                errors: validation.errors
               });
             }
           }
+          
+          console.log('📊 Parse Summary:', {
+            totalRows: jsonData.length - 1, // exclude header
+            emptyRows: emptyRowCount,
+            validData: parsedData.length,
+            skipped: skippedCount,
+            uniqueNIKs: seenNIKs.size
+          });
 
           // Tampilkan peringatan jika ada data yang di-skip
           if (skippedCount > 0) {
@@ -444,8 +582,11 @@ export default function UploadExcel({ onUploadComplete, onMinimize, onMaximize, 
             statsAccumulatorRef.current.skipped++;
             processedCountRef.current += 1;
             
+            // Log setiap NIK duplikat yang di-skip
+            console.log(`⏭️ SKIP: NIK ${item.nik} (${item.namaLengkap}) sudah ada di database`);
+            
             if ((i + 1) % 100 === 0) {
-              addLog('warning', `Batch ${batchIndex + 1}: ${results.duplicates} NIK duplikat di-skip`);
+              addLog('warning', `Batch ${batchIndex + 1}: ${results.duplicates} NIK duplikat di-skip (sudah ada di database)`);
             }
             
             // Update stats every 50 items
