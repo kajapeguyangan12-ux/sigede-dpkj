@@ -30,6 +30,8 @@ export default function DataDiriKependudukanPage() {
     statusBaru: "",
     pekerjaan: "",
     pekerjaanBaru: "",
+    desil: "",
+    desilBaru: "",
     penghasilan: "",
     penghasilanBaru: "",
   });
@@ -80,6 +82,7 @@ export default function DataDiriKependudukanPage() {
             jenisKelamin: profileData.jenisKelamin || "-",
             statusNikah: profileData.statusPerkawinan || "-",
             pekerjaan: profileData.pekerjaan || "-",
+            desil: profileData.desil || "-",
           }));
           
           console.log('📋 EDIT KEPENDUDUKAN: Form data set with database values');
@@ -458,6 +461,39 @@ export default function DataDiriKependudukanPage() {
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               placeholder="Masukkan Pekerjaan Baru"
             />
+          </div>
+
+          {/* Desil Section */}
+          <div className="rounded-xl border border-gray-300 bg-white p-4 shadow-sm">
+            <label className="block text-sm font-semibold text-gray-800 mb-2">
+              Desil
+            </label>
+            <div className="text-xs text-gray-600 mb-2">Data Desil</div>
+            <input
+              type="text"
+              value={formData.desil}
+              className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm mb-3"
+              readOnly
+            />
+
+            <div className="text-xs text-gray-600 mb-2">Desil Baru</div>
+            <select
+              value={formData.desilBaru}
+              onChange={(e) => handleInputChange("desilBaru", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            >
+              <option value="">Pilih Desil</option>
+              <option value="1">Desil 1 (Sangat Miskin)</option>
+              <option value="2">Desil 2</option>
+              <option value="3">Desil 3</option>
+              <option value="4">Desil 4</option>
+              <option value="5">Desil 5</option>
+              <option value="6">Desil 6</option>
+              <option value="7">Desil 7</option>
+              <option value="8">Desil 8</option>
+              <option value="9">Desil 9</option>
+              <option value="10">Desil 10 (Sangat Kaya)</option>
+            </select>
           </div>
 
           {/* Penghasilan Section */}

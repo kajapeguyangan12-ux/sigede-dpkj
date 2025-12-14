@@ -10,30 +10,41 @@ const nextConfig: NextConfig = {
         pathname: '/v0/b/**',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
   },
-  // Allow cross-origin requests from network IP during development
-  allowedDevOrigins: [
-    '192.168.1.39',
-    '192.168.1.48',
-    'localhost',
-    '127.0.0.1',
-  ],
+  // Production optimizations
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: true,
+  
   async headers() {
     return [
       {
         source: '/:path*',
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
-            value: '*',
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
           },
           {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET, POST, PUT, DELETE, OPTIONS',
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload'
           },
           {
-            key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization',
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin'
           },
         ],
       },

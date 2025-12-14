@@ -169,12 +169,16 @@ interface AgeGroup {
 export default function AnalisisDataPage() {
   const router = useRouter();
   
-  // Access control check
+  // Strict access control - ONLY kepala_desa allowed
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  
   useEffect(() => {
     const checkAccess = () => {
       try {
         const storedUser = localStorage.getItem('sigede_auth_user');
         if (!storedUser) {
+          console.log('❌ No user found in localStorage');
           router.push('/masyarakat/login');
           return;
         }
@@ -182,16 +186,34 @@ export default function AnalisisDataPage() {
         const userData = JSON.parse(storedUser);
         const userRole = userData.role as UserRole;
         
-        if (!canAccessDataDesaAnalisis(userRole)) {
-          console.log('❌ Access denied to data analisis for role:', userRole);
-          router.push('/masyarakat/data-desa');
+        // STRICT CHECK: Only kepala_desa allowed, no bypass
+        if (userRole !== 'kepala_desa') {
+          console.log('❌ Access DENIED to data analisis. Role:', userRole, '| Required: kepala_desa');
+          setAccessDenied(true);
+          setTimeout(() => {
+            router.push('/masyarakat/data-desa');
+          }, 2000);
           return;
         }
         
-        console.log('✅ Access granted to data analisis for role:', userRole);
+        // Double check with permission function
+        if (!canAccessDataDesaAnalisis(userRole)) {
+          console.log('❌ Permission check FAILED for role:', userRole);
+          setAccessDenied(true);
+          setTimeout(() => {
+            router.push('/masyarakat/data-desa');
+          }, 2000);
+          return;
+        }
+        
+        console.log('✅ Access GRANTED to data analisis for kepala_desa');
+        setIsAuthorized(true);
       } catch (error) {
         console.error('❌ Error checking analisis access:', error);
-        router.push('/masyarakat/login');
+        setAccessDenied(true);
+        setTimeout(() => {
+          router.push('/masyarakat/login');
+        }, 2000);
       }
     };
     
@@ -207,8 +229,24 @@ export default function AnalisisDataPage() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [showPredictionResult, setShowPredictionResult] = useState(false);
+  const [predictedPeople, setPredictedPeople] = useState<DataDesaItem[]>([]); // Array penduduk yang match prediksi
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Age Group Detail states
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState<string | null>(null);
+  const [ageGroupPeople, setAgeGroupPeople] = useState<DataDesaItem[]>([]);
+  const [showAgeGroupDetail, setShowAgeGroupDetail] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Pagination states for age group detail
+  const [ageGroupCurrentPage, setAgeGroupCurrentPage] = useState(1);
+  const [ageGroupItemsPerPage, setAgeGroupItemsPerPage] = useState(10);
+  const [ageGroupSearchQuery, setAgeGroupSearchQuery] = useState("");
 
   const [filters, setFilters] = useState<FilterState>({
     desa: "dauh-puri-kaja",
@@ -436,26 +474,39 @@ export default function AnalisisDataPage() {
     if (isNaN(targetAgeNum)) return 0;
 
     // Calculate age at the selected date for each person in filtered data
-    const count = filteredData.filter(person => {
+    const matchingPeople = filteredData.filter(person => {
       if (!person.tanggalLahir) return false;
       const ageAtDate = calculateAge(person.tanggalLahir, selectedDate);
       return ageAtDate === targetAgeNum;
-    }).length;
+    });
 
     console.log('🎯 Prediction:', {
       targetAge: targetAgeNum,
       selectedDate,
       filteredDataCount: filteredData.length,
-      matchingCount: count,
+      matchingCount: matchingPeople.length,
       activeFilters: filters
     });
 
-    return count;
+    return matchingPeople.length;
   };
 
   const handleConfirmPrediction = () => {
     if (targetAge && selectedDate) {
+      const targetAgeNum = parseInt(targetAge);
+      if (isNaN(targetAgeNum)) return;
+
+      // Get matching people data
+      const matchingPeople = filteredData.filter(person => {
+        if (!person.tanggalLahir) return false;
+        const ageAtDate = calculateAge(person.tanggalLahir, selectedDate);
+        return ageAtDate === targetAgeNum;
+      });
+
+      setPredictedPeople(matchingPeople);
       setShowPredictionResult(true);
+      setCurrentPage(1); // Reset to first page
+      setSearchQuery(""); // Reset search
     }
   };
 
@@ -463,6 +514,135 @@ export default function AnalisisDataPage() {
     setTargetAge("");
     setSelectedDate("");
     setShowPredictionResult(false);
+    setPredictedPeople([]);
+    setCurrentPage(1);
+    setSearchQuery("");
+  };
+
+  // Handler untuk klik kelompok usia
+  const handleAgeGroupClick = (groupLabel: string, minAge: number, maxAge: number | null) => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    const currentDay = today.getDate();
+
+    // Filter penduduk berdasarkan kelompok usia
+    const peopleInGroup = filteredData.filter(person => {
+      if (!person.tanggalLahir) return false;
+      
+      const birthDate = new Date(person.tanggalLahir);
+      let age = currentYear - birthDate.getFullYear();
+      const monthDiff = currentMonth - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && currentDay < birthDate.getDate())) {
+        age--;
+      }
+
+      if (maxAge === null) {
+        return age > minAge; // Untuk >65 tahun
+      }
+      return age >= minAge && age <= maxAge;
+    });
+
+    setSelectedAgeGroup(groupLabel);
+    setAgeGroupPeople(peopleInGroup);
+    setShowAgeGroupDetail(true);
+    setAgeGroupCurrentPage(1);
+    setAgeGroupSearchQuery("");
+    
+    // Scroll ke section detail
+    setTimeout(() => {
+      document.getElementById('age-group-detail-section')?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }, 100);
+  };
+
+  const handleCloseAgeGroupDetail = () => {
+    setShowAgeGroupDetail(false);
+    setSelectedAgeGroup(null);
+    setAgeGroupPeople([]);
+    setAgeGroupCurrentPage(1);
+    setAgeGroupSearchQuery("");
+  };
+
+  // Filter predicted people by search query
+  const filteredPredictedPeople = predictedPeople.filter(person => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      person.nik?.toLowerCase().includes(query) ||
+      person.namaLengkap?.toLowerCase().includes(query) ||
+      person.daerah?.toLowerCase().includes(query)
+    );
+  });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPredictedPeople.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPageData = filteredPredictedPeople.slice(startIndex, endIndex);
+
+  // Filter age group people by search query
+  const filteredAgeGroupPeople = ageGroupPeople.filter(person => {
+    if (!ageGroupSearchQuery) return true;
+    const query = ageGroupSearchQuery.toLowerCase();
+    return (
+      person.nik?.toLowerCase().includes(query) ||
+      person.namaLengkap?.toLowerCase().includes(query) ||
+      person.daerah?.toLowerCase().includes(query)
+    );
+  });
+
+  // Pagination calculations for age group
+  const ageGroupTotalPages = Math.ceil(filteredAgeGroupPeople.length / ageGroupItemsPerPage);
+  const ageGroupStartIndex = (ageGroupCurrentPage - 1) * ageGroupItemsPerPage;
+  const ageGroupEndIndex = ageGroupStartIndex + ageGroupItemsPerPage;
+  const ageGroupCurrentPageData = filteredAgeGroupPeople.slice(ageGroupStartIndex, ageGroupEndIndex);
+
+  // Generate page numbers to show
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxPagesToShow = 5;
+    
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Smooth scroll to top of table
+    const tableElement = document.getElementById('people-data-table');
+    if (tableElement) {
+      tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleItemsPerPageChange = (value: number) => {
+    setItemsPerPage(value);
+    setCurrentPage(1); // Reset to first page
   };
 
   // Count up animation for prediction result
@@ -474,7 +654,39 @@ export default function AnalisisDataPage() {
     preserveValue: false,
   });
 
-  if (loading) {
+  // Access Denied Screen
+  if (accessDenied) {
+    return (
+      <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-red-50 to-rose-100">
+        <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
+          <HeaderCard title="Analisis Data" backUrl="/masyarakat/data-desa" showBackButton={true} />
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center max-w-md">
+              <div className="relative mx-auto w-24 h-24 mb-6">
+                <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>
+                <div className="relative w-24 h-24 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center shadow-2xl">
+                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Akses Ditolak</h2>
+              <p className="text-gray-600 mb-2 font-medium">Halaman ini hanya dapat diakses oleh <span className="font-bold text-red-600">Kepala Desa</span>.</p>
+              <p className="text-gray-500 text-sm mb-6">Anda akan dialihkan kembali ke halaman data desa...</p>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Loading Screen
+  if (loading || !isAuthorized) {
     return (
       <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
@@ -483,7 +695,7 @@ export default function AnalisisDataPage() {
             <div className="text-center">
               <div className="relative">
                 <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 mx-auto"></div>
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-t-blue-600 border-r-transparent border-b-transparent border-l-transparent mx-auto absolute top-0 left-1/2 -translate-x-1/2"></div>
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-t-red-600 border-r-transparent border-b-transparent border-l-transparent mx-auto absolute top-0 left-1/2 -translate-x-1/2"></div>
               </div>
               <p className="text-gray-600 mt-4 font-medium">Memuat data analisis...</p>
               <p className="text-gray-400 text-sm mt-1">Mohon tunggu sebentar</p>
@@ -507,22 +719,22 @@ export default function AnalisisDataPage() {
 
         {/* Summary Card - SaaS Style */}
         <div className="mb-4 sm:mb-6 relative group animate-scaleIn">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-2xl sm:rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 rounded-2xl sm:rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
           <div className="relative glass-effect rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl border border-white/40">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 shadow-2xl mb-4 sm:mb-5 animate-float">
+              <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-500 via-rose-600 to-pink-600 shadow-2xl mb-4 sm:mb-5 animate-float">
                 <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
               <div className="mb-2">
                 <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-full border border-blue-200/50">
-                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse"></span>
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gradient-to-r from-red-500 to-rose-500 animate-pulse"></span>
                   <span className="text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-wider">Total Penduduk</span>
                 </div>
               </div>
               <div className="relative">
-                <div className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2 leading-none">
+                <div className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent mb-2 leading-none">
                   {filteredData.length.toLocaleString()}
                 </div>
               </div>
@@ -531,7 +743,7 @@ export default function AnalisisDataPage() {
               {activeFiltersCount > 0 && (
                 <div className="mt-4 sm:mt-6 pt-4 sm:pt-5 border-t border-gray-200/50 animate-fadeIn">
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm shadow-lg flex items-center gap-2">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm shadow-lg flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd"/>
                       </svg>
@@ -554,10 +766,10 @@ export default function AnalisisDataPage() {
             onClick={handleToggleFilter}
             className="w-full group relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-xl sm:rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 rounded-xl sm:rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
             <div className="relative flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 glass-effect rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-white/50 group-hover:border-blue-300/50">
               <div className="flex items-center gap-2 sm:gap-4">
-                <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                   </svg>
@@ -568,7 +780,7 @@ export default function AnalisisDataPage() {
                 </div>
                 {activeFiltersCount > 0 && (
                   <div className="ml-2 sm:ml-3 animate-scaleIn">
-                    <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs sm:text-sm rounded-full font-bold shadow-lg flex items-center gap-1 sm:gap-1.5">
+                    <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs sm:text-sm rounded-full font-bold shadow-lg flex items-center gap-1 sm:gap-1.5">
                       <span>{activeFiltersCount}</span>
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
@@ -582,7 +794,7 @@ export default function AnalisisDataPage() {
                   {showFilterPanel ? 'Tutup' : 'Tampilkan'}
                 </span>
                 <div className={`p-2 rounded-lg bg-gray-100 group-hover:bg-gradient-to-br group-hover:from-blue-100 group-hover:to-indigo-100 transition-all duration-500 ${showFilterPanel ? 'rotate-180' : 'rotate-0'}`}>
-                  <svg className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-600 group-hover:text-red-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
@@ -600,7 +812,7 @@ export default function AnalisisDataPage() {
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4 sm:mb-7 animate-fadeIn">
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 shadow-xl">
+                  <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-500 via-rose-600 to-pink-600 shadow-xl">
                     <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                     </svg>
@@ -629,7 +841,7 @@ export default function AnalisisDataPage() {
                 <div className="flex items-center gap-2">
                   {isRefreshing ? (
                     <>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                       <span className="text-xs font-medium text-blue-700">Memperbarui data...</span>
                     </>
                   ) : (
@@ -650,13 +862,13 @@ export default function AnalisisDataPage() {
                 {/* Filter Desa */}
                 <div className="group animate-fadeIn">
                   <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                     DESA
                   </label>
                   <select
                     value={filters.desa}
                     onChange={(e) => setFilters({ ...filters, desa: e.target.value })}
-                    className="w-full px-4 py-3.5 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-xl text-sm font-bold text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-blue-400 shadow-sm cursor-pointer"
+                    className="w-full px-4 py-3.5 bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-300 rounded-xl text-sm font-bold text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-400 shadow-sm cursor-pointer"
                   >
                     <option value="dauh-puri-kaja">Dauh Puri Kaja</option>
                   </select>
@@ -665,13 +877,13 @@ export default function AnalisisDataPage() {
                 {/* Daerah */}
                 <div className="group animate-fadeIn" style={{ animationDelay: '0.05s' }}>
                   <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                     DAERAH
                   </label>
                   <select
                     value={filters.daerah}
                     onChange={(e) => setFilters({ ...filters, daerah: e.target.value })}
-                    className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all hover:border-indigo-300 shadow-sm appearance-none cursor-pointer"
+                    className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm appearance-none cursor-pointer"
                     style={{ color: filters.daerah ? '#1f2937' : '#9ca3af' }}
                   >
                     <option value="" className="text-gray-400">Semua Daerah</option>
@@ -769,9 +981,9 @@ export default function AnalisisDataPage() {
         )}
 
         {/* Prediksi Usia Penduduk - Enhanced */}
-        <div className="mb-6 bg-gradient-to-br from-white via-purple-50/40 to-pink-50/30 rounded-3xl p-6 shadow-2xl border border-purple-100/50 backdrop-blur-sm">
+        <div className="mb-6 bg-gradient-to-br from-white via-red-50/40 to-rose-50/30 rounded-3xl p-6 shadow-2xl border border-red-100/50 backdrop-blur-sm">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 shadow-lg">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-rose-600 shadow-lg">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
@@ -787,7 +999,7 @@ export default function AnalisisDataPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                   </svg>
                   PILIH TANGGAL
@@ -796,13 +1008,13 @@ export default function AnalisisDataPage() {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-4 md:py-3 bg-gradient-to-r from-white to-purple-50 border-2 border-purple-200 rounded-xl text-sm md:text-base font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all hover:border-purple-300 shadow-sm touch-manipulation"
+                  className="w-full px-4 py-4 md:py-3 bg-gradient-to-r from-white to-red-50 border-2 border-red-200 rounded-xl text-sm md:text-base font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm touch-manipulation"
                   style={{ colorScheme: 'light', minHeight: '48px' }}
                 />
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" />
                   </svg>
                   TARGET USIA
@@ -816,7 +1028,7 @@ export default function AnalisisDataPage() {
                   max="120"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  className="w-full px-4 py-4 md:py-3 bg-gradient-to-r from-white to-pink-50 border-2 border-pink-200 rounded-xl text-sm md:text-base font-semibold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-pink-300 shadow-sm touch-manipulation"
+                  className="w-full px-4 py-4 md:py-3 bg-gradient-to-r from-white to-rose-50 border-2 border-rose-200 rounded-xl text-sm md:text-base font-semibold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all hover:border-rose-300 shadow-sm touch-manipulation"
                   style={{ minHeight: '48px' }}
                 />
               </div>
@@ -828,7 +1040,7 @@ export default function AnalisisDataPage() {
                 <button
                   onClick={handleConfirmPrediction}
                   disabled={!targetAge || !selectedDate}
-                  className="flex-1 group relative overflow-hidden bg-gradient-to-r from-purple-500 via-purple-600 to-pink-600 hover:from-purple-600 hover:via-purple-700 hover:to-pink-700 active:scale-95 text-white font-bold py-4 md:py-3.5 px-6 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 touch-manipulation"
+                  className="flex-1 group relative overflow-hidden bg-gradient-to-r from-red-500 via-red-600 to-rose-600 hover:from-red-600 hover:via-red-700 hover:to-rose-700 active:scale-95 text-white font-bold py-4 md:py-3.5 px-6 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 touch-manipulation"
                   style={{ minHeight: '48px' }}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -850,90 +1062,883 @@ export default function AnalisisDataPage() {
             )}
 
             {showPredictionResult && targetAge && selectedDate && (
-              <div className="mt-5 p-6 bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 rounded-2xl shadow-2xl border border-white/20 animate-scaleIn">
-                <div className="text-center text-white">
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                      <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
-                    </svg>
-                    <div className="text-xs font-bold uppercase tracking-wide opacity-90">Hasil Pencarian</div>
-                  </div>
-                  <div className="text-sm mb-2 font-medium">Jumlah Penduduk Usia {targetAge} Tahun</div>
-                  <div className="text-sm mb-3 font-medium opacity-90">Per Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-                  <div className="text-5xl font-extrabold my-3 drop-shadow-lg">{animatedCount}</div>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                    </svg>
-                    <div className="text-sm font-semibold">
-                      {filteredData.length > 0 
-                        ? ((predictionCount / filteredData.length) * 100).toFixed(1) + "% dari total"
-                        : '0%'}
+              <div className="mt-5 space-y-4">
+                {/* Card Hasil Prediksi */}
+                <div className="p-6 bg-gradient-to-br from-red-500 via-red-600 to-rose-600 rounded-2xl shadow-2xl border border-white/20 animate-scaleIn">
+                  <div className="text-center text-white">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
+                      </svg>
+                      <div className="text-xs font-bold uppercase tracking-wide opacity-90">Hasil Pencarian</div>
+                    </div>
+                    <div className="text-sm mb-2 font-medium">Jumlah Penduduk Usia {targetAge} Tahun</div>
+                    <div className="text-sm mb-3 font-medium opacity-90">Per Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                    <div className="text-5xl font-extrabold my-3 drop-shadow-lg">{animatedCount}</div>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                      </svg>
+                      <div className="text-sm font-semibold">
+                        {filteredData.length > 0 
+                          ? ((predictionCount / filteredData.length) * 100).toFixed(1) + "% dari total"
+                          : '0%'}
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Data Penduduk yang Match - Professional UI */}
+                {predictedPeople.length > 0 && (
+                  <div id="people-data-table" className="p-6 bg-white rounded-2xl shadow-xl border border-red-200 animate-fadeIn">
+                    {/* Header Section */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-5 border-b-2 border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-800 text-lg">Data Penduduk</h4>
+                          <p className="text-sm text-gray-500 mt-0.5">
+                            Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredPredictedPeople.length)} dari {filteredPredictedPeople.length} orang
+                            {searchQuery && ` (difilter dari ${predictedPeople.length} total)`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Search & Items Per Page Controls - Mobile Optimized */}
+                    <div className="flex flex-col gap-3 mb-5">
+                      {/* Search Box */}
+                      <div className="w-full">
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                            <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </div>
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => {
+                              setSearchQuery(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            placeholder="Cari NIK, Nama, Daerah..."
+                            className="w-full pl-10 sm:pl-11 pr-10 py-3.5 sm:py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm touch-manipulation"
+                            style={{ minHeight: '48px' }}
+                          />
+                          {searchQuery && (
+                            <button
+                              onClick={() => {
+                                setSearchQuery("");
+                                setCurrentPage(1);
+                              }}
+                              className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-400 hover:text-gray-600 touch-manipulation"
+                            >
+                              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Items Per Page Selector */}
+                      <div className="flex items-center justify-between gap-3 bg-gray-50 px-4 py-3 rounded-xl border border-gray-200">
+                        <label className="text-xs sm:text-sm font-semibold text-gray-700">Data per halaman:</label>
+                        <select
+                          value={itemsPerPage}
+                          onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                          className="px-3 sm:px-4 py-2.5 sm:py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm cursor-pointer touch-manipulation"
+                          style={{ minHeight: '44px' }}
+                        >
+                          <option value={10}>10</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Mobile Card View - Visible on Mobile Only */}
+                    <div className="md:hidden space-y-3 mb-5">
+                      {currentPageData.length > 0 ? (
+                        currentPageData.map((person, index) => {
+                          const currentAge = calculateAge(person.tanggalLahir || '');
+                          const ageAtDate = calculateAge(person.tanggalLahir || '', selectedDate);
+                          const globalIndex = startIndex + index + 1;
+                          
+                          return (
+                            <div key={person.id} className="bg-white rounded-xl border-2 border-gray-200 p-4 shadow-md hover:shadow-lg transition-all">
+                              {/* Header with Number and Gender */}
+                              <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-500 text-white font-bold text-sm">
+                                    {globalIndex}
+                                  </div>
+                                  <div>
+                                    <div className="font-bold text-gray-900 text-base leading-tight">{person.namaLengkap}</div>
+                                    <div className="text-xs text-gray-500 font-mono mt-0.5">{person.nik}</div>
+                                  </div>
+                                </div>
+                                <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold border ${
+                                  person.jenisKelamin === 'Laki-laki' 
+                                    ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                                    : 'bg-pink-100 text-pink-800 border-pink-200'
+                                }`}>
+                                  {person.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
+                                </span>
+                              </div>
+
+                              {/* Data Grid */}
+                              <div className="space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-gray-600">Tanggal Lahir</span>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {person.tanggalLahir ? new Date(person.tanggalLahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-gray-600">Usia Saat Ini</span>
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                    {currentAge} tahun
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-gray-600">Usia di {new Date(selectedDate).getFullYear()}</span>
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                    {ageAtDate} tahun
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-gray-600">Daerah</span>
+                                  <span className="text-sm font-medium text-gray-900">{person.daerah || '-'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-300 text-center">
+                          <svg className="w-16 h-16 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          <p className="text-gray-500 font-semibold">Tidak ada data yang ditemukan</p>
+                          <p className="text-gray-400 text-sm mt-1">Coba ubah kata kunci pencarian</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Desktop Table View - Hidden on Mobile */}
+                    <div className="hidden md:block overflow-hidden rounded-xl border-2 border-gray-200 shadow-lg">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gradient-to-r from-red-600 via-red-500 to-rose-500">
+                            <tr>
+                              <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">No</th>
+                              <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">NIK</th>
+                              <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Nama Lengkap</th>
+                              <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Tanggal Lahir</th>
+                              <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Usia Saat Ini</th>
+                              <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Usia di {new Date(selectedDate).getFullYear()}</th>
+                              <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Daerah</th>
+                              <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Jenis Kelamin</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {currentPageData.length > 0 ? (
+                              currentPageData.map((person, index) => {
+                                const currentAge = calculateAge(person.tanggalLahir || '');
+                                const ageAtDate = calculateAge(person.tanggalLahir || '', selectedDate);
+                                const globalIndex = startIndex + index + 1;
+                                
+                                return (
+                                  <tr key={person.id} className="hover:bg-red-50 transition-colors duration-150">
+                                    <td className="px-4 py-4 text-sm text-gray-900 font-bold">
+                                      {globalIndex}
+                                    </td>
+                                    <td className="px-4 py-4 text-sm text-gray-900 font-mono font-semibold">
+                                      {person.nik}
+                                    </td>
+                                    <td className="px-4 py-4 text-sm text-gray-900 font-semibold">
+                                      {person.namaLengkap}
+                                    </td>
+                                    <td className="px-4 py-4 text-sm text-gray-700">
+                                      {person.tanggalLahir ? new Date(person.tanggalLahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                    </td>
+                                    <td className="px-4 py-4 text-sm">
+                                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                        {currentAge} tahun
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-4 text-sm">
+                                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                        {ageAtDate} tahun
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-4 text-sm text-gray-700 font-medium">
+                                      {person.daerah || '-'}
+                                    </td>
+                                    <td className="px-4 py-4 text-sm">
+                                      <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold border ${
+                                        person.jenisKelamin === 'Laki-laki' 
+                                          ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                                          : 'bg-pink-100 text-pink-800 border-pink-200'
+                                      }`}>
+                                        {person.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            ) : (
+                              <tr>
+                                <td colSpan={8} className="px-4 py-12 text-center">
+                                  <div className="flex flex-col items-center justify-center">
+                                    <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <p className="text-gray-500 font-semibold text-lg">Tidak ada data yang ditemukan</p>
+                                    <p className="text-gray-400 text-sm mt-1">Coba ubah kata kunci pencarian Anda</p>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Professional Pagination - Mobile Optimized */}
+                    {filteredPredictedPeople.length > 0 && (
+                      <div className="mt-6 flex flex-col items-center gap-4 pt-5 border-t-2 border-gray-100">
+                        {/* Pagination Info */}
+                        <div className="text-xs sm:text-sm text-gray-600 font-medium text-center">
+                          Menampilkan <span className="font-bold text-red-600">{startIndex + 1}</span> - 
+                          <span className="font-bold text-red-600">{Math.min(endIndex, filteredPredictedPeople.length)}</span> dari{' '}
+                          <span className="font-bold text-red-600">{filteredPredictedPeople.length}</span> data
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            {/* Previous Button */}
+                            <button
+                              onClick={() => handlePageChange(currentPage - 1)}
+                              disabled={currentPage === 1}
+                              className={`p-2.5 sm:p-3 rounded-lg font-bold transition-all touch-manipulation ${
+                                currentPage === 1
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-md hover:shadow-lg active:scale-95'
+                              }`}
+                              style={{ minWidth: '44px', minHeight: '44px' }}
+                            >
+                              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                              </svg>
+                            </button>
+
+                            {/* Page Numbers - Responsive */}
+                            <div className="flex items-center gap-1">
+                              {getPageNumbers().map((page, index) => (
+                                page === '...' ? (
+                                  <span key={`ellipsis-${index}`} className="px-2 sm:px-3 py-2 text-gray-400 font-bold text-sm">
+                                    ...
+                                  </span>
+                                ) : (
+                                  <button
+                                    key={page}
+                                    onClick={() => handlePageChange(page as number)}
+                                    className={`min-w-[44px] px-3 sm:px-4 py-2.5 rounded-lg font-bold transition-all touch-manipulation text-sm sm:text-base ${
+                                      currentPage === page
+                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg scale-105 sm:scale-110'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:text-purple-700 active:scale-95'
+                                    }`}
+                                    style={{ minHeight: '44px' }}
+                                  >
+                                    {page}
+                                  </button>
+                                )
+                              ))}
+                            </div>
+
+                            {/* Next Button */}
+                            <button
+                              onClick={() => handlePageChange(currentPage + 1)}
+                              disabled={currentPage === totalPages}
+                              className={`p-2.5 sm:p-3 rounded-lg font-bold transition-all touch-manipulation ${
+                                currentPage === totalPages
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-md hover:shadow-lg active:scale-95'
+                              }`}
+                              style={{ minWidth: '44px', minHeight: '44px' }}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {predictedPeople.length === 0 && (
+                  <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-300 text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-200 mb-3">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-600 font-semibold">Tidak ada penduduk yang berusia {targetAge} tahun pada tanggal tersebut</p>
+                    <p className="text-gray-500 text-sm mt-1">Coba ubah filter atau tanggal prediksi</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Distribusi Kelompok Usia - Enhanced */}
-        <div className="mb-4 sm:mb-6 bg-gradient-to-br from-white via-indigo-50/30 to-blue-50/40 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-indigo-100/50">
-          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-            <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-800 text-sm sm:text-base md:text-lg">Distribusi Kelompok Usia</h3>
-              <p className="text-[10px] sm:text-xs text-gray-500 hidden sm:block">Visualisasi sebaran usia penduduk</p>
-            </div>
-          </div>
+        {/* Distribusi Kelompok Usia - Ultra Modern & Professional */}
+        <div className="mb-4 sm:mb-6 relative">
+          {/* Glassmorphism Background Card */}
+          <div className="absolute inset-0 bg-gradient-to-br from-red-100/40 via-rose-50/30 to-pink-100/40 rounded-3xl sm:rounded-[2rem] blur-2xl"></div>
           
-          <div className="space-y-3 sm:space-y-4">
-            {ageGroups.map((group, index) => {
-              // Gradient colors untuk setiap kelompok usia sesuai dengan gambar
-              const gradients = [
-                'from-red-400 to-red-600',      // 0-5 tahun - Merah
-                'from-orange-400 to-orange-600', // 6-12 tahun - Oranye
-                'from-amber-400 to-amber-600',   // 13-17 tahun - Kuning
-                'from-yellow-400 to-yellow-600', // 18-25 tahun - Kuning cerah
-                'from-lime-400 to-lime-600',     // 26-35 tahun - Hijau muda
-                'from-green-400 to-green-600',   // 36-45 tahun - Hijau
-                'from-emerald-400 to-emerald-600', // 46-55 tahun - Emerald
-                'from-teal-400 to-teal-600',     // 56-65 tahun - Teal
-                'from-cyan-400 to-cyan-600'      // >65 tahun - Cyan
-              ];
-              
-              return (
-                <div key={index} className="group hover:scale-[1.02] transition-transform duration-300">
-                  <div className="flex justify-between items-center mb-1.5 sm:mb-2">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <span className="text-xs sm:text-sm font-bold text-gray-700">{group.label}</span>
-                      <span className="px-1.5 sm:px-2 py-0.5 bg-gray-100 rounded-full text-[10px] sm:text-xs font-semibold text-gray-600">
-                        {group.count} orang
-                      </span>
-                    </div>
-                    <span className="text-xs sm:text-sm font-extrabold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                      {group.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-full h-3 sm:h-4 overflow-hidden shadow-inner">
-                    <div
-                      className={`bg-gradient-to-r ${gradients[index]} h-full rounded-full transition-all duration-700 shadow-lg`}
-                      style={{ 
-                        width: `${group.percentage}%`,
-                        minWidth: group.count > 0 ? '2%' : '0%' // Minimal width jika ada data
-                      }}
-                    />
+          <div className="relative bg-white/90 backdrop-blur-xl rounded-3xl sm:rounded-[2rem] p-5 sm:p-8 shadow-[0_8px_32px_rgba(99,102,241,0.12)] border border-white/60 overflow-hidden">
+            {/* Decorative Elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-200/20 to-rose-200/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-200/20 to-pink-200/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+            
+            {/* Header Section */}
+            <div className="relative flex items-center justify-between mb-6 sm:mb-8">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="relative group/icon">
+                  {/* Animated Glow Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl blur-xl opacity-50 group-hover/icon:opacity-75 transition-opacity animate-pulse"></div>
+                  <div className="relative p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-rose-600 shadow-2xl transform group-hover/icon:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
                   </div>
                 </div>
-              );
-            })}
+                <div>
+                  <h3 className="font-extrabold text-gray-900 text-base sm:text-lg md:text-xl tracking-tight">
+                    Distribusi Kelompok Usia
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-0.5 font-medium">
+                    Klik untuk melihat detail data penduduk
+                  </p>
+                </div>
+              </div>
+              
+              {/* Total Count Badge */}
+              <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl border-2 border-red-100/50 shadow-sm">
+                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                </svg>
+                <span className="text-sm font-bold text-red-700">
+                  {filteredData.length} Total
+                </span>
+              </div>
+            </div>
+            
+            {/* Age Groups List */}
+            <div className="relative space-y-4 sm:space-y-5">
+              {ageGroups.map((group, index) => {
+                // Enhanced gradient colors dengan shadow
+                const gradients = [
+                  { bg: 'from-red-500 to-rose-600', glow: 'from-red-500/50 to-rose-600/50', light: 'from-red-50 to-rose-50' },
+                  { bg: 'from-orange-500 to-amber-600', glow: 'from-orange-500/50 to-amber-600/50', light: 'from-orange-50 to-amber-50' },
+                  { bg: 'from-amber-500 to-yellow-600', glow: 'from-amber-500/50 to-yellow-600/50', light: 'from-amber-50 to-yellow-50' },
+                  { bg: 'from-yellow-500 to-amber-500', glow: 'from-yellow-500/50 to-amber-500/50', light: 'from-yellow-50 to-amber-50' },
+                  { bg: 'from-lime-500 to-green-600', glow: 'from-lime-500/50 to-green-600/50', light: 'from-lime-50 to-green-50' },
+                  { bg: 'from-green-500 to-emerald-600', glow: 'from-green-500/50 to-emerald-600/50', light: 'from-green-50 to-emerald-50' },
+                  { bg: 'from-emerald-500 to-teal-600', glow: 'from-emerald-500/50 to-teal-600/50', light: 'from-emerald-50 to-teal-50' },
+                  { bg: 'from-teal-500 to-cyan-600', glow: 'from-teal-500/50 to-cyan-600/50', light: 'from-teal-50 to-cyan-50' },
+                  { bg: 'from-cyan-500 to-rose-600', glow: 'from-cyan-500/50 to-rose-600/50', light: 'from-cyan-50 to-rose-50' }
+                ];
+                
+                const colorScheme = gradients[index];
+                
+                // Parse age range dari label
+                const parseAgeRange = (label: string): { min: number, max: number | null } => {
+                  if (label.includes('>')) {
+                    const age = parseInt(label.match(/>(\d+)/)?.[1] || '65');
+                    return { min: age, max: null };
+                  }
+                  const match = label.match(/(\d+)-(\d+)/);
+                  return { 
+                    min: parseInt(match?.[1] || '0'), 
+                    max: parseInt(match?.[2] || '0') 
+                  };
+                };
+                
+                const { min, max } = parseAgeRange(group.label);
+                
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleAgeGroupClick(group.label, min, max)}
+                    disabled={group.count === 0}
+                    className={`w-full group/item relative transition-all duration-500 ease-out touch-manipulation ${
+                      group.count === 0 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'hover:-translate-y-1 hover:shadow-2xl cursor-pointer active:scale-[0.98]'
+                    }`}
+                  >
+                    {/* Card Container with Neumorphism */}
+                    <div className="relative bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-4 sm:p-5 border-2 border-gray-100/80 shadow-lg group-hover/item:shadow-2xl group-hover/item:border-red-200/60 transition-all duration-500">
+                      {/* Subtle Background Pattern */}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.05),rgba(255,255,255,0))] rounded-2xl pointer-events-none"></div>
+                      
+                      {/* Hover Glow Effect */}
+                      {group.count > 0 && (
+                        <div className={`absolute inset-0 bg-gradient-to-r ${colorScheme.glow} rounded-2xl opacity-0 group-hover/item:opacity-20 blur-xl transition-opacity duration-500`}></div>
+                      )}
+                      
+                      {/* Content */}
+                      <div className="relative">
+                        {/* Top Row: Label, Count, Percentage */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                            {/* Color Indicator Dot with Pulse */}
+                            <div className="relative">
+                              <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-gradient-to-br ${colorScheme.bg} shadow-lg`}></div>
+                              {group.count > 0 && (
+                                <div className={`absolute inset-0 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-gradient-to-br ${colorScheme.bg} animate-ping opacity-75`}></div>
+                              )}
+                            </div>
+                            
+                            {/* Age Label */}
+                            <span className="text-sm sm:text-base font-bold text-gray-800 group-hover/item:text-red-700 transition-colors duration-300">
+                              {group.label}
+                            </span>
+                            
+                            {/* Count Badge - Glassmorphism */}
+                            <div className={`relative px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl backdrop-blur-sm border shadow-sm transition-all duration-300 ${
+                              group.count > 0 
+                                ? `bg-gradient-to-r ${colorScheme.light} border-white/60 group-hover/item:shadow-md group-hover/item:scale-105` 
+                                : 'bg-gray-100 border-gray-200'
+                            }`}>
+                              <div className="flex items-center gap-1.5">
+                                <svg className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${group.count > 0 ? 'text-gray-700' : 'text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                </svg>
+                                <span className={`text-xs sm:text-sm font-extrabold tabular-nums ${
+                                  group.count > 0 ? 'text-gray-800' : 'text-gray-500'
+                                }`}>
+                                  {group.count.toLocaleString('id-ID')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Percentage & Arrow */}
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <span className="text-base sm:text-lg font-black tabular-nums bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent">
+                              {group.percentage.toFixed(1)}%
+                            </span>
+                            {group.count > 0 && (
+                              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-red-100 to-rose-100 flex items-center justify-center group-hover/item:scale-110 group-hover/item:rotate-12 transition-all duration-300 shadow-sm">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 group-hover/item:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Progress Bar - 3D Effect */}
+                        <div className="relative">
+                          {/* Outer Container - Shadow & Border */}
+                          <div className="relative w-full h-5 sm:h-6 rounded-full bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 shadow-[inset_0_2px_8px_rgba(0,0,0,0.1)] border border-gray-200/80 overflow-hidden group-hover/item:shadow-[inset_0_2px_12px_rgba(0,0,0,0.15)] transition-all duration-500">
+                            {/* Shimmer Effect Background */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover/item:translate-x-full transition-transform duration-1000"></div>
+                            
+                            {/* Progress Fill */}
+                            <div className="relative h-full flex items-center">
+                              <div
+                                className={`relative h-full rounded-full bg-gradient-to-r ${colorScheme.bg} shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-all duration-1000 ease-out group-hover/item:shadow-[0_2px_12px_rgba(0,0,0,0.25)]`}
+                                style={{ 
+                                  width: `${group.percentage}%`,
+                                  minWidth: group.count > 0 ? '8%' : '0%'
+                                }}
+                              >
+                                {/* Inner Highlight */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-transparent rounded-full"></div>
+                                
+                                {/* Animated Dots Pattern */}
+                                <div className="absolute inset-0 bg-[length:20px_20px] bg-[radial-gradient(circle,rgba(255,255,255,0.1)_1px,transparent_1px)] rounded-full opacity-60"></div>
+                                
+                                {/* End Cap Glow */}
+                                {group.count > 0 && (
+                                  <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-2 h-4 sm:h-5 bg-white/50 rounded-full blur-sm`}></div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Percentage Label Inside Bar (for larger percentages) */}
+                          {group.percentage >= 15 && (
+                            <div className="absolute inset-0 flex items-center px-3">
+                              <span className="text-[10px] sm:text-xs font-black text-white drop-shadow-lg" style={{ width: `${group.percentage}%` }}>
+                                <span className="float-right mr-2">{group.percentage.toFixed(1)}%</span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            
+            {/* Footer Info */}
+            <div className="relative mt-6 sm:mt-8 pt-5 sm:pt-6 border-t-2 border-gray-100">
+              <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-gray-500">
+                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">
+                  Klik pada kelompok usia untuk melihat detail lengkap
+                </span>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Detail Data Kelompok Usia */}
+        {showAgeGroupDetail && selectedAgeGroup && (
+          <div id="age-group-detail-section" className="mb-4 sm:mb-6 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-red-200 animate-fadeIn">
+            {/* Header with Close Button */}
+            <div className="flex items-center justify-between mb-6 pb-5 border-b-2 border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-800 text-lg">Data Penduduk: {selectedAgeGroup}</h4>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Total {filteredAgeGroupPeople.length} orang
+                    {ageGroupSearchQuery && ` (difilter dari ${ageGroupPeople.length} total)`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseAgeGroupDetail}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors touch-manipulation"
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Search & Items Per Page Controls */}
+            <div className="flex flex-col gap-3 mb-5">
+              <div className="w-full">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={ageGroupSearchQuery}
+                    onChange={(e) => {
+                      setAgeGroupSearchQuery(e.target.value);
+                      setAgeGroupCurrentPage(1);
+                    }}
+                    placeholder="Cari NIK, Nama, Daerah..."
+                    className="w-full pl-10 sm:pl-11 pr-10 py-3.5 sm:py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm touch-manipulation"
+                    style={{ minHeight: '48px' }}
+                  />
+                  {ageGroupSearchQuery && (
+                    <button
+                      onClick={() => {
+                        setAgeGroupSearchQuery("");
+                        setAgeGroupCurrentPage(1);
+                      }}
+                      className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-400 hover:text-gray-600 touch-manipulation"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 bg-gray-50 px-4 py-3 rounded-xl border border-gray-200">
+                <label className="text-xs sm:text-sm font-semibold text-gray-700">Data per halaman:</label>
+                <select
+                  value={ageGroupItemsPerPage}
+                  onChange={(e) => {
+                    setAgeGroupItemsPerPage(Number(e.target.value));
+                    setAgeGroupCurrentPage(1);
+                  }}
+                  className="px-3 sm:px-4 py-2.5 sm:py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm cursor-pointer touch-manipulation"
+                  style={{ minHeight: '44px' }}
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3 mb-5">
+              {ageGroupCurrentPageData.length > 0 ? (
+                ageGroupCurrentPageData.map((person, index) => {
+                  const currentAge = calculateAge(person.tanggalLahir || '');
+                  const globalIndex = ageGroupStartIndex + index + 1;
+                  
+                  return (
+                    <div key={person.id} className="bg-gradient-to-br from-white to-red-50/30 rounded-xl p-4 border-2 border-red-100 shadow-md hover:shadow-lg transition-all">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                          {globalIndex}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h5 className="font-bold text-gray-900 text-sm truncate">{person.namaLengkap}</h5>
+                          <p className="text-xs text-gray-600 font-mono">{person.nik}</p>
+                        </div>
+                        <span className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                          person.jenisKelamin === 'Laki-laki' 
+                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            : 'bg-pink-100 text-pink-800 border-pink-200'
+                        }`}>
+                          {person.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-600">Tanggal Lahir</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {person.tanggalLahir ? new Date(person.tanggalLahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-600">Usia Saat Ini</span>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                            {currentAge} tahun
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-600">Agama</span>
+                          <span className="text-sm font-medium text-gray-900">{person.agama || '-'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-600">Pekerjaan</span>
+                          <span className="text-sm font-medium text-gray-900">{person.pekerjaan || '-'}</span>
+                        </div>
+                        {person.desil && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-600">Desil</span>
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border border-red-200">
+                              Desil {person.desil}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-600">Daerah</span>
+                          <span className="text-sm font-medium text-gray-900">{person.daerah || '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-300 text-center">
+                  <svg className="w-16 h-16 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <p className="text-gray-500 font-semibold">Tidak ada data yang ditemukan</p>
+                  <p className="text-gray-400 text-sm mt-1">Coba ubah kata kunci pencarian</p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-hidden rounded-xl border-2 border-gray-200 shadow-lg mb-5">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-red-600 via-red-500 to-rose-500">
+                    <tr>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">No</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">NIK</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Nama Lengkap</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Tanggal Lahir</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Usia Saat Ini</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Jenis Kelamin</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Agama</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Pekerjaan</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Desil</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Daerah</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {ageGroupCurrentPageData.length > 0 ? (
+                      ageGroupCurrentPageData.map((person, index) => {
+                        const currentAge = calculateAge(person.tanggalLahir || '');
+                        const globalIndex = ageGroupStartIndex + index + 1;
+                        
+                        return (
+                          <tr key={person.id} className="hover:bg-red-50 transition-colors duration-150">
+                            <td className="px-4 py-4 text-sm text-gray-900 font-bold">{globalIndex}</td>
+                            <td className="px-4 py-4 text-sm text-gray-900 font-mono font-semibold">{person.nik}</td>
+                            <td className="px-4 py-4 text-sm text-gray-900 font-semibold">{person.namaLengkap}</td>
+                            <td className="px-4 py-4 text-sm text-gray-700">
+                              {person.tanggalLahir ? new Date(person.tanggalLahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                            </td>
+                            <td className="px-4 py-4 text-sm">
+                              <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                {currentAge} tahun
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-sm">
+                              <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold border ${
+                                person.jenisKelamin === 'Laki-laki' 
+                                  ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                                  : 'bg-pink-100 text-pink-800 border-pink-200'
+                              }`}>
+                                {person.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-700 font-medium">{person.agama || '-'}</td>
+                            <td className="px-4 py-4 text-sm text-gray-700 font-medium">{person.pekerjaan || '-'}</td>
+                            <td className="px-4 py-4 text-sm">
+                              {person.desil ? (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border border-red-200">
+                                  Desil {person.desil}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-gray-700 font-medium">{person.daerah || '-'}</td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-12 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <p className="text-gray-500 font-semibold text-lg">Tidak ada data yang ditemukan</p>
+                            <p className="text-gray-400 text-sm mt-1">Coba ubah kata kunci pencarian Anda</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Pagination */}
+            {filteredAgeGroupPeople.length > 0 && (
+              <div className="mt-6 flex flex-col items-center gap-4 pt-5 border-t-2 border-gray-100">
+                <div className="text-xs sm:text-sm text-gray-600 font-medium text-center">
+                  Menampilkan <span className="font-bold text-red-600">{ageGroupStartIndex + 1}</span> - 
+                  <span className="font-bold text-red-600">{Math.min(ageGroupEndIndex, filteredAgeGroupPeople.length)}</span> dari{' '}
+                  <span className="font-bold text-red-600">{filteredAgeGroupPeople.length}</span> data
+                </div>
+
+                {ageGroupTotalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (ageGroupCurrentPage > 1) {
+                          setAgeGroupCurrentPage(ageGroupCurrentPage - 1);
+                          document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }}
+                      disabled={ageGroupCurrentPage === 1}
+                      className={`p-2.5 sm:p-3 rounded-lg font-bold transition-all touch-manipulation ${
+                        ageGroupCurrentPage === 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-md hover:shadow-lg active:scale-95'
+                      }`}
+                      style={{ minWidth: '44px', minHeight: '44px' }}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      {Array.from({ length: Math.min(5, ageGroupTotalPages) }, (_, i) => {
+                        let pageNum;
+                        if (ageGroupTotalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (ageGroupCurrentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (ageGroupCurrentPage >= ageGroupTotalPages - 2) {
+                          pageNum = ageGroupTotalPages - 4 + i;
+                        } else {
+                          pageNum = ageGroupCurrentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              setAgeGroupCurrentPage(pageNum);
+                              document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                            className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-bold transition-all touch-manipulation ${
+                              ageGroupCurrentPage === pageNum
+                                ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg scale-110'
+                                : 'bg-white text-gray-700 hover:bg-red-50 border-2 border-gray-200 hover:border-red-300'
+                            }`}
+                            style={{ minWidth: '44px', minHeight: '44px' }}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (ageGroupCurrentPage < ageGroupTotalPages) {
+                          setAgeGroupCurrentPage(ageGroupCurrentPage + 1);
+                          document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }}
+                      disabled={ageGroupCurrentPage === ageGroupTotalPages}
+                      className={`p-2.5 sm:p-3 rounded-lg font-bold transition-all touch-manipulation ${
+                        ageGroupCurrentPage === ageGroupTotalPages
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-md hover:shadow-lg active:scale-95'
+                      }`}
+                      style={{ minWidth: '44px', minHeight: '44px' }}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <BottomNavigation />

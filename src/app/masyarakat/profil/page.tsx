@@ -23,6 +23,7 @@ interface UserProfile {
   jenisKelamin?: string;
   agama?: string;
   pekerjaan?: string;
+  desil?: string;
   kecamatan?: string;
   desa?: string;
   rt?: string;
@@ -69,6 +70,7 @@ export default function ProfilMasyarakatPage() {
       jenisKelamin: undefined,
       agama: undefined,
       pekerjaan: undefined,
+      desil: undefined,
       desa: undefined,
       kecamatan: undefined,
       rt: undefined,
@@ -261,6 +263,18 @@ export default function ProfilMasyarakatPage() {
                   <div className="text-sm sm:text-base font-medium text-right">{userProfile.pekerjaan}</div>
                 </div>
               )}
+              <div className="flex justify-between items-start">
+                <div className="text-sm sm:text-base text-gray-600">Desil</div>
+                <div className="text-sm sm:text-base font-medium text-right">
+                  {userProfile?.desil ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border border-red-200">
+                      Desil {userProfile.desil}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 

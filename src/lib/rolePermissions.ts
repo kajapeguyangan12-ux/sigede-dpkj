@@ -171,9 +171,9 @@ export const adminAccess: Record<UserRole, AdminAccess> = {
 
 // Data Desa Analisis access control
 export const dataDesaAnalisisAccess: Record<UserRole, DataDesaAccess> = {
-  super_admin: { canAccessAnalisisData: true },
-  administrator: { canAccessAnalisisData: true },
-  admin_desa: { canAccessAnalisisData: true },
+  super_admin: { canAccessAnalisisData: false },
+  administrator: { canAccessAnalisisData: false },
+  admin_desa: { canAccessAnalisisData: false },
   kepala_desa: { canAccessAnalisisData: true },
   kepala_dusun: { canAccessAnalisisData: false },
   warga_dpkj: { canAccessAnalisisData: false },

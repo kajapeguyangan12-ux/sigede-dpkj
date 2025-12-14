@@ -23,6 +23,7 @@ export interface MasyarakatData {
   jenisKelamin?: string;
   agama?: string;
   pekerjaan?: string;
+  desil?: string;
   statusPerkawinan?: string;
   kewarganegaraan?: string;
   kecamatan?: string;
@@ -64,6 +65,7 @@ export const getMasyarakatByEmail = async (email: string): Promise<MasyarakatDat
         jenisKelamin: data.jenisKelamin || undefined,
         agama: data.agama || undefined,
         pekerjaan: data.pekerjaan || undefined,
+        desil: data.desil || undefined,
         statusPerkawinan: data.statusPerkawinan || undefined,
         kewarganegaraan: data.kewarganegaraan || undefined,
         kecamatan: data.kecamatan || undefined,
@@ -98,6 +100,7 @@ export const getMasyarakatByEmail = async (email: string): Promise<MasyarakatDat
         email: data.email || '',
         nik: data.idNumber || data.nik || undefined,
         noTelepon: data.phoneNumber || data.noTelp || data.noTelepon || undefined,
+        desil: data.desil || undefined,
         userName: data.userName || undefined,
         userType: 'warga_luar_dpkj',
         createdAt: data.createdAt,
