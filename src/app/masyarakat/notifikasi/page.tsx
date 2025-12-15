@@ -158,8 +158,8 @@ export default function NotifikasiPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-48 sm:pb-52 pt-3 sm:pt-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pb-safe">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-56 sm:pb-60 pt-3 sm:pt-4">
         <HeaderCard 
           title="Notifikasi" 
           subtitle={`${unreadCount} belum dibaca`}

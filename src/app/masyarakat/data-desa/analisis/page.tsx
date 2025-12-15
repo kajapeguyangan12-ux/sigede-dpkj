@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import HeaderCard from "../../../components/HeaderCard";
 import BottomNavigation from "../../../components/BottomNavigation";
@@ -242,11 +242,13 @@ export default function AnalisisDataPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   
   // Pagination states for age group detail
   const [ageGroupCurrentPage, setAgeGroupCurrentPage] = useState(1);
   const [ageGroupItemsPerPage, setAgeGroupItemsPerPage] = useState(10);
   const [ageGroupSearchQuery, setAgeGroupSearchQuery] = useState("");
+  const [debouncedAgeGroupSearchQuery, setDebouncedAgeGroupSearchQuery] = useState("");
 
   const [filters, setFilters] = useState<FilterState>({
     desa: "",
@@ -284,10 +286,25 @@ export default function AnalisisDataPage() {
   }, [filters, allData]);
 
   useEffect(() => {
-    if (filteredData.length > 0) {
-      calculateAgeGroups();
-    }
+    // Always calculate age groups, even if empty (will show 0s)
+    console.log('🔄 useEffect triggered for calculateAgeGroups, filteredData.length:', filteredData.length);
+    calculateAgeGroups();
   }, [filteredData]);
+
+  // Debounce search queries untuk optimasi performa
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms delay
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAgeGroupSearchQuery(ageGroupSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [ageGroupSearchQuery]);
 
   // Reset prediction when filters change
   useEffect(() => {
@@ -349,19 +366,32 @@ export default function AnalisisDataPage() {
       setIsRefreshing(true);
       const data = await getDataDesa();
       
-      console.log('Data loaded from data-desa:', data.length, 'records');
+      console.log('📊 Data loaded from data-desa:', data.length, 'records');
+      console.log('📊 Sample data:', data.slice(0, 2));
+      
       setAllData(data);
       setFilteredData(data);
       setLastRefresh(new Date());
+      
+      // Force calculate age groups immediately after data loaded
+      if (data.length > 0) {
+        console.log('✅ Data set successfully, total:', data.length);
+      } else {
+        console.warn('⚠️ No data loaded from getDataDesa()');
+      }
     } catch (error) {
-      console.error("Error loading data-desa:", error);
+      console.error("❌ Error loading data-desa:", error);
+      // Set empty arrays to prevent undefined errors
+      setAllData([]);
+      setFilteredData([]);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
   };
 
-  const calculateAge = (birthDate: string, targetDate?: string): number => {
+  // OPTIMIZED dengan useCallback - fungsi ini dipanggil ribuan kali
+  const calculateAge = useCallback((birthDate: string, targetDate?: string): number => {
     if (!birthDate) return 0;
     
     try {
@@ -378,9 +408,11 @@ export default function AnalisisDataPage() {
     } catch (error) {
       return 0;
     }
-  };
+  }, []);
 
   const calculateAgeGroups = () => {
+    console.log('🎯 calculateAgeGroups called with filteredData.length:', filteredData.length);
+    
     const groups = [
       { range: "0-5 tahun", label: "0-5 tahun", min: 0, max: 5, count: 0 },
       { range: "6-12 tahun", label: "6-12 tahun", min: 6, max: 12, count: 0 },
@@ -412,13 +444,14 @@ export default function AnalisisDataPage() {
     console.log('📊 Age Groups Calculated:', {
       total,
       groups: ageGroupsWithPercentage,
-      rawData: groups
+      hasData: ageGroupsWithPercentage.some(g => g.count > 0)
     });
 
     setAgeGroups(ageGroupsWithPercentage);
   };
 
-  const applyFilters = () => {
+  // OPTIMIZED dengan useCallback
+  const applyFilters = useCallback(() => {
     let result = [...allData];
 
     // Filter berdasarkan desa (karena desa tidak ada di DataDesaItem, kita skip atau filter by logic lain)
@@ -452,9 +485,10 @@ export default function AnalisisDataPage() {
     });
 
     setFilteredData(result);
-  };
+  }, [allData, filters]);
 
-  const resetFilters = () => {
+  // OPTIMIZED dengan useCallback
+  const resetFilters = useCallback(() => {
     setFilters({
       desa: "",
       daerah: "",
@@ -463,7 +497,7 @@ export default function AnalisisDataPage() {
       pendidikanTerakhir: "",
       pekerjaan: "",
     });
-  };
+  }, []);
 
   const activeFiltersCount = Object.values(filters).filter(v => v !== "").length;
 
@@ -491,10 +525,16 @@ export default function AnalisisDataPage() {
     return matchingPeople.length;
   };
 
-  const handleConfirmPrediction = () => {
+  // OPTIMIZED dengan useCallback
+  const handleConfirmPrediction = useCallback(() => {
+    console.log('🎯 handleConfirmPrediction called:', { targetAge, selectedDate, filteredDataLength: filteredData.length });
+    
     if (targetAge && selectedDate) {
       const targetAgeNum = parseInt(targetAge);
-      if (isNaN(targetAgeNum)) return;
+      if (isNaN(targetAgeNum)) {
+        console.log('❌ Invalid targetAge:', targetAge);
+        return;
+      }
 
       // Get matching people data
       const matchingPeople = filteredData.filter(person => {
@@ -503,21 +543,29 @@ export default function AnalisisDataPage() {
         return ageAtDate === targetAgeNum;
       });
 
+      console.log('✅ Matching people found:', matchingPeople.length);
+      console.log('📊 Sample:', matchingPeople.slice(0, 2));
+
       setPredictedPeople(matchingPeople);
       setShowPredictionResult(true);
       setCurrentPage(1); // Reset to first page
       setSearchQuery(""); // Reset search
+      
+      console.log('✅ State updated: showPredictionResult=true, predictedPeople.length=', matchingPeople.length);
+    } else {
+      console.log('❌ Missing targetAge or selectedDate');
     }
-  };
+  }, [targetAge, selectedDate, filteredData]);
 
-  const handleResetPrediction = () => {
+  // OPTIMIZED dengan useCallback
+  const handleResetPrediction = useCallback(() => {
     setTargetAge("");
     setSelectedDate("");
     setShowPredictionResult(false);
     setPredictedPeople([]);
     setCurrentPage(1);
     setSearchQuery("");
-  };
+  }, []);
 
   // Handler untuk klik kelompok usia
   const handleAgeGroupClick = (groupLabel: string, minAge: number, maxAge: number | null) => {
@@ -567,42 +615,82 @@ export default function AnalisisDataPage() {
     setAgeGroupSearchQuery("");
   };
 
-  // Filter predicted people by search query
-  const filteredPredictedPeople = predictedPeople.filter(person => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
+  // Filter predicted people by search query - OPTIMIZED dengan useMemo
+  const filteredPredictedPeople = useMemo(() => {
+    if (!debouncedSearchQuery) return predictedPeople;
+    const query = debouncedSearchQuery.toLowerCase();
+    return predictedPeople.filter(person => 
       person.nik?.toLowerCase().includes(query) ||
       person.namaLengkap?.toLowerCase().includes(query) ||
       person.daerah?.toLowerCase().includes(query)
     );
+  }, [predictedPeople, debouncedSearchQuery]);
+
+  // Pagination calculations - OPTIMIZED dengan useMemo
+  const paginationData = useMemo(() => {
+    const totalPages = Math.ceil(filteredPredictedPeople.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentPageData = filteredPredictedPeople.slice(startIndex, endIndex);
+    
+    return { totalPages, startIndex, endIndex, currentPageData };
+  }, [filteredPredictedPeople, itemsPerPage, currentPage]);
+
+  const { totalPages, startIndex, endIndex, currentPageData } = paginationData;
+
+  // Debug logging for mobile
+  console.log('📱 Pagination Debug:', {
+    predictedPeopleCount: predictedPeople.length,
+    filteredCount: filteredPredictedPeople.length,
+    currentPageDataCount: currentPageData.length,
+    currentPage,
+    totalPages,
+    showPredictionResult
   });
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredPredictedPeople.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentPageData = filteredPredictedPeople.slice(startIndex, endIndex);
+  // Debug useEffect untuk mobile render state
+  useEffect(() => {
+    console.log('📱 Mobile Card View State:', {
+      currentPageDataLength: currentPageData.length,
+      predictedPeopleLength: predictedPeople.length,
+      filteredPredictedPeopleLength: filteredPredictedPeople.length,
+      showPredictionResult,
+      currentPage,
+      totalPages,
+      hasData: currentPageData.length > 0
+    });
+  }, [currentPageData, showPredictionResult, currentPage]);
 
-  // Filter age group people by search query
-  const filteredAgeGroupPeople = ageGroupPeople.filter(person => {
-    if (!ageGroupSearchQuery) return true;
-    const query = ageGroupSearchQuery.toLowerCase();
-    return (
+  // Monitor perubahan showPredictionResult
+  useEffect(() => {
+    console.log('🎭 showPredictionResult changed to:', showPredictionResult);
+  }, [showPredictionResult]);
+
+  // Filter age group people by search query - OPTIMIZED dengan useMemo
+  const filteredAgeGroupPeople = useMemo(() => {
+    if (!debouncedAgeGroupSearchQuery) return ageGroupPeople;
+    const query = debouncedAgeGroupSearchQuery.toLowerCase();
+    return ageGroupPeople.filter(person =>
       person.nik?.toLowerCase().includes(query) ||
       person.namaLengkap?.toLowerCase().includes(query) ||
       person.daerah?.toLowerCase().includes(query)
     );
-  });
+  }, [ageGroupPeople, debouncedAgeGroupSearchQuery]);
 
-  // Pagination calculations for age group
-  const ageGroupTotalPages = Math.ceil(filteredAgeGroupPeople.length / ageGroupItemsPerPage);
-  const ageGroupStartIndex = (ageGroupCurrentPage - 1) * ageGroupItemsPerPage;
-  const ageGroupEndIndex = ageGroupStartIndex + ageGroupItemsPerPage;
-  const ageGroupCurrentPageData = filteredAgeGroupPeople.slice(ageGroupStartIndex, ageGroupEndIndex);
+  // Pagination calculations for age group - OPTIMIZED dengan useMemo
+  const ageGroupPaginationData = useMemo(() => {
+    const ageGroupTotalPages = Math.ceil(filteredAgeGroupPeople.length / ageGroupItemsPerPage);
+    const ageGroupStartIndex = (ageGroupCurrentPage - 1) * ageGroupItemsPerPage;
+    const ageGroupEndIndex = ageGroupStartIndex + ageGroupItemsPerPage;
+    const ageGroupCurrentPageData = filteredAgeGroupPeople.slice(ageGroupStartIndex, ageGroupEndIndex);
+    
+    return { ageGroupTotalPages, ageGroupStartIndex, ageGroupEndIndex, ageGroupCurrentPageData };
+  }, [filteredAgeGroupPeople, ageGroupItemsPerPage, ageGroupCurrentPage]);
 
-  // Generate page numbers to show
-  const getPageNumbers = () => {
+  const { ageGroupTotalPages, ageGroupStartIndex, ageGroupEndIndex, ageGroupCurrentPageData } = ageGroupPaginationData;
+
+  // Generate page numbers to show - OPTIMIZED dengan useMemo
+  const pageNumbers = useMemo(() => {
     const pages = [];
     const maxPagesToShow = 5;
     
@@ -629,21 +717,23 @@ export default function AnalisisDataPage() {
     }
     
     return pages;
-  };
+  }, [totalPages, currentPage]);
 
-  const handlePageChange = (page: number) => {
+  // OPTIMIZED dengan useCallback
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
     // Smooth scroll to top of table
     const tableElement = document.getElementById('people-data-table');
     if (tableElement) {
       tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  };
+  }, []);
 
-  const handleItemsPerPageChange = (value: number) => {
+  // OPTIMIZED dengan useCallback
+  const handleItemsPerPageChange = useCallback((value: number) => {
     setItemsPerPage(value);
     setCurrentPage(1); // Reset to first page
-  };
+  }, []);
 
   // Count up animation for prediction result
   const predictionCount = predictAgeCount();
@@ -1038,7 +1128,10 @@ export default function AnalisisDataPage() {
             {(targetAge || selectedDate) && (
               <div className="flex gap-3 animate-fadeIn">
                 <button
-                  onClick={handleConfirmPrediction}
+                  onClick={() => {
+                    console.log('🔘 Konfirmasi button clicked (mobile/desktop)');
+                    handleConfirmPrediction();
+                  }}
                   disabled={!targetAge || !selectedDate}
                   className="flex-1 group relative overflow-hidden bg-gradient-to-r from-red-500 via-red-600 to-rose-600 hover:from-red-600 hover:via-red-700 hover:to-rose-700 active:scale-95 text-white font-bold py-4 md:py-3.5 px-6 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 touch-manipulation"
                   style={{ minHeight: '48px' }}
@@ -1344,7 +1437,7 @@ export default function AnalisisDataPage() {
 
                             {/* Page Numbers - Responsive */}
                             <div className="flex items-center gap-1">
-                              {getPageNumbers().map((page, index) => (
+                              {pageNumbers.map((page, index) => (
                                 page === '...' ? (
                                   <span key={`ellipsis-${index}`} className="px-2 sm:px-3 py-2 text-gray-400 font-bold text-sm">
                                     ...

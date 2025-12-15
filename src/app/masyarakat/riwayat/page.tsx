@@ -464,8 +464,8 @@ export default function RiwayatMasyarakatPage() {
   };
 
   return (
-    <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
-      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-48 sm:pb-52 pt-3 sm:pt-4">
+    <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800 pb-safe">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-56 sm:pb-60 pt-3 sm:pt-4">
         <HeaderCard title="Aktivitas" backUrl="/masyarakat/home" showBackButton={false} />
 
         {/* Tabs */}
