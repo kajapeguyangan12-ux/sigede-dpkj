@@ -249,7 +249,7 @@ export default function AnalisisDataPage() {
   const [ageGroupSearchQuery, setAgeGroupSearchQuery] = useState("");
 
   const [filters, setFilters] = useState<FilterState>({
-    desa: "dauh-puri-kaja",
+    desa: "",
     daerah: "",
     jenisKelamin: "",
     agama: "",
@@ -456,7 +456,7 @@ export default function AnalisisDataPage() {
 
   const resetFilters = () => {
     setFilters({
-      desa: "dauh-puri-kaja",
+      desa: "",
       daerah: "",
       jenisKelamin: "",
       agama: "",

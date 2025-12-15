@@ -94,7 +94,7 @@ export default function RiwayatMasyarakatPage() {
   const [selectedItem, setSelectedItem] = useState<RiwayatItem | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 4;
   const [savedLaporan, setSavedLaporan] = useState<RiwayatItem[]>([]);
   const [savedLayanan, setSavedLayanan] = useState<RiwayatItem[]>([]);
   const [savingLaporan, setSavingLaporan] = useState<{[key: string]: boolean}>({});
@@ -405,7 +405,7 @@ export default function RiwayatMasyarakatPage() {
     }
 
     return (
-      <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 sm:mt-8">
+      <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 sm:mt-8 mb-8 sm:mb-10">
         <button
           onClick={() => goToPage(currentPage - 1)}
           disabled={currentPage === 1}
@@ -465,7 +465,7 @@ export default function RiwayatMasyarakatPage() {
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-b from-red-50 to-gray-50 text-gray-800">
-      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-6 pt-3 sm:pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-48 sm:pb-52 pt-3 sm:pt-4">
         <HeaderCard title="Aktivitas" backUrl="/masyarakat/home" showBackButton={false} />
 
         {/* Tabs */}

@@ -52,6 +52,8 @@ export default function NotifikasiPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pengaduan' | 'layanan_publik'>('all');
   const [hasAutoMarked, setHasAutoMarked] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const fetchNotifications = useCallback(async (userId: string) => {
     try {
@@ -125,6 +127,22 @@ export default function NotifikasiPage() {
     return notif.type === filter;
   });
 
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentNotifications = filteredNotifications.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const unreadCount = notifications.filter(n => n.status === 'unread').length;
 
   const formatDate = (timestamp: any) => {
@@ -141,7 +159,7 @@ export default function NotifikasiPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-6 pt-3 sm:pt-4">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-48 sm:pb-52 pt-3 sm:pt-4">
         <HeaderCard 
           title="Notifikasi" 
           subtitle={`${unreadCount} belum dibaca`}
@@ -216,7 +234,7 @@ export default function NotifikasiPage() {
               </p>
             </div>
           ) : (
-            filteredNotifications.map((notification) => (
+            currentNotifications.map((notification) => (
               <div
                 key={notification.id}
                 className={`border rounded-2xl p-4 sm:p-5 transition-all hover:shadow-xl hover:scale-[1.01] ${
@@ -320,6 +338,59 @@ export default function NotifikasiPage() {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && filteredNotifications.length > itemsPerPage && (
+          <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 sm:mt-8 mb-8 sm:mb-10">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg disabled:shadow-none text-sm sm:text-base font-semibold"
+            >
+              ‹
+            </button>
+            
+            {/* Selalu tampilkan halaman 1-5 */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => goToPage(page)}
+                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all text-sm sm:text-base font-semibold shadow-md hover:shadow-lg ${
+                  currentPage === page
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white scale-110 shadow-lg'
+                    : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:scale-105'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            {/* Ellipsis dan halaman terakhir jika totalPages > 5 */}
+            {totalPages > 5 && (
+              <>
+                <span className="px-2 text-gray-400 font-bold">···</span>
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all text-sm sm:text-base font-semibold shadow-md hover:shadow-lg ${
+                    currentPage === totalPages
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white scale-110 shadow-lg'
+                      : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:scale-105'
+                  }`}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg disabled:shadow-none text-sm sm:text-base font-semibold"
+            >
+              ›
+            </button>
+          </div>
+        )}
       </div>
 
       <BottomNavigation />
