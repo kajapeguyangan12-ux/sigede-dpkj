@@ -268,48 +268,30 @@ export default function AnalisisDataPage() {
     pekerjaan: [] as string[],
   });
 
+  // Single unified effect for data fetching - works same on PC and mobile
   useEffect(() => {
     setLoading(true);
-    
-    // Mobile detection for aggressive cache clearing
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile) {
-      console.log('📱 Mobile device detected - clearing stale data');
-      // Reset states to force fresh data
-      setAgeGroups([]);
-      setPredictedPeople([]);
-    }
-    
     fetchAllDataDesa();
     
-    // Auto-refresh data every 5 minutes to keep it updated
+    // Auto-refresh data every 5 minutes
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Auto-refreshing data...');
       fetchAllDataDesa();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 5 * 60 * 1000);
 
     return () => clearInterval(refreshInterval);
   }, []);
 
+  // Apply filters when filters or data changes - unified for all devices
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, allData]);
 
+  // Calculate age groups immediately when filteredData changes - unified for all devices
   useEffect(() => {
-    // Always calculate age groups, even if empty (will show 0s)
-    console.log('🔄 useEffect triggered for calculateAgeGroups, filteredData.length:', filteredData.length);
-    console.log('🔄 filteredData is array?', Array.isArray(filteredData));
-    console.log('🔄 calculateAgeGroups function exists?', typeof calculateAgeGroups === 'function');
-    
-    // Mobile optimization: ensure filteredData is ready before calculating
-    if (Array.isArray(filteredData)) {
-      calculateAgeGroups();
-    } else {
-      console.warn('⚠️ filteredData is not an array, skipping calculation');
-    }
+    calculateAgeGroups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredData]);
+  }, [filteredData, calculateAgeGroups]);
 
   // Debounce search queries untuk optimasi performa
   useEffect(() => {
@@ -326,33 +308,12 @@ export default function AnalisisDataPage() {
     return () => clearTimeout(timer);
   }, [ageGroupSearchQuery]);
 
-  // Reset prediction when filters change
+  // Reset prediction when filters change - unified for all devices
   useEffect(() => {
     if (showPredictionResult) {
-      // Recalculate prediction when filtered data changes
       setShowPredictionResult(false);
-      // Will need to click Konfirmasi again
     }
   }, [filteredData.length]);
-
-  // Auto-recalculate age groups every minute for real-time age updates
-  useEffect(() => {
-    const ageUpdateInterval = setInterval(() => {
-      if (filteredData.length > 0) {
-        console.log('⏰ Auto-updating age calculations...');
-        calculateAgeGroups();
-        // Also update prediction if shown
-        if (showPredictionResult && targetAge && selectedDate) {
-          // Force re-render to update prediction count
-          setShowPredictionResult(false);
-          setTimeout(() => setShowPredictionResult(true), 100);
-        }
-      }
-    }, 60 * 1000); // Every 1 minute
-
-    return () => clearInterval(ageUpdateInterval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredData, showPredictionResult, targetAge, selectedDate]);
 
   // Generate dynamic filter options from data
   useEffect(() => {
@@ -386,23 +347,11 @@ export default function AnalisisDataPage() {
     try {
       setIsRefreshing(true);
       const data = await getDataDesa();
-      
-      console.log('📊 Data loaded from data-desa:', data.length, 'records');
-      console.log('📊 Sample data:', data.slice(0, 2));
-      
       setAllData(data);
       setFilteredData(data);
       setLastRefresh(new Date());
-      
-      // Force calculate age groups immediately after data loaded
-      if (data.length > 0) {
-        console.log('✅ Data set successfully, total:', data.length);
-      } else {
-        console.warn('⚠️ No data loaded from getDataDesa()');
-      }
     } catch (error) {
-      console.error("❌ Error loading data-desa:", error);
-      // Set empty arrays to prevent undefined errors
+      console.error("Error loading data:", error);
       setAllData([]);
       setFilteredData([]);
     } finally {
@@ -433,13 +382,6 @@ export default function AnalisisDataPage() {
 
   // OPTIMIZED dengan useCallback - PENTING untuk mobile
   const calculateAgeGroups = useCallback(() => {
-    console.log('🎯 calculateAgeGroups called with filteredData.length:', filteredData.length);
-    console.log('🎯 First 3 people data:', filteredData.slice(0, 3).map(p => ({
-      nama: p.namaLengkap,
-      tanggalLahir: p.tanggalLahir,
-      age: p.tanggalLahir ? calculateAge(p.tanggalLahir) : 'N/A'
-    })));
-    
     const groups = [
       { range: "0-5 tahun", label: "0-5 tahun", min: 0, max: 5, count: 0 },
       { range: "6-12 tahun", label: "6-12 tahun", min: 6, max: 12, count: 0 },
@@ -452,16 +394,12 @@ export default function AnalisisDataPage() {
       { range: ">65 tahun", label: ">65 tahun", min: 66, max: 999, count: 0 },
     ];
 
-    let totalWithBirthDate = 0;
     filteredData.forEach(person => {
       if (person.tanggalLahir) {
-        totalWithBirthDate++;
         const age = calculateAge(person.tanggalLahir);
         const group = groups.find(g => age >= g.min && age <= g.max);
         if (group) {
           group.count++;
-        } else {
-          console.warn('⚠️ Age not in any group:', age, 'for person:', person.namaLengkap);
         }
       }
     });
@@ -473,14 +411,6 @@ export default function AnalisisDataPage() {
       count: g.count,
       percentage: total > 0 ? (g.count / total) * 100 : 0,
     }));
-
-    console.log('📊 Age Groups Calculated:', {
-      total,
-      totalWithBirthDate,
-      groups: ageGroupsWithPercentage,
-      hasData: ageGroupsWithPercentage.some(g => g.count > 0),
-      device: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'
-    });
 
     setAgeGroups(ageGroupsWithPercentage);
   }, [filteredData, calculateAge]);
