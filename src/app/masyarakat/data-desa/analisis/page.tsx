@@ -1585,6 +1585,17 @@ export default function AnalisisDataPage() {
             
             {/* Age Groups List */}
             <div className="relative space-y-4 sm:space-y-5">
+              {/* Debug: Log ageGroups on render */}
+              {console.log('🎨 Rendering ageGroups:', { 
+                length: ageGroups.length, 
+                data: ageGroups.slice(0, 3),
+                timestamp: new Date().toISOString()
+              })}
+              {ageGroups.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="font-semibold">Memuat data kelompok usia...</p>
+                </div>
+              )}
               {ageGroups.map((group, index) => {
                 // Enhanced gradient colors dengan shadow
                 const gradients = [
