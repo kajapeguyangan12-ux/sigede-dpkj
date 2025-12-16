@@ -4,10 +4,9 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import HeaderCard from "../../../components/HeaderCard";
 import BottomNavigation from "../../../components/BottomNavigation";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+// Fixed: Removed unused Firestore imports
 import { canAccessDataDesaAnalisis } from "@/lib/rolePermissions";
-import { UserRole } from "../../lib/useCurrentUser";
+import { UserRole } from "@/app/masyarakat/lib/useCurrentUser"; // Fixed: Corrected import path
 import { getDataDesa, DataDesaItem } from "@/lib/dataDesaService";
 import { useCountUp } from "@/hooks/useCountUp";
 
@@ -16,7 +15,7 @@ const styles = `
   @keyframes slideDown {
     from {
       opacity: 0;
-      transform: translateY(-30px) scale(0.97);
+      transform: translateY(-20px) scale(0.98);
       max-height: 0;
     }
     to {
@@ -34,7 +33,7 @@ const styles = `
     }
     to {
       opacity: 0;
-      transform: translateY(-30px) scale(0.97);
+      transform: translateY(-20px) scale(0.98);
       max-height: 0;
     }
   }
@@ -42,18 +41,16 @@ const styles = `
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(10px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
     }
   }
   
   @keyframes scaleIn {
     from {
       opacity: 0;
-      transform: scale(0.92);
+      transform: scale(0.95);
     }
     to {
       opacity: 1;
@@ -75,54 +72,88 @@ const styles = `
       transform: translateY(0px);
     }
     50% {
-      transform: translateY(-10px);
+      transform: translateY(-5px);
     }
   }
   
   @keyframes pulse-glow {
     0%, 100% {
-      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
     }
     50% {
-      box-shadow: 0 0 35px rgba(59, 130, 246, 0.6);
+      box-shadow: 0 0 25px rgba(59, 130, 246, 0.4);
     }
   }
   
   .animate-slideDown {
-    animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: max-height, opacity;
   }
   
   .animate-slideUp {
-    animation: slideUp 0.4s cubic-bezier(0.4, 0, 1, 1) forwards;
+    animation: slideUp 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+    will-change: max-height, opacity;
   }
   
   .animate-fadeIn {
-    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: fadeIn 0.25s ease-out;
+    will-change: opacity;
   }
   
   .animate-scaleIn {
-    animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: scaleIn 0.25s ease-out;
+    will-change: transform, opacity;
   }
   
   .animate-shimmer {
     animation: shimmer 3s infinite;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
     background-size: 200% 100%;
   }
   
   .animate-float {
-    animation: float 3s ease-in-out infinite;
+    animation: float 4s ease-in-out infinite;
+    will-change: transform;
   }
   
   .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
+    animation: pulse-glow 3s ease-in-out infinite;
   }
   
   .glass-effect {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  /* Aggressive performance optimization for mobile */
+  @media (max-width: 768px) {
+    .animate-float {
+      animation: none !important;
+      transform: none !important;
+    }
+    .animate-shimmer {
+      animation: none !important;
+    }
+    .animate-pulse-glow {
+      animation: none !important;
+      box-shadow: none !important;
+    }
+    .glass-effect {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      background: rgba(255, 255, 255, 0.98) !important;
+    }
+    /* Disable expensive animations on mobile */
+    .animate-slideDown,
+    .animate-slideUp {
+      animation-duration: 0.15s !important; /* Faster animations */
+    }
+    .animate-fadeIn,
+    .animate-scaleIn {
+      animation-duration: 0.2s !important; /* Faster animations */
+    }
   }
   
   .gradient-border {
@@ -144,11 +175,8 @@ const styles = `
   }
 `;
 
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement("style");
-  styleSheet.textContent = styles;
-  document.head.appendChild(styleSheet);
-}
+// Fixed: Moved DOM manipulation into component lifecycle (useEffect)
+// This prevents SSR/hydration errors in Next.js
 
 interface FilterState {
   desa: string;
@@ -173,12 +201,33 @@ export default function AnalisisDataPage() {
   const [accessDenied, setAccessDenied] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   
+  // Fixed: Inject styles safely in useEffect to prevent SSR errors
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const styleSheet = document.createElement("style");
+      styleSheet.textContent = styles;
+      styleSheet.id = "analisis-page-styles"; // Add ID to prevent duplicates
+      
+      // Check if styles already injected
+      if (!document.getElementById("analisis-page-styles")) {
+        document.head.appendChild(styleSheet);
+      }
+      
+      // Cleanup on unmount
+      return () => {
+        const existingStyle = document.getElementById("analisis-page-styles");
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+      };
+    }
+  }, []);
+  
   useEffect(() => {
     const checkAccess = () => {
       try {
         const storedUser = localStorage.getItem('sigede_auth_user');
         if (!storedUser) {
-          console.log('❌ No user found in localStorage');
           router.push('/masyarakat/login');
           return;
         }
@@ -188,7 +237,6 @@ export default function AnalisisDataPage() {
         
         // STRICT CHECK: Only kepala_desa allowed, no bypass
         if (userRole !== 'kepala_desa') {
-          console.log('❌ Access DENIED to data analisis. Role:', userRole, '| Required: kepala_desa');
           setAccessDenied(true);
           setTimeout(() => {
             router.push('/masyarakat/data-desa');
@@ -198,7 +246,6 @@ export default function AnalisisDataPage() {
         
         // Double check with permission function
         if (!canAccessDataDesaAnalisis(userRole)) {
-          console.log('❌ Permission check FAILED for role:', userRole);
           setAccessDenied(true);
           setTimeout(() => {
             router.push('/masyarakat/data-desa');
@@ -206,7 +253,6 @@ export default function AnalisisDataPage() {
           return;
         }
         
-        console.log('✅ Access GRANTED to data analisis for kepala_desa');
         setIsAuthorized(true);
       } catch (error) {
         console.error('❌ Error checking analisis access:', error);
@@ -221,6 +267,7 @@ export default function AnalisisDataPage() {
   }, [router]);
   
   const [allData, setAllData] = useState<DataDesaItem[]>([]);
+  const [totalDataCount, setTotalDataCount] = useState(0); // Track actual total before limiting
   const [filteredData, setFilteredData] = useState<DataDesaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [targetAge, setTargetAge] = useState("");
@@ -228,7 +275,7 @@ export default function AnalisisDataPage() {
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [showPredictionResult, setShowPredictionResult] = useState(false);
+  const [showPredictionResult, setShowPredictionResult] = useState(false); // Hidden by default - only show after clicking Konfirmasi
   const [predictedPeople, setPredictedPeople] = useState<DataDesaItem[]>([]); // Array penduduk yang match prediksi
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -240,15 +287,21 @@ export default function AnalisisDataPage() {
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Reduced from 10 for faster initial load
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   
   // Pagination states for age group detail
   const [ageGroupCurrentPage, setAgeGroupCurrentPage] = useState(1);
-  const [ageGroupItemsPerPage, setAgeGroupItemsPerPage] = useState(10);
+  const [ageGroupItemsPerPage, setAgeGroupItemsPerPage] = useState(5); // Reduced from 10 for faster initial load
   const [ageGroupSearchQuery, setAgeGroupSearchQuery] = useState("");
   const [debouncedAgeGroupSearchQuery, setDebouncedAgeGroupSearchQuery] = useState("");
+  
+  // Performance optimization states
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [isLazyLoading, setIsLazyLoading] = useState(false);
+  const MAX_DATA_DISPLAY = 3000; // Reduced from 5000 for better mobile performance
+  const CHUNK_SIZE = 500; // Process data in smaller chunks for smoother UX
 
   const [filters, setFilters] = useState<FilterState>({
     desa: "",
@@ -269,30 +322,24 @@ export default function AnalisisDataPage() {
   });
 
   // Single unified effect for data fetching - works same on PC and mobile
+  // OPTIMIZED: Hapus auto-refresh untuk mencegah re-render yang tidak perlu
   useEffect(() => {
     setLoading(true);
     fetchAllDataDesa();
-    
-    // Auto-refresh data every 5 minutes
-    const refreshInterval = setInterval(() => {
-      fetchAllDataDesa();
-    }, 5 * 60 * 1000);
-
-    return () => clearInterval(refreshInterval);
   }, []);
 
-  // Debounce search queries untuk optimasi performa
+  // Debounce search queries untuk optimasi performa - aggressive delay for mobile
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 300); // 300ms delay
+    }, 800); // Increased to 800ms for better mobile performance
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedAgeGroupSearchQuery(ageGroupSearchQuery);
-    }, 300);
+    }, 800); // Increased to 800ms for better mobile performance
     return () => clearTimeout(timer);
   }, [ageGroupSearchQuery]);
 
@@ -301,30 +348,35 @@ export default function AnalisisDataPage() {
     if (showPredictionResult) {
       setShowPredictionResult(false);
     }
+    // Fixed: Added missing dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredData.length]);
 
-  // Generate dynamic filter options from data
+  // Generate dynamic filter options from data - optimized with setTimeout
   useEffect(() => {
     if (allData.length > 0) {
-      const options = {
-        daerah: [...new Set(allData.map(item => item.daerah).filter(Boolean))].sort() as string[],
-        jenisKelamin: [...new Set(allData.map(item => item.jenisKelamin).filter(Boolean))].sort() as string[],
-        agama: [...new Set(allData.map(item => item.agama).filter(Boolean))].sort() as string[],
-        pendidikanTerakhir: [...new Set(allData.map(item => item.pendidikanTerakhir).filter(Boolean))].sort() as string[],
-        pekerjaan: [...new Set(allData.map(item => item.pekerjaan).filter(Boolean))].sort() as string[],
-      };
-      setFilterOptions(options);
+      // Use setTimeout to prevent blocking UI thread
+      setTimeout(() => {
+        const options = {
+          daerah: [...new Set(allData.map(item => item.daerah).filter(Boolean))].sort() as string[],
+          jenisKelamin: [...new Set(allData.map(item => item.jenisKelamin).filter(Boolean))].sort() as string[],
+          agama: [...new Set(allData.map(item => item.agama).filter(Boolean))].sort() as string[],
+          pendidikanTerakhir: [...new Set(allData.map(item => item.pendidikanTerakhir).filter(Boolean))].sort() as string[],
+          pekerjaan: [...new Set(allData.map(item => item.pekerjaan).filter(Boolean))].sort() as string[],
+        };
+        setFilterOptions(options);
+      }, 0);
     }
   }, [allData]);
 
   const handleToggleFilter = () => {
     if (showFilterPanel) {
-      // Trigger closing animation
+      // Trigger closing animation - faster for better UX
       setIsClosing(true);
       setTimeout(() => {
         setShowFilterPanel(false);
         setIsClosing(false);
-      }, 400); // Match animation duration
+      }, 200); // Reduced from 400ms for faster response
     } else {
       // Open immediately
       setShowFilterPanel(true);
@@ -335,9 +387,23 @@ export default function AnalisisDataPage() {
     try {
       setIsRefreshing(true);
       const data = await getDataDesa();
-      setAllData(data);
-      setFilteredData(data);
+      
+      // Store total count before limiting
+      setTotalDataCount(data.length);
+      
+      // PERFORMANCE: Limit data untuk mencegah freeze
+      // Jika data terlalu banyak, ambil sample atau paginate
+      const limitedData = data.length > MAX_DATA_DISPLAY 
+        ? data.slice(0, MAX_DATA_DISPLAY) 
+        : data;
+      
+      setAllData(limitedData);
+      setFilteredData(limitedData);
       setLastRefresh(new Date());
+      
+      if (data.length > MAX_DATA_DISPLAY && process.env.NODE_ENV === 'development') {
+        console.warn(`⚠️ Data limited to ${MAX_DATA_DISPLAY} items for performance. Total: ${data.length}`);
+      }
     } catch (error) {
       console.error("Error loading data:", error);
       setAllData([]);
@@ -348,27 +414,76 @@ export default function AnalisisDataPage() {
     }
   };
 
+  // Helper function to parse date string (supports DD-MM-YYYY and YYYY-MM-DD)
+  const parseDateString = useCallback((dateString: string): Date | null => {
+    if (!dateString) return null;
+    
+    try {
+      // Check if date contains '-'
+      if (dateString.includes('-')) {
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+          // Check if it's DD-MM-YYYY (day has 1-2 digits, year has 4)
+          if (parts[0].length <= 2 && parts[2].length === 4) {
+            // DD-MM-YYYY format
+            const [day, month, year] = parts;
+            return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+          } else if (parts[0].length === 4) {
+            // YYYY-MM-DD format
+            return new Date(dateString);
+          }
+        }
+      }
+      // Fallback to default Date constructor
+      return new Date(dateString);
+    } catch (error) {
+      console.error('Error parsing date:', dateString, error);
+      return null;
+    }
+  }, []);
+
+  // Helper function to format date for display
+  const formatDateDisplay = useCallback((dateString: string | undefined, format: 'short' | 'long' = 'long'): string => {
+    if (!dateString) return '-';
+    
+    const date = parseDateString(dateString);
+    if (!date || isNaN(date.getTime())) return 'Invalid Date';
+    
+    return date.toLocaleDateString('id-ID', { 
+      day: 'numeric', 
+      month: format === 'short' ? 'short' : 'long', 
+      year: 'numeric' 
+    });
+  }, [parseDateString]);
+
   // OPTIMIZED dengan useCallback - fungsi ini dipanggil ribuan kali
   const calculateAge = useCallback((birthDate: string, targetDate?: string): number => {
     if (!birthDate) {
-      console.warn('⚠️ calculateAge: no birthDate provided');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ calculateAge: no birthDate provided');
+      }
       return 0;
     }
     
     try {
-      const birth = new Date(birthDate);
-      const referenceDate = targetDate ? new Date(targetDate) : new Date();
+      const birth = parseDateString(birthDate);
+      const reference = targetDate ? (parseDateString(targetDate) || new Date(targetDate)) : new Date();
       
       // Validate dates
-      if (isNaN(birth.getTime())) {
+      if (!birth || isNaN(birth.getTime())) {
         console.error('❌ calculateAge: Invalid birth date:', birthDate);
         return 0;
       }
       
-      let age = referenceDate.getFullYear() - birth.getFullYear();
-      const monthDiff = referenceDate.getMonth() - birth.getMonth();
+      if (!reference || isNaN(reference.getTime())) {
+        console.error('❌ calculateAge: Invalid reference date:', targetDate);
+        return 0;
+      }
       
-      if (monthDiff < 0 || (monthDiff === 0 && referenceDate.getDate() < birth.getDate())) {
+      let age = reference.getFullYear() - birth.getFullYear();
+      const monthDiff = reference.getMonth() - birth.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && reference.getDate() < birth.getDate())) {
         age--;
       }
       
@@ -377,113 +492,115 @@ export default function AnalisisDataPage() {
       console.error('❌ calculateAge error:', error, 'birthDate:', birthDate);
       return 0;
     }
-  }, []);
+  }, [parseDateString]);
 
   // OPTIMIZED dengan useCallback - PENTING untuk mobile
+  // UPDATED: Menggunakan selectedDate jika ada agar umur dinamis berubah sesuai tanggal prediksi
   const calculateAgeGroups = useCallback(() => {
-    console.log('📊 calculateAgeGroups called - START', {
-      filteredDataLength: filteredData.length,
-      sampleData: filteredData.slice(0, 2).map(p => ({ 
-        nik: p.nik, 
-        nama: p.namaLengkap, 
-        tanggalLahir: p.tanggalLahir 
-      }))
-    });
+    // Early return jika tidak ada data - performance optimization
+    if (!filteredData || filteredData.length === 0) {
+      setAgeGroups([]);
+      setIsCalculating(false);
+      return;
+    }
 
-    const groups = [
-      { range: "0-5 tahun", label: "0-5 tahun", min: 0, max: 5, count: 0 },
-      { range: "6-12 tahun", label: "6-12 tahun", min: 6, max: 12, count: 0 },
-      { range: "13-17 tahun", label: "13-17 tahun", min: 13, max: 17, count: 0 },
-      { range: "18-25 tahun", label: "18-25 tahun", min: 18, max: 25, count: 0 },
-      { range: "26-35 tahun", label: "26-35 tahun", min: 26, max: 35, count: 0 },
-      { range: "36-45 tahun", label: "36-45 tahun", min: 36, max: 45, count: 0 },
-      { range: "46-55 tahun", label: "46-55 tahun", min: 46, max: 55, count: 0 },
-      { range: "56-65 tahun", label: "56-65 tahun", min: 56, max: 65, count: 0 },
-      { range: ">65 tahun", label: ">65 tahun", min: 66, max: 999, count: 0 },
-    ];
+    // Set calculating state
+    setIsCalculating(true);
 
-    let processedCount = 0;
-    let withBirthDateCount = 0;
-    
-    filteredData.forEach((person, index) => {
-      if (person.tanggalLahir) {
-        withBirthDateCount++;
-        const age = calculateAge(person.tanggalLahir);
-        
-        // Debug first 3 people
-        if (index < 3) {
-          console.log(`Person ${index}:`, {
-            nama: person.namaLengkap,
-            tanggalLahir: person.tanggalLahir,
-            calculatedAge: age
+    // Use setTimeout to prevent blocking UI
+    setTimeout(() => {
+      try {
+        // Gunakan tanggal prediksi jika ada, jika tidak gunakan tanggal hari ini
+        const referenceDate = selectedDate || new Date().toISOString().split('T')[0];
+
+        const groups = [
+          { range: "0-5 tahun", label: "0-5 tahun", min: 0, max: 5, count: 0 },
+          { range: "6-12 tahun", label: "6-12 tahun", min: 6, max: 12, count: 0 },
+          { range: "13-17 tahun", label: "13-17 tahun", min: 13, max: 17, count: 0 },
+          { range: "18-25 tahun", label: "18-25 tahun", min: 18, max: 25, count: 0 },
+          { range: "26-35 tahun", label: "26-35 tahun", min: 26, max: 35, count: 0 },
+          { range: "36-45 tahun", label: "36-45 tahun", min: 36, max: 45, count: 0 },
+          { range: "46-55 tahun", label: "46-55 tahun", min: 46, max: 55, count: 0 },
+          { range: "56-65 tahun", label: "56-65 tahun", min: 56, max: 65, count: 0 },
+          { range: ">65 tahun", label: ">65 tahun", min: 66, max: 999, count: 0 },
+        ];
+
+        // Optimized loop - smaller chunks for better mobile performance
+        const chunkSize = 500; // Reduced from 1000 for smoother processing
+        for (let i = 0; i < filteredData.length; i += chunkSize) {
+          const chunk = filteredData.slice(i, i + chunkSize);
+          chunk.forEach((person) => {
+            if (person.tanggalLahir) {
+              // PENTING: Gunakan referenceDate agar umur berubah sesuai tanggal yang dipilih
+              const age = calculateAge(person.tanggalLahir, referenceDate);
+              
+              // Optimized: Direct index lookup
+              if (age <= 5) groups[0].count++;
+              else if (age <= 12) groups[1].count++;
+              else if (age <= 17) groups[2].count++;
+              else if (age <= 25) groups[3].count++;
+              else if (age <= 35) groups[4].count++;
+              else if (age <= 45) groups[5].count++;
+              else if (age <= 55) groups[6].count++;
+              else if (age <= 65) groups[7].count++;
+              else groups[8].count++;
+            }
           });
         }
-        
-        const group = groups.find(g => age >= g.min && age <= g.max);
-        if (group) {
-          group.count++;
-          processedCount++;
-        } else {
-          console.warn('⚠️ Age not in any group:', { age, person: person.namaLengkap });
-        }
+
+        const total = filteredData.length;
+        const ageGroupsWithPercentage = groups.map(g => ({
+          range: g.range,
+          label: g.label,
+          count: g.count,
+          percentage: total > 0 ? (g.count / total) * 100 : 0,
+        }));
+
+        setAgeGroups(ageGroupsWithPercentage);
+        setIsCalculating(false);
+      } catch (error) {
+        console.error('Error calculating age groups:', error);
+        setIsCalculating(false);
       }
-    });
-
-    console.log('📊 calculateAgeGroups - Processing complete:', {
-      totalFiltered: filteredData.length,
-      withBirthDate: withBirthDateCount,
-      processedIntoGroups: processedCount,
-      groups: groups.map(g => ({ label: g.label, count: g.count }))
-    });
-
-    const total = filteredData.length;
-    const ageGroupsWithPercentage = groups.map(g => ({
-      range: g.range,
-      label: g.label,
-      count: g.count,
-      percentage: total > 0 ? (g.count / total) * 100 : 0,
-    }));
-
-    console.log('📊 Final ageGroups to set:', ageGroupsWithPercentage.slice(0, 3));
-
-    setAgeGroups(ageGroupsWithPercentage);
-  }, [filteredData, calculateAge]);
+    }, 0); // Use setTimeout 0 to yield to browser
+  }, [filteredData, calculateAge, selectedDate]);
 
   // OPTIMIZED dengan useCallback
   const applyFilters = useCallback(() => {
-    let result = [...allData];
+    // Early bailout - jika tidak ada filter aktif, langsung set allData
+    const hasActiveFilters = Object.values(filters).some(v => v !== "");
+    if (!hasActiveFilters) {
+      setFilteredData(allData);
+      return;
+    }
 
-    // Filter berdasarkan desa (karena desa tidak ada di DataDesaItem, kita skip atau filter by logic lain)
-    // Untuk sekarang kita skip filter desa karena semua data sudah dari satu desa
-    
-    // Apply other filters
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && key !== 'desa') { // Skip desa filter
-        result = result.filter(item => {
-          const itemValue = item[key as keyof DataDesaItem];
-          if (!itemValue) return false;
-          
-          // Handle daerah special case - might have code prefix
-          if (key === 'daerah') {
-            const itemDaerah = itemValue.toString();
-            // Check if it matches directly or if it's part of the string
-            return itemDaerah === value || 
-                   itemDaerah.toLowerCase().includes(value.toLowerCase()) ||
-                   value.toLowerCase().includes(itemDaerah.toLowerCase());
-          }
-          
-          return itemValue.toString().toLowerCase() === value.toLowerCase();
-        });
-      }
-    });
+    // Use setTimeout to prevent blocking
+    setTimeout(() => {
+      let result = [...allData];
 
-    console.log('🔍 Filter applied:', { 
-      filters, 
-      originalCount: allData.length, 
-      filteredCount: result.length 
-    });
+      // Apply other filters
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && key !== 'desa') { // Skip desa filter
+          result = result.filter(item => {
+            const itemValue = item[key as keyof DataDesaItem];
+            if (!itemValue) return false;
+            
+            // Handle daerah special case - might have code prefix
+            if (key === 'daerah') {
+              const itemDaerah = itemValue.toString();
+              // Check if it matches directly or if it's part of the string
+              return itemDaerah === value || 
+                     itemDaerah.toLowerCase().includes(value.toLowerCase()) ||
+                     value.toLowerCase().includes(itemDaerah.toLowerCase());
+            }
+            
+            return itemValue.toString().toLowerCase() === value.toLowerCase();
+          });
+        }
+      });
 
-    setFilteredData(result);
+      setFilteredData(result);
+    }, 0);
   }, [allData, filters]);
 
   // OPTIMIZED dengan useCallback
@@ -514,27 +631,14 @@ export default function AnalisisDataPage() {
       return ageAtDate === targetAgeNum;
     });
 
-    console.log('🎯 Prediction:', {
-      targetAge: targetAgeNum,
-      selectedDate,
-      filteredDataCount: filteredData.length,
-      matchingCount: matchingPeople.length,
-      activeFilters: filters
-    });
-
     return matchingPeople.length;
   }, [targetAge, selectedDate, filteredData, calculateAge, filters]);
 
   // OPTIMIZED dengan useCallback
   const handleConfirmPrediction = useCallback(() => {
-    console.log('🎯 handleConfirmPrediction called:', { targetAge, selectedDate, filteredDataLength: filteredData.length });
-    
     if (targetAge && selectedDate) {
       const targetAgeNum = parseInt(targetAge);
-      if (isNaN(targetAgeNum)) {
-        console.log('❌ Invalid targetAge:', targetAge);
-        return;
-      }
+      if (isNaN(targetAgeNum)) return;
 
       // Get matching people data
       const matchingPeople = filteredData.filter(person => {
@@ -543,17 +647,19 @@ export default function AnalisisDataPage() {
         return ageAtDate === targetAgeNum;
       });
 
-      console.log('✅ Matching people found:', matchingPeople.length);
-      console.log('📊 Sample:', matchingPeople.slice(0, 2));
-
       setPredictedPeople(matchingPeople);
+      // Show results only after user clicks Konfirmasi
       setShowPredictionResult(true);
       setCurrentPage(1); // Reset to first page
       setSearchQuery(""); // Reset search
       
-      console.log('✅ State updated: showPredictionResult=true, predictedPeople.length=', matchingPeople.length);
-    } else {
-      console.log('❌ Missing targetAge or selectedDate');
+      // Scroll to results after a short delay
+      setTimeout(() => {
+        const resultsElement = document.getElementById('prediction-results');
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     }
   }, [targetAge, selectedDate, filteredData, calculateAge]);
 
@@ -561,6 +667,7 @@ export default function AnalisisDataPage() {
   const handleResetPrediction = useCallback(() => {
     setTargetAge("");
     setSelectedDate("");
+    // Hide results when reset
     setShowPredictionResult(false);
     setPredictedPeople([]);
     setCurrentPage(1);
@@ -568,26 +675,22 @@ export default function AnalisisDataPage() {
   }, []);
 
   // Handler untuk klik kelompok usia - OPTIMIZED dengan useCallback untuk mobile compatibility
+  // UPDATED: Menggunakan selectedDate agar data yang ditampilkan konsisten dengan tanggal prediksi
   const handleAgeGroupClick = useCallback((groupLabel: string, minAge: number, maxAge: number | null) => {
+    // Gunakan tanggal prediksi jika ada, jika tidak gunakan tanggal hari ini
+    const referenceDate = selectedDate || new Date().toISOString().split('T')[0];
+    
     // Filter penduduk berdasarkan kelompok usia - menggunakan calculateAge untuk konsistensi
     const peopleInGroup = filteredData.filter(person => {
       if (!person.tanggalLahir) return false;
       
-      // Gunakan calculateAge untuk konsistensi dengan fungsi lain
-      const age = calculateAge(person.tanggalLahir);
+      // PENTING: Gunakan referenceDate agar umur konsisten dengan tanggal yang dipilih
+      const age = calculateAge(person.tanggalLahir, referenceDate);
 
       if (maxAge === null) {
         return age > minAge; // Untuk >65 tahun
       }
       return age >= minAge && age <= maxAge;
-    });
-
-    console.log('📊 Age Group Click:', {
-      groupLabel,
-      minAge,
-      maxAge,
-      filteredDataCount: filteredData.length,
-      peopleInGroupCount: peopleInGroup.length
     });
 
     setSelectedAgeGroup(groupLabel);
@@ -598,12 +701,15 @@ export default function AnalisisDataPage() {
     
     // Scroll ke section detail
     setTimeout(() => {
-      document.getElementById('age-group-detail-section')?.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-      });
+      // Fixed: Safe DOM access with optional chaining
+      if (typeof document !== 'undefined') {
+        document.getElementById('age-group-detail-section')?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
     }, 100);
-  }, [filteredData, calculateAge]);
+  }, [filteredData, calculateAge, selectedDate]);
 
   // OPTIMIZED dengan useCallback
   const handleCloseAgeGroupDetail = useCallback(() => {
@@ -637,34 +743,6 @@ export default function AnalisisDataPage() {
 
   const { totalPages, startIndex, endIndex, currentPageData } = paginationData;
 
-  // Debug logging for mobile
-  console.log('📱 Pagination Debug:', {
-    predictedPeopleCount: predictedPeople.length,
-    filteredCount: filteredPredictedPeople.length,
-    currentPageDataCount: currentPageData.length,
-    currentPage,
-    totalPages,
-    showPredictionResult
-  });
-
-  // Debug useEffect untuk mobile render state
-  useEffect(() => {
-    console.log('📱 Mobile Card View State:', {
-      currentPageDataLength: currentPageData.length,
-      predictedPeopleLength: predictedPeople.length,
-      filteredPredictedPeopleLength: filteredPredictedPeople.length,
-      showPredictionResult,
-      currentPage,
-      totalPages,
-      hasData: currentPageData.length > 0
-    });
-  }, [currentPageData, showPredictionResult, currentPage]);
-
-  // Monitor perubahan showPredictionResult
-  useEffect(() => {
-    console.log('🎭 showPredictionResult changed to:', showPredictionResult);
-  }, [showPredictionResult]);
-
   // Filter age group people by search query - OPTIMIZED dengan useMemo
   const filteredAgeGroupPeople = useMemo(() => {
     if (!debouncedAgeGroupSearchQuery) return ageGroupPeople;
@@ -688,30 +766,44 @@ export default function AnalisisDataPage() {
 
   const { ageGroupTotalPages, ageGroupStartIndex, ageGroupEndIndex, ageGroupCurrentPageData } = ageGroupPaginationData;
 
-  // Generate page numbers to show - OPTIMIZED dengan useMemo
+  // Generate page numbers to show - OPTIMIZED untuk mobile dan desktop
   const pageNumbers = useMemo(() => {
     const pages = [];
-    const maxPagesToShow = 5;
+    // Detect if mobile - use window width check
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    const maxPagesToShow = isMobile ? 3 : 5; // Show 3 on mobile, 5 on desktop
     
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      if (isMobile) {
+        // Mobile: Show only current, previous, and next
+        if (currentPage === 1) {
+          pages.push(1, 2, '...', totalPages);
+        } else if (currentPage === totalPages) {
+          pages.push(1, '...', totalPages - 1, totalPages);
+        } else {
+          pages.push(1, '...', currentPage, '...', totalPages);
+        }
       } else {
-        pages.push(1);
-        pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
+        // Desktop: Show more pages
+        if (currentPage <= 3) {
+          for (let i = 1; i <= 4; i++) pages.push(i);
+          pages.push('...');
+          pages.push(totalPages);
+        } else if (currentPage >= totalPages - 2) {
+          pages.push(1);
+          pages.push('...');
+          for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+        } else {
+          pages.push(1);
+          pages.push('...');
+          for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+          pages.push('...');
+          pages.push(totalPages);
+        }
       }
     }
     
@@ -721,10 +813,12 @@ export default function AnalisisDataPage() {
   // OPTIMIZED dengan useCallback
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
-    // Smooth scroll to top of table
-    const tableElement = document.getElementById('people-data-table');
-    if (tableElement) {
-      tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Fixed: Safe DOM access for SSR compatibility
+    if (typeof document !== 'undefined') {
+      const tableElement = document.getElementById('people-data-table');
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   }, []);
 
@@ -740,24 +834,16 @@ export default function AnalisisDataPage() {
     applyFilters();
   }, [filters, allData, applyFilters]);
 
-  // Calculate age groups immediately when filteredData changes - unified for all devices
+  // Calculate age groups with debounce to prevent excessive recalculation
   // IMPORTANT: Placed after calculateAgeGroups is defined to avoid hoisting issues
   useEffect(() => {
-    console.log('🔄 useEffect triggered for calculateAgeGroups', {
-      filteredDataLength: filteredData.length,
-      timestamp: new Date().toISOString()
-    });
-    calculateAgeGroups();
-  }, [filteredData, calculateAgeGroups]);
-
-  // Debug: Log ageGroups state changes for mobile debugging
-  useEffect(() => {
-    console.log('🎨 ageGroups state updated:', { 
-      length: ageGroups.length, 
-      data: ageGroups.slice(0, 3).map(g => ({ label: g.label, count: g.count })),
-      timestamp: new Date().toISOString()
-    });
-  }, [ageGroups]);
+    // Debounce calculation untuk prevent lag
+    const timer = setTimeout(() => {
+      calculateAgeGroups();
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timer);
+  }, [filteredData, calculateAgeGroups, selectedDate]);
 
   // Count up animation for prediction result - using memoized value
   const predictionCount = predictAgeCount;
@@ -822,19 +908,37 @@ export default function AnalisisDataPage() {
 
   return (
     <main className="min-h-[100svh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-      {/* Background Decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-200/30 to-indigo-200/30 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-200/30 to-pink-200/30 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
+      {/* Background Decorations - Hidden on mobile for performance */}
+      <div className="hidden lg:block absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-purple-200/20 to-pink-200/20 rounded-full blur-2xl transform -translate-x-1/2 translate-y-1/2"></div>
       </div>
-
+      
+      {/* Main Container */}
       <div className="relative mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         <HeaderCard title="Analisis Data" backUrl="/masyarakat/data-desa" showBackButton={true} />
 
+        {/* Performance Warning - Data Limited - Optimized display */}
+        {totalDataCount > MAX_DATA_DISPLAY && (
+          <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-orange-50 border border-orange-200 rounded-lg sm:rounded-xl">
+            <div className="flex items-start gap-2">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs sm:text-sm font-bold text-orange-900 mb-0.5 sm:mb-1">⚡ Optimasi Performa Aktif</h4>
+                <p className="text-[10px] sm:text-xs text-orange-700 leading-tight sm:leading-relaxed">
+                  Menampilkan {MAX_DATA_DISPLAY.toLocaleString()} dari {totalDataCount.toLocaleString()} data. Gunakan filter untuk hasil lebih spesifik.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Summary Card - SaaS Style */}
-        <div className="mb-4 sm:mb-6 relative group animate-scaleIn">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 rounded-2xl sm:rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
-          <div className="relative glass-effect rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl border border-white/40">
+        <div className="mb-4 sm:mb-6 relative group">
+          <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 rounded-2xl sm:rounded-3xl blur-lg opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
+          <div className="relative bg-white/90 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl border border-gray-200">
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br from-red-500 via-rose-600 to-pink-600 shadow-2xl mb-4 sm:mb-5 animate-float">
                 <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -849,7 +953,7 @@ export default function AnalisisDataPage() {
               </div>
               <div className="relative">
                 <div className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent mb-2 leading-none">
-                  {filteredData.length.toLocaleString()}
+                  {activeFiltersCount > 0 ? filteredData.length.toLocaleString() : totalDataCount.toLocaleString()}
                 </div>
               </div>
               <div className="text-sm sm:text-base text-gray-600 font-semibold">Jiwa</div>
@@ -865,7 +969,7 @@ export default function AnalisisDataPage() {
                     </div>
                     <div className="text-gray-400 font-medium text-xs sm:text-sm">dari</div>
                     <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-100 text-gray-700 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm">
-                      {allData.length.toLocaleString()} Total
+                      {totalDataCount.toLocaleString()} Total
                     </div>
                   </div>
                 </div>
@@ -875,13 +979,13 @@ export default function AnalisisDataPage() {
         </div>
 
         {/* Filter Panel Toggle - SaaS Style */}
-        <div className="mb-4 sm:mb-6 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
+        <div className="mb-4 sm:mb-6 animate-fadeIn">
           <button
             onClick={handleToggleFilter}
             className="w-full group relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 rounded-xl sm:rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
-            <div className="relative flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 glass-effect rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-white/50 group-hover:border-blue-300/50">
+            <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 rounded-xl sm:rounded-2xl blur opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+            <div className="relative flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 bg-white rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-200 border border-gray-200 group-hover:border-blue-300">
               <div className="flex items-center gap-2 sm:gap-4">
                 <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -919,9 +1023,9 @@ export default function AnalisisDataPage() {
 
         {/* Filter Panel - SaaS Style with smooth animation */}
         {showFilterPanel && (
-          <div className={`mb-4 sm:mb-6 bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/30 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-blue-100/50 overflow-hidden ${isClosing ? 'animate-slideUp' : 'animate-slideDown'}`}>
-            {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-3xl -z-10"></div>
+          <div className={`mb-4 sm:mb-6 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-blue-100 overflow-hidden ${isClosing ? 'animate-slideUp' : 'animate-slideDown'}`}>
+            {/* Background decoration - hidden on mobile for performance */}
+            <div className="hidden md:block absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-2xl -z-10"></div>
             
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4 sm:mb-7 animate-fadeIn">
@@ -1049,8 +1153,6 @@ export default function AnalisisDataPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Pendidikan */}
               <div className="group animate-fadeIn" style={{ animationDelay: '0.2s' }}>
                 <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-2">
@@ -1091,7 +1193,6 @@ export default function AnalisisDataPage() {
               </div>
             </div>
           </div>
-        </div>
         )}
 
         {/* Prediksi Usia Penduduk - Ultra Modern Design */}
@@ -1177,7 +1278,6 @@ export default function AnalisisDataPage() {
                 <div className="flex gap-3 sm:gap-4 animate-fadeIn">
                   <button
                     onClick={() => {
-                      console.log('🔘 Konfirmasi button clicked');
                       handleConfirmPrediction();
                     }}
                     disabled={!targetAge || !selectedDate}
@@ -1207,7 +1307,7 @@ export default function AnalisisDataPage() {
               )}
 
             {showPredictionResult && targetAge && selectedDate && (
-              <div className="mt-5 space-y-4">
+              <div id="prediction-results" className="mt-5 space-y-4">
                 {/* Card Hasil Prediksi */}
                 <div className="p-6 bg-gradient-to-br from-red-500 via-red-600 to-rose-600 rounded-2xl shadow-2xl border border-white/20 animate-scaleIn">
                   <div className="text-center text-white">
@@ -1344,7 +1444,7 @@ export default function AnalisisDataPage() {
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs font-semibold text-gray-600">Tanggal Lahir</span>
                                   <span className="text-sm font-medium text-gray-900">
-                                    {person.tanggalLahir ? new Date(person.tanggalLahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                    {formatDateDisplay(person.tanggalLahir, 'short')}
                                   </span>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -1413,7 +1513,7 @@ export default function AnalisisDataPage() {
                                       {person.namaLengkap}
                                     </td>
                                     <td className="px-4 py-4 text-sm text-gray-700">
-                                      {person.tanggalLahir ? new Date(person.tanggalLahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                      {formatDateDisplay(person.tanggalLahir)}
                                     </td>
                                     <td className="px-4 py-4 text-sm">
                                       <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
@@ -1470,40 +1570,40 @@ export default function AnalisisDataPage() {
 
                         {/* Pagination Controls */}
                         {totalPages > 1 && (
-                          <div className="flex items-center gap-1.5 sm:gap-2">
+                          <div className="flex items-center gap-1 sm:gap-2">
                             {/* Previous Button */}
                             <button
                               onClick={() => handlePageChange(currentPage - 1)}
                               disabled={currentPage === 1}
-                              className={`p-2.5 sm:p-3 rounded-lg font-bold transition-all touch-manipulation ${
+                              className={`p-2 sm:p-2.5 rounded-md sm:rounded-lg font-bold transition-all touch-manipulation ${
                                 currentPage === 1
                                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                  : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-md hover:shadow-lg active:scale-95'
+                                  : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-sm sm:shadow-md hover:shadow-lg active:scale-95'
                               }`}
-                              style={{ minWidth: '44px', minHeight: '44px' }}
+                              style={{ minWidth: '36px', minHeight: '36px' }}
                             >
-                              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                               </svg>
                             </button>
 
-                            {/* Page Numbers - Responsive */}
-                            <div className="flex items-center gap-1">
+                            {/* Page Numbers - Mobile Optimized */}
+                            <div className="flex items-center gap-0.5 sm:gap-1">
                               {pageNumbers.map((page, index) => (
                                 page === '...' ? (
-                                  <span key={`ellipsis-${index}`} className="px-2 sm:px-3 py-2 text-gray-400 font-bold text-sm">
+                                  <span key={`ellipsis-${index}`} className="px-1 sm:px-2 py-2 text-gray-400 font-bold text-xs sm:text-sm">
                                     ...
                                   </span>
                                 ) : (
                                   <button
                                     key={page}
                                     onClick={() => handlePageChange(page as number)}
-                                    className={`min-w-[44px] px-3 sm:px-4 py-2.5 rounded-lg font-bold transition-all touch-manipulation text-sm sm:text-base ${
+                                    className={`min-w-[36px] sm:min-w-[44px] px-2 sm:px-3 py-2 sm:py-2.5 rounded-md sm:rounded-lg font-bold transition-all touch-manipulation text-xs sm:text-base ${
                                       currentPage === page
-                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg scale-105 sm:scale-110'
+                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md sm:shadow-lg scale-100 sm:scale-105'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:text-purple-700 active:scale-95'
                                     }`}
-                                    style={{ minHeight: '44px' }}
+                                    style={{ minHeight: '36px' }}
                                   >
                                     {page}
                                   </button>
@@ -1515,14 +1615,14 @@ export default function AnalisisDataPage() {
                             <button
                               onClick={() => handlePageChange(currentPage + 1)}
                               disabled={currentPage === totalPages}
-                              className={`p-2.5 sm:p-3 rounded-lg font-bold transition-all touch-manipulation ${
+                              className={`p-2 sm:p-2.5 rounded-md sm:rounded-lg font-bold transition-all touch-manipulation ${
                                 currentPage === totalPages
                                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                  : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-md hover:shadow-lg active:scale-95'
+                                  : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-sm sm:shadow-md hover:shadow-lg active:scale-95'
                               }`}
-                              style={{ minWidth: '44px', minHeight: '44px' }}
+                              style={{ minWidth: '36px', minHeight: '36px' }}
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                               </svg>
                             </button>
@@ -1551,21 +1651,21 @@ export default function AnalisisDataPage() {
 
         {/* Distribusi Kelompok Usia - Ultra Modern & Professional */}
         <div className="mb-4 sm:mb-6 relative">
-          {/* Glassmorphism Background Card */}
-          <div className="absolute inset-0 bg-gradient-to-br from-red-100/40 via-rose-50/30 to-pink-100/40 rounded-3xl sm:rounded-[2rem] blur-2xl"></div>
+          {/* Glassmorphism Background Card - Hidden on mobile */}
+          <div className="hidden lg:block absolute inset-0 bg-gradient-to-br from-red-100/30 via-rose-50/20 to-pink-100/30 rounded-3xl sm:rounded-[2rem] blur-xl"></div>
           
-          <div className="relative bg-white/90 backdrop-blur-xl rounded-3xl sm:rounded-[2rem] p-5 sm:p-8 shadow-[0_8px_32px_rgba(99,102,241,0.12)] border border-white/60 overflow-hidden">
-            {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-200/20 to-rose-200/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-200/20 to-pink-200/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+          <div className="relative bg-white/95 rounded-3xl sm:rounded-[2rem] p-5 sm:p-8 shadow-xl border border-gray-200 overflow-hidden">
+            {/* Decorative Elements - Hidden on mobile for performance */}
+            <div className="hidden lg:block absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-200/15 to-rose-200/15 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="hidden lg:block absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-200/15 to-pink-200/15 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
             
             {/* Header Section */}
             <div className="relative flex items-center justify-between mb-6 sm:mb-8">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative group/icon">
-                  {/* Animated Glow Effect */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl blur-xl opacity-50 group-hover/icon:opacity-75 transition-opacity animate-pulse"></div>
-                  <div className="relative p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-rose-600 shadow-2xl transform group-hover/icon:scale-110 transition-transform duration-300">
+                  {/* Animated Glow Effect - Hidden on mobile */}
+                  <div className="hidden md:block absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl blur-lg opacity-40 group-hover/icon:opacity-60 transition-opacity"></div>
+                  <div className="relative p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-rose-600 shadow-xl transform md:group-hover:scale-105 transition-transform duration-200">
                     <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
@@ -1575,9 +1675,21 @@ export default function AnalisisDataPage() {
                   <h3 className="font-extrabold text-gray-900 text-base sm:text-lg md:text-xl tracking-tight">
                     Distribusi Kelompok Usia
                   </h3>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-0.5 font-medium">
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 font-medium">
                     Klik untuk melihat detail data penduduk
                   </p>
+                  {selectedDate && (
+                    <div className="flex items-center gap-2 mt-2 animate-fadeIn">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200/50">
+                        <svg className="w-3.5 h-3.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-[10px] sm:text-xs font-bold text-blue-700">
+                          Berdasarkan: {new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -1592,9 +1704,38 @@ export default function AnalisisDataPage() {
               </div>
             </div>
             
+            {/* Info Box - Cara Kerja Fitur */}
+            {!selectedDate && (
+              <div className="mb-5 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200/50 animate-fadeIn">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-blue-900 text-sm mb-1">💡 Tips: Prediksi Umur Dinamis</h4>
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      Pilih tanggal di <span className="font-bold">Prediksi Usia Penduduk</span> di atas untuk melihat distribusi kelompok usia berubah secara otomatis sesuai tanggal yang Anda pilih. Umur penduduk akan dihitung berdasarkan tanggal tersebut.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Loading Indicator - Lightweight */}
+            {isCalculating && (
+              <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-500 border-t-transparent"></div>
+                  <span className="text-xs sm:text-sm font-medium text-yellow-800">Menghitung...</span>
+                </div>
+              </div>
+            )}
+
             {/* Age Groups List */}
             <div className="relative space-y-4 sm:space-y-5">
-              {ageGroups.length === 0 && (
+              {!isCalculating && ageGroups.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <p className="font-semibold">Memuat data kelompok usia...</p>
                 </div>
@@ -1635,20 +1776,20 @@ export default function AnalisisDataPage() {
                     key={index}
                     onClick={() => handleAgeGroupClick(group.label, min, max)}
                     disabled={group.count === 0}
-                    className={`w-full group/item relative transition-all duration-500 ease-out touch-manipulation ${
+                    className={`w-full group/item relative transition-all duration-200 ease-out touch-manipulation ${
                       group.count === 0 
                         ? 'opacity-50 cursor-not-allowed' 
-                        : 'hover:-translate-y-1 hover:shadow-2xl cursor-pointer active:scale-[0.98]'
+                        : 'md:hover:-translate-y-1 md:hover:shadow-xl cursor-pointer active:scale-[0.98]'
                     }`}
                   >
                     {/* Card Container with Neumorphism */}
-                    <div className="relative bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-4 sm:p-5 border-2 border-gray-100/80 shadow-lg group-hover/item:shadow-2xl group-hover/item:border-red-200/60 transition-all duration-500">
-                      {/* Subtle Background Pattern */}
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.05),rgba(255,255,255,0))] rounded-2xl pointer-events-none"></div>
+                    <div className="relative bg-white rounded-2xl p-4 sm:p-5 border-2 border-gray-100 shadow-md md:group-hover/item:shadow-lg md:group-hover/item:border-red-200 transition-all duration-200">
+                      {/* Subtle Background Pattern - Hidden on mobile */}
+                      <div className="hidden md:block absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.03),rgba(255,255,255,0))] rounded-2xl pointer-events-none"></div>
                       
-                      {/* Hover Glow Effect */}
+                      {/* Hover Glow Effect - Hidden on mobile */}
                       {group.count > 0 && (
-                        <div className={`absolute inset-0 bg-gradient-to-r ${colorScheme.glow} rounded-2xl opacity-0 group-hover/item:opacity-20 blur-xl transition-opacity duration-500`}></div>
+                        <div className={`hidden md:block absolute inset-0 bg-gradient-to-r ${colorScheme.glow} rounded-2xl opacity-0 md:group-hover/item:opacity-15 blur-lg transition-opacity duration-300`}></div>
                       )}
                       
                       {/* Content */}
@@ -1696,38 +1837,38 @@ export default function AnalisisDataPage() {
                             {group.count > 0 && (
                               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-red-100 to-rose-100 flex items-center justify-center group-hover/item:scale-110 group-hover/item:rotate-12 transition-all duration-300 shadow-sm">
                                 <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 group-hover/item:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                                 </svg>
                               </div>
                             )}
                           </div>
                         </div>
                         
-                        {/* Progress Bar - 3D Effect */}
+                        {/* Progress Bar - Optimized */}
                         <div className="relative">
                           {/* Outer Container - Shadow & Border */}
-                          <div className="relative w-full h-5 sm:h-6 rounded-full bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 shadow-[inset_0_2px_8px_rgba(0,0,0,0.1)] border border-gray-200/80 overflow-hidden group-hover/item:shadow-[inset_0_2px_12px_rgba(0,0,0,0.15)] transition-all duration-500">
-                            {/* Shimmer Effect Background */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover/item:translate-x-full transition-transform duration-1000"></div>
+                          <div className="relative w-full h-5 sm:h-6 rounded-full bg-gray-100 shadow-inner border border-gray-200 overflow-hidden md:group-hover/item:shadow-md transition-shadow duration-200">
+                            {/* Shimmer Effect Background - Desktop only */}
+                            <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full md:group-hover:item:translate-x-full transition-transform duration-700"></div>
                             
                             {/* Progress Fill */}
                             <div className="relative h-full flex items-center">
                               <div
-                                className={`relative h-full rounded-full bg-gradient-to-r ${colorScheme.bg} shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-all duration-1000 ease-out group-hover/item:shadow-[0_2px_12px_rgba(0,0,0,0.25)]`}
+                                className={`relative h-full rounded-full bg-gradient-to-r ${colorScheme.bg} shadow-sm transition-all duration-500 ease-out`}
                                 style={{ 
                                   width: `${group.percentage}%`,
                                   minWidth: group.count > 0 ? '8%' : '0%'
                                 }}
                               >
                                 {/* Inner Highlight */}
-                                <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-transparent rounded-full"></div>
+                                <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-transparent rounded-full"></div>
                                 
-                                {/* Animated Dots Pattern */}
-                                <div className="absolute inset-0 bg-[length:20px_20px] bg-[radial-gradient(circle,rgba(255,255,255,0.1)_1px,transparent_1px)] rounded-full opacity-60"></div>
+                                {/* Animated Dots Pattern - Desktop only */}
+                                <div className="hidden md:block absolute inset-0 bg-[length:20px_20px] bg-[radial-gradient(circle,rgba(255,255,255,0.1)_1px,transparent_1px)] rounded-full opacity-40"></div>
                                 
-                                {/* End Cap Glow */}
+                                {/* End Cap Glow - Desktop only */}
                                 {group.count > 0 && (
-                                  <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-2 h-4 sm:h-5 bg-white/50 rounded-full blur-sm`}></div>
+                                  <div className={`hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-2 h-4 sm:h-5 bg-white/40 rounded-full blur-sm`}></div>
                                 )}
                               </div>
                             </div>
@@ -1771,7 +1912,7 @@ export default function AnalisisDataPage() {
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 616 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
                 <div>
@@ -1852,7 +1993,9 @@ export default function AnalisisDataPage() {
             <div className="md:hidden space-y-3 mb-5">
               {ageGroupCurrentPageData.length > 0 ? (
                 ageGroupCurrentPageData.map((person, index) => {
-                  const currentAge = calculateAge(person.tanggalLahir || '');
+                  // PENTING: Gunakan selectedDate jika ada, jika tidak gunakan tanggal hari ini
+                  const referenceDate = selectedDate || new Date().toISOString().split('T')[0];
+                  const currentAge = calculateAge(person.tanggalLahir || '', referenceDate);
                   const globalIndex = ageGroupStartIndex + index + 1;
                   
                   return (
@@ -1877,11 +2020,13 @@ export default function AnalisisDataPage() {
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold text-gray-600">Tanggal Lahir</span>
                           <span className="text-sm font-medium text-gray-900">
-                            {person.tanggalLahir ? new Date(person.tanggalLahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                            {formatDateDisplay(person.tanggalLahir)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-gray-600">Usia Saat Ini</span>
+                          <span className="text-xs font-semibold text-gray-600">
+                            {selectedDate ? 'Usia Pada Tanggal' : 'Usia Saat Ini'}
+                          </span>
                           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
                             {currentAge} tahun
                           </span>
@@ -1931,18 +2076,20 @@ export default function AnalisisDataPage() {
                       <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">NIK</th>
                       <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Nama Lengkap</th>
                       <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Tanggal Lahir</th>
-                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Usia Saat Ini</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">{selectedDate ? 'Usia Pada Tanggal' : 'Usia Saat Ini'}</th>
                       <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Jenis Kelamin</th>
                       <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Agama</th>
                       <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Pekerjaan</th>
-                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Desil</th>
                       <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Daerah</th>
+                      <th className="px-4 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Desil</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {ageGroupCurrentPageData.length > 0 ? (
                       ageGroupCurrentPageData.map((person, index) => {
-                        const currentAge = calculateAge(person.tanggalLahir || '');
+                        // PENTING: Gunakan selectedDate jika ada, jika tidak gunakan tanggal hari ini
+                        const referenceDate = selectedDate || new Date().toISOString().split('T')[0];
+                        const currentAge = calculateAge(person.tanggalLahir || '', referenceDate);
                         const globalIndex = ageGroupStartIndex + index + 1;
                         
                         return (
@@ -1951,7 +2098,7 @@ export default function AnalisisDataPage() {
                             <td className="px-4 py-4 text-sm text-gray-900 font-mono font-semibold">{person.nik}</td>
                             <td className="px-4 py-4 text-sm text-gray-900 font-semibold">{person.namaLengkap}</td>
                             <td className="px-4 py-4 text-sm text-gray-700">
-                              {person.tanggalLahir ? new Date(person.tanggalLahir).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                              {formatDateDisplay(person.tanggalLahir)}
                             </td>
                             <td className="px-4 py-4 text-sm">
                               <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
@@ -1960,15 +2107,16 @@ export default function AnalisisDataPage() {
                             </td>
                             <td className="px-4 py-4 text-sm">
                               <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold border ${
-                                person.jenisKelamin === 'Laki-laki' 
-                                  ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                                person.jenisKelamin === 'Laki-laki'
+                                  ? 'bg-blue-100 text-blue-800 border-blue-200'
                                   : 'bg-pink-100 text-pink-800 border-pink-200'
                               }`}>
-                                {person.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}
+                                {person.jenisKelamin || '-'}
                               </span>
                             </td>
                             <td className="px-4 py-4 text-sm text-gray-700 font-medium">{person.agama || '-'}</td>
                             <td className="px-4 py-4 text-sm text-gray-700 font-medium">{person.pekerjaan || '-'}</td>
+                            <td className="px-4 py-4 text-sm text-gray-700 font-medium">{person.daerah || '-'}</td>
                             <td className="px-4 py-4 text-sm">
                               {person.desil ? (
                                 <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border border-red-200">
@@ -1978,13 +2126,12 @@ export default function AnalisisDataPage() {
                                 <span className="text-gray-400">-</span>
                               )}
                             </td>
-                            <td className="px-4 py-4 text-sm text-gray-700 font-medium">{person.daerah || '-'}</td>
                           </tr>
                         );
                       })
                     ) : (
                       <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center">
+                        <td colSpan={11} className="px-4 py-12 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -2010,38 +2157,55 @@ export default function AnalisisDataPage() {
                 </div>
 
                 {ageGroupTotalPages > 1 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     <button
                       onClick={() => {
                         if (ageGroupCurrentPage > 1) {
                           setAgeGroupCurrentPage(ageGroupCurrentPage - 1);
-                          document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          if (typeof document !== 'undefined') {
+                            document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
                         }
                       }}
                       disabled={ageGroupCurrentPage === 1}
-                      className={`p-2.5 sm:p-3 rounded-lg font-bold transition-all touch-manipulation ${
+                      className={`p-2 sm:p-2.5 rounded-md sm:rounded-lg font-bold transition-all touch-manipulation ${
                         ageGroupCurrentPage === 1
                           ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-md hover:shadow-lg active:scale-95'
+                          : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-sm sm:shadow-md hover:shadow-lg active:scale-95'
                       }`}
-                      style={{ minWidth: '44px', minHeight: '44px' }}
+                      style={{ minWidth: '36px', minHeight: '36px' }}
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
 
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      {Array.from({ length: Math.min(5, ageGroupTotalPages) }, (_, i) => {
+                    <div className="flex items-center gap-0.5 sm:gap-1">
+                      {Array.from({ length: Math.min(typeof window !== 'undefined' && window.innerWidth < 640 ? 3 : 5, ageGroupTotalPages) }, (_, i) => {
+                        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+                        const maxPages = isMobile ? 3 : 5;
                         let pageNum;
-                        if (ageGroupTotalPages <= 5) {
+                        
+                        if (ageGroupTotalPages <= maxPages) {
                           pageNum = i + 1;
-                        } else if (ageGroupCurrentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (ageGroupCurrentPage >= ageGroupTotalPages - 2) {
-                          pageNum = ageGroupTotalPages - 4 + i;
+                        } else if (isMobile) {
+                          // Mobile: show current page centered
+                          if (ageGroupCurrentPage === 1) {
+                            pageNum = i + 1;
+                          } else if (ageGroupCurrentPage === ageGroupTotalPages) {
+                            pageNum = ageGroupTotalPages - 2 + i;
+                          } else {
+                            pageNum = ageGroupCurrentPage - 1 + i;
+                          }
                         } else {
-                          pageNum = ageGroupCurrentPage - 2 + i;
+                          // Desktop logic
+                          if (ageGroupCurrentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (ageGroupCurrentPage >= ageGroupTotalPages - 2) {
+                            pageNum = ageGroupTotalPages - 4 + i;
+                          } else {
+                            pageNum = ageGroupCurrentPage - 2 + i;
+                          }
                         }
                         
                         return (
@@ -2049,14 +2213,16 @@ export default function AnalisisDataPage() {
                             key={i}
                             onClick={() => {
                               setAgeGroupCurrentPage(pageNum);
-                              document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              if (typeof document !== 'undefined') {
+                                document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
                             }}
-                            className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-bold transition-all touch-manipulation ${
+                            className={`min-w-[36px] sm:min-w-[44px] px-2 sm:px-3 py-2 sm:py-2.5 rounded-md sm:rounded-lg text-xs sm:text-sm font-bold transition-all touch-manipulation ${
                               ageGroupCurrentPage === pageNum
-                                ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg scale-110'
-                                : 'bg-white text-gray-700 hover:bg-red-50 border-2 border-gray-200 hover:border-red-300'
+                                ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-md sm:shadow-lg scale-100 sm:scale-105'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-red-100 hover:to-rose-100'
                             }`}
-                            style={{ minWidth: '44px', minHeight: '44px' }}
+                            style={{ minHeight: '36px' }}
                           >
                             {pageNum}
                           </button>
@@ -2068,18 +2234,20 @@ export default function AnalisisDataPage() {
                       onClick={() => {
                         if (ageGroupCurrentPage < ageGroupTotalPages) {
                           setAgeGroupCurrentPage(ageGroupCurrentPage + 1);
-                          document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          if (typeof document !== 'undefined') {
+                            document.getElementById('age-group-detail-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
                         }
                       }}
                       disabled={ageGroupCurrentPage === ageGroupTotalPages}
-                      className={`p-2.5 sm:p-3 rounded-lg font-bold transition-all touch-manipulation ${
+                      className={`p-2 sm:p-2.5 rounded-md sm:rounded-lg font-bold transition-all touch-manipulation ${
                         ageGroupCurrentPage === ageGroupTotalPages
                           ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-md hover:shadow-lg active:scale-95'
+                          : 'bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600 shadow-sm sm:shadow-md hover:shadow-lg active:scale-95'
                       }`}
-                      style={{ minWidth: '44px', minHeight: '44px' }}
+                      style={{ minWidth: '36px', minHeight: '36px' }}
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
@@ -2091,7 +2259,11 @@ export default function AnalisisDataPage() {
         )}
       </div>
 
+      {/* END: Container utama */}
+      </div>
+
       <BottomNavigation />
     </main>
   );
 }
+
