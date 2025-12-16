@@ -350,11 +350,21 @@ export default function AnalisisDataPage() {
 
   // OPTIMIZED dengan useCallback - fungsi ini dipanggil ribuan kali
   const calculateAge = useCallback((birthDate: string, targetDate?: string): number => {
-    if (!birthDate) return 0;
+    if (!birthDate) {
+      console.warn('⚠️ calculateAge: no birthDate provided');
+      return 0;
+    }
     
     try {
       const birth = new Date(birthDate);
       const referenceDate = targetDate ? new Date(targetDate) : new Date();
+      
+      // Validate dates
+      if (isNaN(birth.getTime())) {
+        console.error('❌ calculateAge: Invalid birth date:', birthDate);
+        return 0;
+      }
+      
       let age = referenceDate.getFullYear() - birth.getFullYear();
       const monthDiff = referenceDate.getMonth() - birth.getMonth();
       
@@ -364,12 +374,22 @@ export default function AnalisisDataPage() {
       
       return age;
     } catch (error) {
+      console.error('❌ calculateAge error:', error, 'birthDate:', birthDate);
       return 0;
     }
   }, []);
 
   // OPTIMIZED dengan useCallback - PENTING untuk mobile
   const calculateAgeGroups = useCallback(() => {
+    console.log('📊 calculateAgeGroups called - START', {
+      filteredDataLength: filteredData.length,
+      sampleData: filteredData.slice(0, 2).map(p => ({ 
+        nik: p.nik, 
+        nama: p.namaLengkap, 
+        tanggalLahir: p.tanggalLahir 
+      }))
+    });
+
     const groups = [
       { range: "0-5 tahun", label: "0-5 tahun", min: 0, max: 5, count: 0 },
       { range: "6-12 tahun", label: "6-12 tahun", min: 6, max: 12, count: 0 },
@@ -382,14 +402,38 @@ export default function AnalisisDataPage() {
       { range: ">65 tahun", label: ">65 tahun", min: 66, max: 999, count: 0 },
     ];
 
-    filteredData.forEach(person => {
+    let processedCount = 0;
+    let withBirthDateCount = 0;
+    
+    filteredData.forEach((person, index) => {
       if (person.tanggalLahir) {
+        withBirthDateCount++;
         const age = calculateAge(person.tanggalLahir);
+        
+        // Debug first 3 people
+        if (index < 3) {
+          console.log(`Person ${index}:`, {
+            nama: person.namaLengkap,
+            tanggalLahir: person.tanggalLahir,
+            calculatedAge: age
+          });
+        }
+        
         const group = groups.find(g => age >= g.min && age <= g.max);
         if (group) {
           group.count++;
+          processedCount++;
+        } else {
+          console.warn('⚠️ Age not in any group:', { age, person: person.namaLengkap });
         }
       }
+    });
+
+    console.log('📊 calculateAgeGroups - Processing complete:', {
+      totalFiltered: filteredData.length,
+      withBirthDate: withBirthDateCount,
+      processedIntoGroups: processedCount,
+      groups: groups.map(g => ({ label: g.label, count: g.count }))
     });
 
     const total = filteredData.length;
@@ -399,6 +443,8 @@ export default function AnalisisDataPage() {
       count: g.count,
       percentage: total > 0 ? (g.count / total) * 100 : 0,
     }));
+
+    console.log('📊 Final ageGroups to set:', ageGroupsWithPercentage.slice(0, 3));
 
     setAgeGroups(ageGroupsWithPercentage);
   }, [filteredData, calculateAge]);
@@ -697,6 +743,10 @@ export default function AnalisisDataPage() {
   // Calculate age groups immediately when filteredData changes - unified for all devices
   // IMPORTANT: Placed after calculateAgeGroups is defined to avoid hoisting issues
   useEffect(() => {
+    console.log('🔄 useEffect triggered for calculateAgeGroups', {
+      filteredDataLength: filteredData.length,
+      timestamp: new Date().toISOString()
+    });
     calculateAgeGroups();
   }, [filteredData, calculateAgeGroups]);
 
