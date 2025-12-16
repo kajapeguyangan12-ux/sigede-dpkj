@@ -281,18 +281,6 @@ export default function AnalisisDataPage() {
     return () => clearInterval(refreshInterval);
   }, []);
 
-  // Apply filters when filters or data changes - unified for all devices
-  useEffect(() => {
-    applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, allData]);
-
-  // Calculate age groups immediately when filteredData changes - unified for all devices
-  useEffect(() => {
-    calculateAgeGroups();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredData, calculateAgeGroups]);
-
   // Debounce search queries untuk optimasi performa
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -466,7 +454,8 @@ export default function AnalisisDataPage() {
 
   const activeFiltersCount = Object.values(filters).filter(v => v !== "").length;
 
-  const predictAgeCount = () => {
+  // OPTIMIZED dengan useMemo - untuk consistency di mobile dan desktop
+  const predictAgeCount = useMemo(() => {
     if (!targetAge || !selectedDate) return 0;
     
     const targetAgeNum = parseInt(targetAge);
@@ -488,7 +477,7 @@ export default function AnalisisDataPage() {
     });
 
     return matchingPeople.length;
-  };
+  }, [targetAge, selectedDate, filteredData, calculateAge, filters]);
 
   // OPTIMIZED dengan useCallback
   const handleConfirmPrediction = useCallback(() => {
@@ -520,7 +509,7 @@ export default function AnalisisDataPage() {
     } else {
       console.log('❌ Missing targetAge or selectedDate');
     }
-  }, [targetAge, selectedDate, filteredData]);
+  }, [targetAge, selectedDate, filteredData, calculateAge]);
 
   // OPTIMIZED dengan useCallback
   const handleResetPrediction = useCallback(() => {
@@ -532,29 +521,27 @@ export default function AnalisisDataPage() {
     setSearchQuery("");
   }, []);
 
-  // Handler untuk klik kelompok usia
-  const handleAgeGroupClick = (groupLabel: string, minAge: number, maxAge: number | null) => {
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth();
-    const currentDay = today.getDate();
-
-    // Filter penduduk berdasarkan kelompok usia
+  // Handler untuk klik kelompok usia - OPTIMIZED dengan useCallback untuk mobile compatibility
+  const handleAgeGroupClick = useCallback((groupLabel: string, minAge: number, maxAge: number | null) => {
+    // Filter penduduk berdasarkan kelompok usia - menggunakan calculateAge untuk konsistensi
     const peopleInGroup = filteredData.filter(person => {
       if (!person.tanggalLahir) return false;
       
-      const birthDate = new Date(person.tanggalLahir);
-      let age = currentYear - birthDate.getFullYear();
-      const monthDiff = currentMonth - birthDate.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && currentDay < birthDate.getDate())) {
-        age--;
-      }
+      // Gunakan calculateAge untuk konsistensi dengan fungsi lain
+      const age = calculateAge(person.tanggalLahir);
 
       if (maxAge === null) {
         return age > minAge; // Untuk >65 tahun
       }
       return age >= minAge && age <= maxAge;
+    });
+
+    console.log('📊 Age Group Click:', {
+      groupLabel,
+      minAge,
+      maxAge,
+      filteredDataCount: filteredData.length,
+      peopleInGroupCount: peopleInGroup.length
     });
 
     setSelectedAgeGroup(groupLabel);
@@ -570,15 +557,16 @@ export default function AnalisisDataPage() {
         block: 'start' 
       });
     }, 100);
-  };
+  }, [filteredData, calculateAge]);
 
-  const handleCloseAgeGroupDetail = () => {
+  // OPTIMIZED dengan useCallback
+  const handleCloseAgeGroupDetail = useCallback(() => {
     setShowAgeGroupDetail(false);
     setSelectedAgeGroup(null);
     setAgeGroupPeople([]);
     setAgeGroupCurrentPage(1);
     setAgeGroupSearchQuery("");
-  };
+  }, []);
 
   // Filter predicted people by search query - OPTIMIZED dengan useMemo
   const filteredPredictedPeople = useMemo(() => {
@@ -700,8 +688,20 @@ export default function AnalisisDataPage() {
     setCurrentPage(1); // Reset to first page
   }, []);
 
-  // Count up animation for prediction result
-  const predictionCount = predictAgeCount();
+  // Apply filters when filters or data changes - unified for all devices
+  // IMPORTANT: Placed after all functions are defined to avoid hoisting issues
+  useEffect(() => {
+    applyFilters();
+  }, [filters, allData, applyFilters]);
+
+  // Calculate age groups immediately when filteredData changes - unified for all devices
+  // IMPORTANT: Placed after calculateAgeGroups is defined to avoid hoisting issues
+  useEffect(() => {
+    calculateAgeGroups();
+  }, [filteredData, calculateAgeGroups]);
+
+  // Count up animation for prediction result - using memoized value
+  const predictionCount = predictAgeCount;
   const { count: animatedCount } = useCountUp({
     end: predictionCount,
     duration: 1500,
@@ -1035,89 +1035,117 @@ export default function AnalisisDataPage() {
         </div>
         )}
 
-        {/* Prediksi Usia Penduduk - Enhanced */}
-        <div className="mb-6 bg-gradient-to-br from-white via-red-50/40 to-rose-50/30 rounded-3xl p-6 shadow-2xl border border-red-100/50 backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-rose-600 shadow-lg">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-800 text-lg">Prediksi Usia Penduduk</h3>
-              <p className="text-xs text-gray-500">Analisis usia berdasarkan tanggal tertentu</p>
-            </div>
-          </div>
+        {/* Prediksi Usia Penduduk - Ultra Modern Design */}
+        <div className="mb-6 relative overflow-hidden bg-gradient-to-br from-white via-red-50/30 to-rose-50/20 rounded-3xl shadow-2xl border border-red-100/40 backdrop-blur-md">
+          {/* Decorative background elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-400/10 to-rose-400/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-pink-400/10 to-red-400/10 rounded-full blur-3xl"></div>
           
-          <div className="space-y-4">
-            {/* Pilih Tanggal dan Target Usia */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+          <div className="relative z-10 p-4 sm:p-6">
+            {/* Header with icon and description */}
+            <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-red-400 to-rose-500 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity"></div>
+                <div className="relative p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-rose-600 shadow-2xl transform group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  PILIH TANGGAL
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-4 md:py-3 bg-gradient-to-r from-white to-red-50 border-2 border-red-200 rounded-xl text-sm md:text-base font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all hover:border-red-300 shadow-sm touch-manipulation"
-                  style={{ colorScheme: 'light', minHeight: '48px' }}
-                />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" />
-                  </svg>
-                  TARGET USIA
-                </label>
-                <input
-                  type="number"
-                  value={targetAge}
-                  onChange={(e) => setTargetAge(e.target.value)}
-                  placeholder="Masukkan usia"
-                  min="0"
-                  max="120"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  className="w-full px-4 py-4 md:py-3 bg-gradient-to-r from-white to-rose-50 border-2 border-rose-200 rounded-xl text-sm md:text-base font-semibold text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all hover:border-rose-300 shadow-sm touch-manipulation"
-                  style={{ minHeight: '48px' }}
-                />
+              <div className="flex-1">
+                <h3 className="font-extrabold text-gray-800 text-lg sm:text-xl md:text-2xl mb-1 bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                  Prediksi Usia Penduduk
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 font-medium">Analisis usia berdasarkan tanggal tertentu</p>
               </div>
             </div>
+            
+            <div className="space-y-5">
+              {/* Input Fields - Modern Card Style */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                {/* Pilih Tanggal */}
+                <div className="group">
+                  <label className="block text-xs sm:text-sm font-extrabold text-gray-700 mb-3 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="uppercase tracking-wide">Pilih Tanggal</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full px-4 sm:px-5 py-4 sm:py-5 bg-white border-3 border-red-200 rounded-2xl text-sm sm:text-base font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-red-200 focus:border-red-400 transition-all hover:border-red-300 hover:shadow-lg shadow-md group-hover:shadow-xl cursor-pointer"
+                      style={{ colorScheme: 'light', minHeight: '56px' }}
+                    />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-red-400/0 to-rose-400/0 group-hover:from-red-400/5 group-hover:to-rose-400/5 transition-all pointer-events-none"></div>
+                  </div>
+                </div>
 
-            {/* Buttons - Show when any field is filled */}
-            {(targetAge || selectedDate) && (
-              <div className="flex gap-3 animate-fadeIn">
-                <button
-                  onClick={() => {
-                    console.log('🔘 Konfirmasi button clicked (mobile/desktop)');
-                    handleConfirmPrediction();
-                  }}
-                  disabled={!targetAge || !selectedDate}
-                  className="flex-1 group relative overflow-hidden bg-gradient-to-r from-red-500 via-red-600 to-rose-600 hover:from-red-600 hover:via-red-700 hover:to-rose-700 active:scale-95 text-white font-bold py-4 md:py-3.5 px-6 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 touch-manipulation"
-                  style={{ minHeight: '48px' }}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Konfirmasi
-                </button>
-                <button
-                  onClick={handleResetPrediction}
-                  className="px-6 py-4 md:py-3.5 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 active:scale-95 text-gray-700 font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 touch-manipulation"
-                  style={{ minHeight: '48px' }}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Reset
-                </button>
+                {/* Target Usia */}
+                <div className="group">
+                  <label className="block text-xs sm:text-sm font-extrabold text-gray-700 mb-3 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-100 to-rose-200 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" />
+                      </svg>
+                    </div>
+                    <span className="uppercase tracking-wide">Target Usia</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={targetAge}
+                      onChange={(e) => setTargetAge(e.target.value)}
+                      placeholder="Masukkan usia"
+                      min="0"
+                      max="120"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="w-full px-4 sm:px-5 py-4 sm:py-5 bg-white border-3 border-rose-200 rounded-2xl text-sm sm:text-base font-bold text-gray-800 placeholder:text-gray-400 placeholder:font-medium focus:outline-none focus:ring-4 focus:ring-rose-200 focus:border-rose-400 transition-all hover:border-rose-300 hover:shadow-lg shadow-md group-hover:shadow-xl"
+                      style={{ minHeight: '56px' }}
+                    />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-rose-400/0 to-pink-400/0 group-hover:from-rose-400/5 group-hover:to-pink-400/5 transition-all pointer-events-none"></div>
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Action Buttons - Modern Design */}
+              {(targetAge || selectedDate) && (
+                <div className="flex gap-3 sm:gap-4 animate-fadeIn">
+                  <button
+                    onClick={() => {
+                      console.log('🔘 Konfirmasi button clicked');
+                      handleConfirmPrediction();
+                    }}
+                    disabled={!targetAge || !selectedDate}
+                    className="flex-1 group relative overflow-hidden bg-gradient-to-r from-red-500 via-red-600 to-rose-600 hover:from-red-600 hover:via-rose-600 hover:to-pink-600 active:scale-95 text-white font-extrabold py-4 sm:py-5 px-6 sm:px-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 touch-manipulation"
+                    style={{ minHeight: '56px' }}
+                  >
+                    {/* Shine effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="relative z-10 text-sm sm:text-base">Konfirmasi</span>
+                  </button>
+                  
+                  <button
+                    onClick={handleResetPrediction}
+                    className="group relative overflow-hidden px-6 sm:px-8 py-4 sm:py-5 bg-white hover:bg-gray-50 active:scale-95 text-gray-700 font-extrabold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 border-2 border-gray-200 hover:border-gray-300 touch-manipulation"
+                    style={{ minHeight: '56px' }}
+                  >
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 group-hover:text-red-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span className="hidden sm:inline text-sm sm:text-base">Reset</span>
+                  </button>
+                </div>
+              )}
 
             {showPredictionResult && targetAge && selectedDate && (
               <div className="mt-5 space-y-4">
