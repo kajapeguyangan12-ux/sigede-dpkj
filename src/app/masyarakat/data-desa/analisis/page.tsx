@@ -270,6 +270,16 @@ export default function AnalisisDataPage() {
 
   useEffect(() => {
     setLoading(true);
+    
+    // Mobile detection for aggressive cache clearing
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      console.log('📱 Mobile device detected - clearing stale data');
+      // Reset states to force fresh data
+      setAgeGroups([]);
+      setPredictedPeople([]);
+    }
+    
     fetchAllDataDesa();
     
     // Auto-refresh data every 5 minutes to keep it updated
@@ -283,12 +293,22 @@ export default function AnalisisDataPage() {
 
   useEffect(() => {
     applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, allData]);
 
   useEffect(() => {
     // Always calculate age groups, even if empty (will show 0s)
     console.log('🔄 useEffect triggered for calculateAgeGroups, filteredData.length:', filteredData.length);
-    calculateAgeGroups();
+    console.log('🔄 filteredData is array?', Array.isArray(filteredData));
+    console.log('🔄 calculateAgeGroups function exists?', typeof calculateAgeGroups === 'function');
+    
+    // Mobile optimization: ensure filteredData is ready before calculating
+    if (Array.isArray(filteredData)) {
+      calculateAgeGroups();
+    } else {
+      console.warn('⚠️ filteredData is not an array, skipping calculation');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredData]);
 
   // Debounce search queries untuk optimasi performa
@@ -331,6 +351,7 @@ export default function AnalisisDataPage() {
     }, 60 * 1000); // Every 1 minute
 
     return () => clearInterval(ageUpdateInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredData, showPredictionResult, targetAge, selectedDate]);
 
   // Generate dynamic filter options from data
@@ -410,8 +431,14 @@ export default function AnalisisDataPage() {
     }
   }, []);
 
-  const calculateAgeGroups = () => {
+  // OPTIMIZED dengan useCallback - PENTING untuk mobile
+  const calculateAgeGroups = useCallback(() => {
     console.log('🎯 calculateAgeGroups called with filteredData.length:', filteredData.length);
+    console.log('🎯 First 3 people data:', filteredData.slice(0, 3).map(p => ({
+      nama: p.namaLengkap,
+      tanggalLahir: p.tanggalLahir,
+      age: p.tanggalLahir ? calculateAge(p.tanggalLahir) : 'N/A'
+    })));
     
     const groups = [
       { range: "0-5 tahun", label: "0-5 tahun", min: 0, max: 5, count: 0 },
@@ -425,11 +452,17 @@ export default function AnalisisDataPage() {
       { range: ">65 tahun", label: ">65 tahun", min: 66, max: 999, count: 0 },
     ];
 
+    let totalWithBirthDate = 0;
     filteredData.forEach(person => {
       if (person.tanggalLahir) {
+        totalWithBirthDate++;
         const age = calculateAge(person.tanggalLahir);
         const group = groups.find(g => age >= g.min && age <= g.max);
-        if (group) group.count++;
+        if (group) {
+          group.count++;
+        } else {
+          console.warn('⚠️ Age not in any group:', age, 'for person:', person.namaLengkap);
+        }
       }
     });
 
@@ -443,12 +476,14 @@ export default function AnalisisDataPage() {
 
     console.log('📊 Age Groups Calculated:', {
       total,
+      totalWithBirthDate,
       groups: ageGroupsWithPercentage,
-      hasData: ageGroupsWithPercentage.some(g => g.count > 0)
+      hasData: ageGroupsWithPercentage.some(g => g.count > 0),
+      device: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'
     });
 
     setAgeGroups(ageGroupsWithPercentage);
-  };
+  }, [filteredData, calculateAge]);
 
   // OPTIMIZED dengan useCallback
   const applyFilters = useCallback(() => {
@@ -1529,12 +1564,12 @@ export default function AnalisisDataPage() {
                 </div>
               </div>
               
-              {/* Total Count Badge */}
-              <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl border-2 border-red-100/50 shadow-sm">
-                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+              {/* Total Count Badge - Mobile Responsive */}
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-50 to-rose-50 rounded-xl sm:rounded-2xl border-2 border-red-100/50 shadow-sm">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
-                <span className="text-sm font-bold text-red-700">
+                <span className="text-xs sm:text-sm font-bold text-red-700">
                   {filteredData.length} Total
                 </span>
               </div>

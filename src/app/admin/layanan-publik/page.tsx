@@ -631,6 +631,21 @@ export default function LayananPublikAdminPage() {
         
         alert(message);
         
+        // Update status downloaded di database
+        if (selectedLayanan.id) {
+          try {
+            const docRef = doc(db, 'layanan-publik', selectedLayanan.id);
+            await updateDoc(docRef, {
+              downloadedByAdmin: true,
+              downloadedAt: new Date(),
+              updatedAt: new Date()
+            });
+            console.log('✅ Status downloaded berhasil disimpan');
+          } catch (error) {
+            console.error('❌ Error updating downloaded status:', error);
+          }
+        }
+        
         // Refresh data setelah download berhasil agar nomor surat tersimpan di list
         await fetchData();
         
@@ -1007,7 +1022,12 @@ export default function LayananPublikAdminPage() {
     `;
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, downloadedByAdmin?: boolean) => {
+    // Jika sudah didownload oleh admin, gunakan warna hijau (completed)
+    if (downloadedByAdmin && status !== 'ditolak') {
+      return 'bg-green-100 text-green-800 border-green-200';
+    }
+    
     if (status.includes('pending')) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     if (status.includes('approved')) return 'bg-blue-100 text-blue-800 border-blue-200';
     if (status === 'completed') return 'bg-green-100 text-green-800 border-green-200';
@@ -1015,7 +1035,12 @@ export default function LayananPublikAdminPage() {
     return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: string, downloadedByAdmin?: boolean) => {
+    // Jika sudah didownload oleh admin, tampilkan status khusus
+    if (downloadedByAdmin && status !== 'ditolak') {
+      return '✅ Sudah Didownload Admin';
+    }
+    
     // Status text berdasarkan role
     if (user?.role === 'kepala_dusun') {
       const statusMap: Record<string, string> = {
@@ -1275,8 +1300,8 @@ export default function LayananPublikAdminPage() {
                         {layanan.createdAt ? new Date(layanan.createdAt.seconds * 1000).toLocaleDateString('id-ID') : '-'}
                       </td>
                       <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${getStatusColor(layanan.status)}`}>
-                          {getStatusText(layanan.status)}
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${getStatusColor(layanan.status, layanan.downloadedByAdmin)}`}>
+                          {getStatusText(layanan.status, layanan.downloadedByAdmin)}
                         </span>
                       </td>
                       <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
@@ -1328,8 +1353,8 @@ export default function LayananPublikAdminPage() {
                         <p className="text-xs text-gray-600 font-semibold">#{indexOfFirstItem + index + 1}</p>
                       </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-bold rounded-full border flex-shrink-0 ${getStatusColor(layanan.status)}`}>
-                      {getStatusText(layanan.status)}
+                    <span className={`px-2 py-1 text-xs font-bold rounded-full border flex-shrink-0 ${getStatusColor(layanan.status, layanan.downloadedByAdmin)}`}>
+                      {getStatusText(layanan.status, layanan.downloadedByAdmin)}
                     </span>
                   </div>
                   
@@ -1380,64 +1405,151 @@ export default function LayananPublikAdminPage() {
             )}
           </div>
 
-          {/* Pagination - Mobile Optimized */}
+          {/* Professional Modern Pagination */}
           {filteredData.length > 0 && totalPages > 1 && (
-            <div className="mt-3 sm:mt-4 md:mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white rounded-xl border border-purple-100">
-              <div className="text-xs sm:text-sm text-gray-700 font-semibold text-center sm:text-left">
-                Menampilkan <span className="text-purple-600">{indexOfFirstItem + 1}</span> - <span className="text-purple-600">{Math.min(indexOfLastItem, filteredData.length)}</span> dari <span className="text-purple-600">{filteredData.length}</span> data
-              </div>
-              
-              <div className="flex items-center gap-1 sm:gap-2">
-                {/* Previous Button */}
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`p-2 rounded-lg font-semibold text-sm transition-all ${
-                    currentPage === 1
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200 active:scale-95'
-                  }`}
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-
-                {/* Page Numbers */}
-                <div className="flex items-center gap-1">
-                  {pageNumbers.map((page, idx) => (
-                    page === '...' ? (
-                      <span key={`ellipsis-${idx}`} className="px-2 py-1 text-gray-500 text-xs sm:text-sm">...</span>
-                    ) : (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page as number)}
-                        className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all ${
-                          currentPage === page
-                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                            : 'bg-white text-gray-700 hover:bg-purple-50 active:bg-purple-100 border border-purple-200'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )
-                  ))}
+            <div className="mt-4 sm:mt-6 md:mt-8">
+              {/* Pagination Card */}
+              <div className="bg-gradient-to-br from-white via-purple-50/30 to-pink-50/30 rounded-2xl border-2 border-purple-100 shadow-xl overflow-hidden">
+                {/* Info Bar */}
+                <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-4 sm:px-6 py-3">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-sm sm:text-base font-bold">
+                        Menampilkan {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredData.length)} dari {filteredData.length} data
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm">
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-xs sm:text-sm font-semibold text-white">Halaman {currentPage} dari {totalPages}</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Next Button */}
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg font-semibold text-sm transition-all ${
-                    currentPage === totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200 active:scale-95'
-                  }`}
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                {/* Pagination Controls */}
+                <div className="px-4 sm:px-6 py-4 sm:py-5">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {/* First Page Button */}
+                    <button
+                      onClick={() => handlePageChange(1)}
+                      disabled={currentPage === 1}
+                      className={`group relative px-3 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+                        currentPage === 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                          : 'bg-white text-purple-600 hover:bg-purple-100 hover:shadow-md active:scale-95 border-2 border-purple-200 hover:border-purple-300'
+                      }`}
+                      title="Halaman Pertama"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Previous Button */}
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className={`group relative px-4 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+                        currentPage === 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                          : 'bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 hover:shadow-lg active:scale-95'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span className="hidden sm:inline">Previous</span>
+                      </div>
+                    </button>
+
+                    {/* Page Numbers */}
+                    <div className="flex items-center gap-1.5">
+                      {pageNumbers.map((page, idx) => (
+                        page === '...' ? (
+                          <span key={`ellipsis-${idx}`} className="px-3 py-2 text-gray-400 font-bold text-sm">•••</span>
+                        ) : (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page as number)}
+                            className={`relative px-3 sm:px-4 py-2 rounded-lg font-bold text-sm transition-all duration-300 min-w-[40px] ${
+                              currentPage === page
+                                ? 'bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500 text-white shadow-lg shadow-purple-300 scale-110 z-10'
+                                : 'bg-white text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 hover:text-purple-700 hover:shadow-md active:scale-95 border-2 border-purple-100 hover:border-purple-300'
+                            }`}
+                          >
+                            {currentPage === page && (
+                              <div className="absolute inset-0 bg-white/20 rounded-lg animate-pulse"></div>
+                            )}
+                            <span className="relative z-10">{page}</span>
+                          </button>
+                        )
+                      ))}
+                    </div>
+
+                    {/* Next Button */}
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className={`group relative px-4 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+                        currentPage === totalPages
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                          : 'bg-gradient-to-r from-pink-500 to-pink-600 text-white hover:from-pink-600 hover:to-pink-700 hover:shadow-lg active:scale-95'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="hidden sm:inline">Next</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </button>
+
+                    {/* Last Page Button */}
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className={`group relative px-3 py-2 rounded-lg font-bold text-sm transition-all duration-300 ${
+                        currentPage === totalPages
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
+                          : 'bg-white text-pink-600 hover:bg-pink-100 hover:shadow-md active:scale-95 border-2 border-pink-200 hover:border-pink-300'
+                      }`}
+                      title="Halaman Terakhir"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Quick Jump */}
+                  {totalPages > 5 && (
+                    <div className="mt-4 pt-4 border-t-2 border-purple-100 flex items-center justify-center gap-3">
+                      <span className="text-sm font-semibold text-gray-600">Lompat ke:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={totalPages}
+                        placeholder="#"
+                        className="w-16 px-3 py-1.5 border-2 border-purple-200 rounded-lg text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            const value = parseInt((e.target as HTMLInputElement).value);
+                            if (value >= 1 && value <= totalPages) {
+                              handlePageChange(value);
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }
+                        }}
+                      />
+                      <span className="text-xs text-gray-500">Tekan Enter</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1475,8 +1587,8 @@ export default function LayananPublikAdminPage() {
               <div className="p-3 sm:p-4 md:p-6 lg:p-8 space-y-3 sm:space-y-4 md:space-y-6 overflow-y-auto flex-1">
                 {/* Status Badge */}
                 <div className="flex items-center justify-center">
-                  <span className={`px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 md:py-3 text-xs sm:text-sm md:text-base lg:text-lg font-bold rounded-full border-2 ${getStatusColor(selectedLayanan.status)} text-center`}>
-                    {getStatusText(selectedLayanan.status)}
+                  <span className={`px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 md:py-3 text-xs sm:text-sm md:text-base lg:text-lg font-bold rounded-full border-2 ${getStatusColor(selectedLayanan.status, selectedLayanan.downloadedByAdmin)} text-center`}>
+                    {getStatusText(selectedLayanan.status, selectedLayanan.downloadedByAdmin)}
                   </span>
                 </div>
 
@@ -1547,6 +1659,25 @@ export default function LayananPublikAdminPage() {
                           }) : '-'}
                         </p>
                       </div>
+                      {selectedLayanan.downloadedByAdmin && selectedLayanan.downloadedAt && (
+                        <div className="bg-green-50 p-3 rounded-lg border-2 border-green-200">
+                          <span className="text-green-700 font-semibold flex items-center gap-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Status Download:
+                          </span>
+                          <p className="text-green-900 font-bold mt-1">
+                            ✅ Sudah Didownload pada {new Date(selectedLayanan.downloadedAt.seconds * 1000).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      )}
                       {selectedLayanan.keperluan && (
                         <div>
                           <span className="text-gray-600 font-semibold">Keperluan:</span>
@@ -1888,7 +2019,11 @@ export default function LayananPublikAdminPage() {
                     <button
                       onClick={handleDownloadPDF}
                       disabled={isGeneratingPDF}
-                      className={`w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold rounded-lg sm:rounded-xl hover:shadow-lg active:scale-98 transition-all text-sm sm:text-base ${isGeneratingPDF ? 'opacity-75 cursor-wait' : ''}`}
+                      className={`w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 ${
+                        selectedLayanan.downloadedByAdmin 
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                          : 'bg-gradient-to-r from-orange-500 to-yellow-500'
+                      } text-white font-bold rounded-lg sm:rounded-xl hover:shadow-lg active:scale-98 transition-all text-sm sm:text-base ${isGeneratingPDF ? 'opacity-75 cursor-wait' : ''}`}
                     >
                       {isGeneratingPDF ? (
                         <>
@@ -1897,6 +2032,11 @@ export default function LayananPublikAdminPage() {
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                           Memproses...
+                        </>
+                      ) : selectedLayanan.downloadedByAdmin ? (
+                        <>
+                          ✅ Download Lagi Paket Lengkap
+                          <span className="block text-xs mt-0.5 opacity-90">(Sudah didownload {selectedLayanan.downloadedAt ? new Date(selectedLayanan.downloadedAt.seconds * 1000).toLocaleDateString('id-ID') : ''})</span>
                         </>
                       ) : (
                         <>

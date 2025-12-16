@@ -56,6 +56,8 @@ export interface LayananPublik {
   catatanKades?: string;
   nomorSuratKadus?: string; // Nomor surat pengantar kepala dusun
   nomorSurat?: string; // Nomor surat dari admin desa
+  downloadedByAdmin?: boolean; // Tracking apakah admin sudah download paket lengkap
+  downloadedAt?: Timestamp; // Timestamp kapan admin download
   approvedByAdmin?: boolean;
   approvedByKadus?: boolean;
   approvedByKades?: boolean;

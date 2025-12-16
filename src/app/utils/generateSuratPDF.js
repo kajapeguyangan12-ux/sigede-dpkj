@@ -87,9 +87,9 @@ export async function generateSuratPDF(dataSurat, nomorSurat = 'surat') {
     
     console.log('📸 Starting html2canvas capture...');
     
-    // 5. Capture dengan html2canvas
+    // 5. Capture dengan html2canvas (scale 4 untuk logo HD tanpa pecah)
     const canvas = await html2canvas(content, {
-      scale: 2,
+      scale: 4,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
@@ -129,18 +129,21 @@ export async function generateSuratPDF(dataSurat, nomorSurat = 'surat') {
       throw new Error('Canvas kosong (0 dimensions). Periksa content element.');
     }
     
-    // 7. Convert canvas to image
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    // 7. Convert canvas to image (maximum quality 1.0 untuk logo HD)
+    const imgData = canvas.toDataURL('image/jpeg', 1.0);
     
-    // 8. Create PDF (A4 size)
+    // 8. Create PDF (A4 size - 210mm x 297mm)
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: 'a4'
+      format: 'a4',
+      compress: true
     });
     
     const pdfWidth = 210; // A4 width in mm
     const pdfHeight = 297; // A4 height in mm
+    
+    console.log('📄 PDF size: A4 (210mm x 297mm)');
     
     // Calculate aspect ratio to fit A4
     const canvasAspectRatio = canvas.height / canvas.width;

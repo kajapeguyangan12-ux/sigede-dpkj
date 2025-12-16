@@ -179,7 +179,7 @@ export default function SuratTemplate({ data }: SuratTemplateProps) {
       }}>
         <div style={{ 
           display: 'table-cell',
-          width: '100px',
+          width: '150px',
           verticalAlign: 'top',
           paddingRight: '15px'
         }}>
@@ -187,13 +187,15 @@ export default function SuratTemplate({ data }: SuratTemplateProps) {
             src="/logo/LOGO_DPKJ.png" 
             alt="Logo DPKJ"
             style={{ 
-              width: '80px', 
-              height: '80px', 
+              width: '140px', 
+              height: 'auto',
+              maxHeight: '140px',
               objectFit: 'contain',
               objectPosition: 'center',
               display: 'block',
-              margin: '0 auto'
-            }}
+              margin: '0 auto',
+              imageRendering: '-webkit-optimize-contrast'
+            } as React.CSSProperties}
             crossOrigin="anonymous"
           />
         </div>
