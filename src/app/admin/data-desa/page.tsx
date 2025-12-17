@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from '../../masyarakat/lib/useCurrentUser';
 import AdminLayout from "../components/AdminLayout";
@@ -65,8 +65,13 @@ const customStyles = `
   }
 `
 
-// CSS untuk modal modern
+// CSS untuk modal modern dengan optimasi mobile
 const modernModalStyles = `
+  /* Prevent zoom on input focus for iOS */
+  input, select, textarea {
+    font-size: 16px !important; /* iOS requires 16px minimum to prevent auto-zoom */
+  }
+
   .modern-modal-overlay {
     position: fixed !important;
     top: 0 !important;
@@ -79,53 +84,96 @@ const modernModalStyles = `
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 20px !important;
+    padding: 0 !important;
     animation: modalFadeIn 0.3s ease-out !important;
+    overflow: hidden !important;
+  }
+  
+  @media (min-width: 768px) {
+    .modern-modal-overlay {
+      padding: 20px !important;
+    }
   }
   
   .modern-modal-container {
     background: white !important;
-    border-radius: 16px !important;
+    border-radius: 0 !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
     width: 100% !important;
-    max-width: 900px !important;
-    max-height: 90vh !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     animation: modalSlideUp 0.3s ease-out !important;
     position: relative !important;
     display: flex !important;
     flex-direction: column !important;
+    -webkit-overflow-scrolling: touch !important; /* Smooth scrolling on iOS */
+  }
+  
+  @media (min-width: 768px) {
+    .modern-modal-container {
+      border-radius: 16px !important;
+      max-width: 900px !important;
+      max-height: 90vh !important;
+      height: auto !important;
+    }
   }
   
   .close-button {
     position: absolute !important;
-    top: 20px !important;
-    right: 24px !important;
+    top: 12px !important;
+    right: 12px !important;
     background: rgba(0, 0, 0, 0.5) !important;
     border: none !important;
     border-radius: 50% !important;
-    width: 40px !important;
-    height: 40px !important;
+    width: 44px !important; /* Larger for mobile touch */
+    height: 44px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     z-index: 10 !important;
+    touch-action: manipulation !important; /* Prevent double-tap zoom */
+  }
+  
+  @media (min-width: 768px) {
+    .close-button {
+      top: 20px !important;
+      right: 24px !important;
+      width: 40px !important;
+      height: 40px !important;
+    }
   }
   
   .close-button:hover {
     background: rgba(0, 0, 0, 0.7) !important;
-    transform: rotate(90deg) !important;
+  }
+  
+  @media (min-width: 768px) {
+    .close-button:hover {
+      transform: rotate(90deg) !important;
+    }
   }
 
   .modern-modal-content {
-    padding: 20px !important;
+    padding: 12px !important;
     padding-top: 60px !important;
+    padding-bottom: 80px !important; /* Extra space for mobile keyboard */
     flex: 1 !important;
     overflow-y: auto !important;
     scroll-behavior: smooth !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  @media (min-width: 768px) {
+    .modern-modal-content {
+      padding: 20px !important;
+      padding-top: 60px !important;
+      padding-bottom: 20px !important;
+    }
   }
 
   .modern-modal-content::-webkit-scrollbar {
@@ -262,6 +310,7 @@ export default function DataDesaPage() {
     sukuBangsa: "",
     kewarganegaraan: "",
     pendidikanTerakhir: "",
+    pendidikan: "",
     pekerjaan: "",
     penghasilan: "",
     golonganDarah: "",
@@ -295,7 +344,7 @@ export default function DataDesaPage() {
     }
   }, [currentUser, dataWarga]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
       noKK: "",
       namaLengkap: "",
@@ -310,6 +359,7 @@ export default function DataDesaPage() {
       sukuBangsa: "",
       kewarganegaraan: "",
       pendidikanTerakhir: "",
+      pendidikan: "",
       pekerjaan: "",
       penghasilan: "",
       golonganDarah: "",
@@ -317,7 +367,12 @@ export default function DataDesaPage() {
       desil: ""
     });
     setEditingId(null);
-  };
+  }, []);
+
+  // Optimized input handler
+  const handleInputChange = useCallback((field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -382,6 +437,7 @@ export default function DataDesaPage() {
       sukuBangsa: item.sukuBangsa,
       kewarganegaraan: item.kewarganegaraan,
       pendidikanTerakhir: item.pendidikanTerakhir,
+      pendidikan: item.pendidikanTerakhir || "",
       pekerjaan: item.pekerjaan,
       penghasilan: item.penghasilan,
       golonganDarah: item.golonganDarah,
@@ -477,9 +533,9 @@ export default function DataDesaPage() {
       
       {/* Loading Screen */}
       {userLoading && (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-gray-600 font-medium">Memuat data pengguna...</p>
           </div>
         </div>
@@ -488,7 +544,7 @@ export default function DataDesaPage() {
       {/* Main Content */}
       {!userLoading && (
         <AdminLayout>
-          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 p-3 sm:p-4 md:p-6 safe-area-padding">
+          <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 p-3 sm:p-4 md:p-6 safe-area-padding">
             <div className="max-w-7xl mx-auto">
               {/* Custom Header */}
               <div 
@@ -938,373 +994,539 @@ export default function DataDesaPage() {
           />
         )}
 
-        {/* Add/Edit Modal */}
+        {/* Add/Edit Modal - Professional UI/UX */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
+          <div className="fixed inset-0 bg-gradient-to-br from-black/60 via-black/50 to-black/60 backdrop-blur-md flex items-center justify-center z-50 p-0 md:p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-none md:rounded-2xl w-full h-full md:max-w-5xl md:w-full md:max-h-[92vh] md:h-auto overflow-hidden shadow-2xl border-0 md:border md:border-gray-200/50 animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300">
+              {/* Premium Header with Gradient */}
+              <div className="sticky top-0 bg-gradient-to-r from-red-600 via-red-700 to-rose-700 z-10 p-5 md:p-7 shadow-lg safe-area-padding">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    {editingId ? 'Edit Data Warga' : 'Tambah Data Warga'}
-                  </h3>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg md:text-2xl font-bold text-white">
+                        {editingId ? 'Edit Data Warga' : 'Tambah Data Warga'}
+                      </h3>
+                      <p className="text-xs md:text-sm text-blue-100 mt-0.5">
+                        Lengkapi formulir di bawah dengan data yang valid
+                      </p>
+                    </div>
+                  </div>
                   <button
+                    type="button"
                     onClick={() => {
                       setShowModal(false);
                       resetForm();
                     }}
-                    className="text-gray-500 hover:text-gray-700 transition-colors p-2 rounded-lg hover:bg-gray-100"
+                    className="flex-shrink-0 w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white transition-all duration-200 hover:rotate-90 touch-manipulation"
+                    aria-label="Close modal"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
               </div>
               
-              <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      No KK
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.noKK}
-                      onChange={(e) => setFormData(prev => ({...prev, noKK: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-gray-900 font-semibold"
-                      placeholder="Masukkan No KK"
-                    />
+              <form onSubmit={handleSubmit} className="p-5 md:p-8 overflow-y-auto h-[calc(100vh-140px)] md:max-h-[calc(92vh-180px)] bg-gradient-to-b from-gray-50/50 to-white safe-area-padding">
+                
+                {/* Section 1: Identitas Keluarga */}
+                <div className="mb-4 md:mb-5">
+                  <div className="flex items-center gap-2 mb-3 md:mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-base md:text-lg font-bold text-gray-900">Identitas Keluarga</h4>
+                      <p className="text-xs md:text-sm text-gray-500">Data kartu keluarga dan hubungan keluarga</p>
+                    </div>
                   </div>
+                  <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-200/60 p-4 md:p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          No KK <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formData.noKK}
+                          onChange={(e) => handleInputChange('noKK', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 font-mono text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="16 digit nomor KK"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Agama
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.agama}
-                      onChange={(e) => setFormData(prev => ({...prev, agama: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Agama"
-                    />
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                          </svg>
+                          SHDK
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.shdk}
+                          onChange={(e) => handleInputChange('shdk', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="Kepala Keluarga / Istri / Anak"
+                        />
+                      </div>
+                    </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Nama Lengkap
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.namaLengkap}
-                      onChange={(e) => setFormData(prev => ({...prev, namaLengkap: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Nama Lengkap"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Suku Bangsa
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.sukuBangsa}
-                      onChange={(e) => setFormData(prev => ({...prev, sukuBangsa: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Suku Bangsa"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      NIK
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={16}
-                      value={formData.nik}
-                      onChange={(e) => setFormData(prev => ({...prev, nik: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-gray-900 font-semibold"
-                      placeholder="Masukkan NIK"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Kewarganegaraan
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.kewarganegaraan}
-                      onChange={(e) => setFormData(prev => ({...prev, kewarganegaraan: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Kewarganegaraan"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Jenis Kelamin
-                    </label>
-                    <select
-                      value={formData.jenisKelamin}
-                      onChange={(e) => setFormData(prev => ({...prev, jenisKelamin: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                    >
-                      <option value="" className="text-gray-500">Pilih Jenis Kelamin</option>
-                      <option value="Laki-laki" className="text-gray-900">Laki-laki</option>
-                      <option value="Perempuan" className="text-gray-900">Perempuan</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Pendidikan Terakhir
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.pendidikanTerakhir}
-                      onChange={(e) => setFormData(prev => ({...prev, pendidikanTerakhir: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Pendidikan Terakhir"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Tempat Lahir
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.tempatLahir}
-                      onChange={(e) => setFormData(prev => ({...prev, tempatLahir: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Tempat Lahir"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Pekerjaan
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.pekerjaan}
-                      onChange={(e) => setFormData(prev => ({...prev, pekerjaan: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Pekerjaan"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Tanggal Lahir
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.tanggalLahir}
-                      onChange={(e) => {
-                        // Allow only numbers and slashes
-                        let value = e.target.value.replace(/[^0-9/]/g, '');
-                        
-                        // Parse current parts
-                        const parts = value.split('/');
-                        let day = parts[0] || '';
-                        let month = parts[1] || '';
-                        let year = parts[2] || '';
-                        
-                        // Function to get max days in a month
-                        const getMaxDaysInMonth = (m: number, y: number) => {
-                          if (m === 2) {
-                            // February - check leap year
-                            if (y && ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0)) {
-                              return 29; // Leap year
-                            }
-                            return 28; // Non-leap year
-                          } else if ([4, 6, 9, 11].includes(m)) {
-                            return 30; // April, June, September, November
-                          }
-                          return 31; // January, March, May, July, August, October, December
-                        };
-                        
-                        // Validate and correct month (01-12)
-                        if (month) {
-                          const monthNum = parseInt(month);
-                          if (monthNum > 12) {
-                            month = '12';
-                          } else if (monthNum === 0 && month.length === 2) {
-                            month = '01';
-                          }
-                        }
-                        
-                        // Validate and correct day based on month
-                        if (day) {
-                          let dayNum = parseInt(day);
-                          const monthNum = parseInt(month) || 1;
-                          const yearNum = parseInt(year) || new Date().getFullYear();
-                          const maxDays = getMaxDaysInMonth(monthNum, yearNum);
-                          
-                          if (dayNum > maxDays) {
-                            day = maxDays.toString().padStart(2, '0');
-                          } else if (dayNum === 0 && day.length === 2) {
-                            day = '01';
-                          }
-                        }
-                        
-                        // Reconstruct value
-                        const newParts = [day, month, year].filter((p, i) => {
-                          // Keep part if it's not empty or if we're still building the date
-                          if (i === 0) return true; // Always keep day
-                          if (i === 1) return parts.length > 1; // Keep month if user typed /
-                          if (i === 2) return parts.length > 2; // Keep year if user typed second /
-                          return false;
-                        });
-                        
-                        value = newParts.join('/');
-                        
-                        // Auto-add slashes after day (2 digits) and month (2 digits)
-                        const cleanValue = value.replace(/\//g, '');
-                        if (cleanValue.length >= 2 && value.split('/').length === 1) {
-                          value = cleanValue.substring(0, 2) + '/' + cleanValue.substring(2);
-                        }
-                        if (cleanValue.length >= 4 && value.split('/').length === 2) {
-                          const p = value.split('/');
-                          value = p[0] + '/' + p[1].substring(0, 2) + '/' + p[1].substring(2);
-                        }
-                        
-                        // Limit to DD/MM/YYYY format (10 characters)
-                        if (value.length <= 10) {
-                          setFormData(prev => ({...prev, tanggalLahir: value}));
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        // Allow backspace to delete slashes
-                        if (e.key === 'Backspace') {
-                          const cursorPos = e.currentTarget.selectionStart || 0;
-                          const value = e.currentTarget.value;
-                          
-                          // If cursor is right after a slash, remove the slash
-                          if (cursorPos > 0 && value[cursorPos - 1] === '/') {
-                            e.preventDefault();
-                            const newValue = value.substring(0, cursorPos - 1) + value.substring(cursorPos);
-                            setFormData(prev => ({...prev, tanggalLahir: newValue}));
-                            // Set cursor position after the deletion
-                            setTimeout(() => {
-                              e.currentTarget.setSelectionRange(cursorPos - 1, cursorPos - 1);
-                            }, 0);
-                          }
-                        }
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="DD/MM/YYYY"
-                      maxLength={10}
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Format: DD/MM/YYYY (contoh: 15/08/1990). Hari otomatis disesuaikan dengan bulan.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Penghasilan
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.penghasilan}
-                      onChange={(e) => setFormData(prev => ({...prev, penghasilan: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Penghasilan"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Alamat
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={formData.alamat}
-                      onChange={(e) => setFormData(prev => ({...prev, alamat: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Alamat"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Golongan Darah
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.golonganDarah}
-                      onChange={(e) => setFormData(prev => ({...prev, golonganDarah: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Golongan Darah"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Daerah
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.daerah}
-                      onChange={(e) => setFormData(prev => ({...prev, daerah: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Daerah"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      SHDK
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.shdk}
-                      onChange={(e) => setFormData(prev => ({...prev, shdk: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan SHDK"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Status Nikah
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.statusNikah}
-                      onChange={(e) => setFormData(prev => ({...prev, statusNikah: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Status Nikah"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 mb-2">
-                      Desil
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.desil}
-                      onChange={(e) => setFormData(prev => ({...prev, desil: e.target.value}))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-semibold"
-                      placeholder="Masukkan Desil"
-                    />
-                  </div>
-
                 </div>
 
-                <div className="flex justify-center mt-8 pt-6">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full max-w-xs px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-                  >
-                    {loading ? 'Menyimpan...' : 'Simpan Data'}
-                  </button>
+                {/* Section 2: Identitas Pribadi */}
+                <div className="mb-4 md:mb-5">
+                  <div className="flex items-center gap-2 mb-3 md:mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-base md:text-lg font-bold text-gray-900">Identitas Pribadi</h4>
+                      <p className="text-xs md:text-sm text-gray-500">Data diri dan identitas warga</p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-200/60 p-4 md:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          Nama Lengkap <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          autoComplete="name"
+                          value={formData.namaLengkap}
+                          onChange={(e) => handleInputChange('namaLengkap', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="Nama lengkap sesuai KTP"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                          </svg>
+                          NIK <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={16}
+                          value={formData.nik}
+                          onChange={(e) => handleInputChange('nik', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-mono text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="16 digit NIK"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          Jenis Kelamin
+                        </label>
+                        <select
+                          value={formData.jenisKelamin}
+                          onChange={(e) => handleInputChange('jenisKelamin', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                        >
+                          <option value="">Pilih Jenis Kelamin</option>
+                          <option value="Laki-laki">Laki-laki</option>
+                          <option value="Perempuan">Perempuan</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z" />
+                          </svg>
+                          Status Nikah
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.statusNikah}
+                          onChange={(e) => handleInputChange('statusNikah', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="Belum Kawin / Kawin / Cerai"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Tempat & Tanggal Lahir */}
+                <div className="mb-4 md:mb-5">
+                  <div className="flex items-center gap-2 mb-3 md:mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-base md:text-lg font-bold text-gray-900">Tempat & Tanggal Lahir</h4>
+                      <p className="text-xs md:text-sm text-gray-500">Informasi kelahiran warga</p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-200/60 p-4 md:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Tempat Lahir
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.tempatLahir}
+                          onChange={(e) => handleInputChange('tempatLahir', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="Kota/Kabupaten tempat lahir"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Tanggal Lahir
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={10}
+                          value={formData.tanggalLahir}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/[^0-9/]/g, '');
+                            const cleanValue = value.replace(/\//g, '');
+                            if (cleanValue.length >= 2) {
+                              value = cleanValue.substring(0, 2) + '/' + cleanValue.substring(2);
+                            }
+                            if (cleanValue.length >= 4) {
+                              value = cleanValue.substring(0, 2) + '/' + cleanValue.substring(2, 4) + '/' + cleanValue.substring(4, 8);
+                            }
+                            if (value.length <= 10) {
+                              setFormData(prev => ({...prev, tanggalLahir: value}));
+                            }
+                          }}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="DD/MM/YYYY"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 4: Pekerjaan & Ekonomi */}
+                <div className="mb-4 md:mb-5">
+                  <div className="flex items-center gap-2 mb-3 md:mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-base md:text-lg font-bold text-gray-900">Pekerjaan & Ekonomi</h4>
+                      <p className="text-xs md:text-sm text-gray-500">Informasi pekerjaan dan ekonomi</p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-200/60 p-4 md:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          Pekerjaan
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.pekerjaan}
+                          onChange={(e) => handleInputChange('pekerjaan', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="Pekerjaan saat ini"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Penghasilan
+                        </label>
+                        <select
+                          value={formData.penghasilan}
+                          onChange={(e) => handleInputChange('penghasilan', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                        >
+                          <option value="">Pilih Range Penghasilan</option>
+                          <option value="< Rp 500.000">&lt; Rp 500.000</option>
+                          <option value="Rp 500.000 - Rp 1.000.000">Rp 500.000 - Rp 1.000.000</option>
+                          <option value="Rp 1.000.000 - Rp 2.000.000">Rp 1.000.000 - Rp 2.000.000</option>
+                          <option value="Rp 2.000.000 - Rp 5.000.000">Rp 2.000.000 - Rp 5.000.000</option>
+                          <option value="> Rp 5.000.000">&gt; Rp 5.000.000</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          Desil
+                        </label>
+                        <select
+                          value={formData.desil}
+                          onChange={(e) => handleInputChange('desil', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                        >
+                          <option value="">Pilih Desil</option>
+                          <option value="1">1 (Sangat Miskin)</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
+                          <option value="5">5</option>
+                          <option value="6">6</option>
+                          <option value="7">7</option>
+                          <option value="8">8</option>
+                          <option value="9">9</option>
+                          <option value="10">10 (Sangat Kaya)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                          Pendidikan Terakhir
+                        </label>
+                        <select
+                          value={formData.pendidikan}
+                          onChange={(e) => handleInputChange('pendidikan', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                        >
+                          <option value="">Pilih Pendidikan</option>
+                          <option value="Tidak/Belum Sekolah">Tidak/Belum Sekolah</option>
+                          <option value="SD/Sederajat">SD/Sederajat</option>
+                          <option value="SMP/Sederajat">SMP/Sederajat</option>
+                          <option value="SMA/Sederajat">SMA/Sederajat</option>
+                          <option value="D1/D2/D3">D1/D2/D3</option>
+                          <option value="D4/S1">D4/S1</option>
+                          <option value="S2">S2</option>
+                          <option value="S3">S3</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 5: Alamat & Lokasi */}
+                <div className="mb-4 md:mb-5">
+                  <div className="flex items-center gap-2 mb-3 md:mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-base md:text-lg font-bold text-gray-900">Alamat & Lokasi</h4>
+                      <p className="text-xs md:text-sm text-gray-500">Informasi alamat tempat tinggal</p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-200/60 p-4 md:p-5">
+                    <div className="grid grid-cols-1 gap-4 md:gap-5">
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                          </svg>
+                          Alamat Lengkap
+                        </label>
+                        <textarea
+                          value={formData.alamat}
+                          onChange={(e) => handleInputChange('alamat', e.target.value)}
+                          rows={3}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation resize-none"
+                          placeholder="Jalan, RT/RW, Dusun, dll"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                          </svg>
+                          Daerah
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.daerah}
+                          onChange={(e) => handleInputChange('daerah', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="Nama daerah/dusun"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 6: Data Lainnya */}
+                <div className="mb-4 md:mb-5">
+                  <div className="flex items-center gap-2 mb-3 md:mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-base md:text-lg font-bold text-gray-900">Data Lainnya</h4>
+                      <p className="text-xs md:text-sm text-gray-500">Informasi tambahan warga</p>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-200/60 p-4 md:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                          </svg>
+                          Agama
+                        </label>
+                        <select
+                          value={formData.agama}
+                          onChange={(e) => handleInputChange('agama', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                        >
+                          <option value="">Pilih Agama</option>
+                          <option value="Islam">Islam</option>
+                          <option value="Kristen">Kristen</option>
+                          <option value="Katolik">Katolik</option>
+                          <option value="Hindu">Hindu</option>
+                          <option value="Buddha">Buddha</option>
+                          <option value="Konghucu">Konghucu</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Suku Bangsa
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.sukuBangsa}
+                          onChange={(e) => handleInputChange('sukuBangsa', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                          placeholder="Contoh: Jawa, Sunda, Batak, dll"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                          </svg>
+                          Kewarganegaraan
+                        </label>
+                        <select
+                          value={formData.kewarganegaraan}
+                          onChange={(e) => handleInputChange('kewarganegaraan', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                        >
+                          <option value="">Pilih Kewarganegaraan</option>
+                          <option value="WNI">WNI (Warga Negara Indonesia)</option>
+                          <option value="WNA">WNA (Warga Negara Asing)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 text-sm md:text-base font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                          </svg>
+                          Golongan Darah
+                        </label>
+                        <select
+                          value={formData.golonganDarah}
+                          onChange={(e) => handleInputChange('golonganDarah', e.target.value)}
+                          className="w-full px-4 py-3.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 font-medium bg-gray-50/50 hover:bg-white transition-all duration-200 touch-manipulation"
+                        >
+                          <option value="">Pilih Golongan Darah</option>
+                          <option value="A">A</option>
+                          <option value="B">B</option>
+                          <option value="AB">AB</option>
+                          <option value="O">O</option>
+                          <option value="Tidak Tahu">Tidak Tahu</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Premium Submit Button - Professional Design */}
+                <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pt-3 pb-3 md:relative md:bg-none md:pt-0 md:pb-0 safe-area-padding border-t border-gray-200 md:border-0">
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-2.5 md:gap-3 px-4 md:px-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowModal(false);
+                        resetForm();
+                      }}
+                      className="w-full md:w-auto px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-bold text-base hover:bg-gray-50 active:bg-gray-100 transition-all shadow-sm hover:shadow-md touch-manipulation flex items-center justify-center gap-2 order-2 md:order-1"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span>Batal</span>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full md:w-auto min-w-[200px] px-8 py-3 bg-gradient-to-r from-red-600 via-red-700 to-rose-700 text-white rounded-xl font-bold text-base hover:from-red-700 hover:via-red-800 hover:to-rose-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl touch-manipulation flex items-center justify-center gap-2 order-1 md:order-2"
+                    >
+                      {loading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Menyimpan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>Simpan Data</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -1317,3 +1539,6 @@ export default function DataDesaPage() {
     </>
   );
 }
+
+
+

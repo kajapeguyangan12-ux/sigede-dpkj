@@ -30,6 +30,9 @@ export const metadata: Metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // Prevent zoom on iOS
+  viewportFit: "cover", // iOS safe area support
 };
 
 export default function RootLayout({
