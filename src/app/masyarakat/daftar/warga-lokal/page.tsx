@@ -219,10 +219,28 @@ export default function WargaLokalRegisterPage() {
         setVerifiedData(matchedData);
         setNikMessage(`✅ NIK valid! Anda dapat melanjutkan registrasi.`);
         
-        // Auto-fill tanggal lahir from NIK after verification
-        const birthDate = extractBirthDateFromNIK(formData.nik);
+        // Convert tanggal lahir from DD/MM/YYYY to YYYY-MM-DD format for date input
+        let birthDate = '';
+        if (matchedData.tanggalLahir) {
+          // Check if already in YYYY-MM-DD format
+          if (matchedData.tanggalLahir.includes('-')) {
+            birthDate = matchedData.tanggalLahir;
+          } else if (matchedData.tanggalLahir.includes('/')) {
+            // Convert from DD/MM/YYYY to YYYY-MM-DD
+            const [day, month, year] = matchedData.tanggalLahir.split('/');
+            if (day && month && year) {
+              birthDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+          }
+        }
+        
+        // Fallback: extract from NIK if tanggalLahir not available in data-desa
+        if (!birthDate) {
+          birthDate = extractBirthDateFromNIK(formData.nik);
+        }
+        
         if (birthDate) {
-          console.log('📅 Auto-filling tanggal lahir after NIK verification:', birthDate);
+          console.log('📅 Auto-filling tanggal lahir from data-desa:', birthDate);
         }
         
         // Auto-fill daerah and tanggal lahir from matched data
