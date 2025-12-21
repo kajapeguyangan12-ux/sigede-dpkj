@@ -336,10 +336,12 @@ export const uploadStrukturImage = async (file: File, fileName: string): Promise
 };
 
 // Upload image to lembaga-kemasyarakatan folder
-export const uploadLembagaImage = async (file: File, fileName: string): Promise<string> => {
+export const uploadLembagaImage = async (file: File, fileName: string, tipeLembaga: string = 'kemasyarakatan'): Promise<string> => {
   try {
     const storage = getStorage();
-    const storageRef = ref(storage, `lembaga-kemasyarakatan/${fileName}`);
+    // Use dynamic storage path based on lembaga type
+    const storagePath = tipeLembaga === 'karang-taruna' ? 'Karang-Taruna' : 'lembaga-kemasyarakatan';
+    const storageRef = ref(storage, `${storagePath}/${fileName}`);
 
     // Convert to WebP first
     const webpBlob = await convertToWebP(file);

@@ -32,12 +32,12 @@ export default function LayananPublikPage() {
     {
       title: "Surat Kelakuan Baik",
       icon: <ConductIcon className="h-12 w-12 text-blue-600" />,
-      category: "Administrasi Umum",
+      category: "Umum",
     },
     {
       title: "Surat Keterangan Belum Bekerja",
       icon: <EmploymentIcon className="h-12 w-12 text-emerald-600" />,
-      category: "Ketenagakerjaan",
+      category: "Umum",
     },
     {
       title: "Surat Keterangan Kematian",
@@ -47,12 +47,12 @@ export default function LayananPublikPage() {
     {
       title: "Surat Keterangan Berpergian",
       icon: <TravelIcon className="h-12 w-12 text-indigo-600" />,
-      category: "Perizinan",
+      category: "Umum",
     },
     {
       title: "Form Taring Dukcapil",
       icon: <CommunityIcon className="h-12 w-12 text-amber-600" />,
-      category: "Kependudukan",
+      category: "Form Taring Dukcapil",
     },
   ], []);
 
@@ -156,7 +156,7 @@ export default function LayananPublikPage() {
         <div className="max-w-7xl mx-auto">
         <HeaderCard 
           title="Layanan Publik" 
-          subtitle="Administrasi & Perizinan"
+          subtitle="Administrasi & Kependudukan"
           backUrl="/masyarakat/home"
           showBackButton={true}
         />

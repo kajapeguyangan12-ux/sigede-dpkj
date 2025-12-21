@@ -388,22 +388,13 @@ export default function AnalisisDataPage() {
       setIsRefreshing(true);
       const data = await getDataDesa();
       
-      // Store total count before limiting
+      // Store total count
       setTotalDataCount(data.length);
       
-      // PERFORMANCE: Limit data untuk mencegah freeze
-      // Jika data terlalu banyak, ambil sample atau paginate
-      const limitedData = data.length > MAX_DATA_DISPLAY 
-        ? data.slice(0, MAX_DATA_DISPLAY) 
-        : data;
-      
-      setAllData(limitedData);
-      setFilteredData(limitedData);
+      // Tampilkan semua data tanpa limit
+      setAllData(data);
+      setFilteredData(data);
       setLastRefresh(new Date());
-      
-      if (data.length > MAX_DATA_DISPLAY && process.env.NODE_ENV === 'development') {
-        console.warn(`⚠️ Data limited to ${MAX_DATA_DISPLAY} items for performance. Total: ${data.length}`);
-      }
     } catch (error) {
       console.error("Error loading data:", error);
       setAllData([]);
@@ -414,18 +405,20 @@ export default function AnalisisDataPage() {
     }
   };
 
-  // Helper function to parse date string (supports DD-MM-YYYY and YYYY-MM-DD)
+  // Helper function to parse date string (supports DD-MM-YYYY, DD/MM/YYYY and YYYY-MM-DD)
   const parseDateString = useCallback((dateString: string): Date | null => {
     if (!dateString) return null;
     
     try {
-      // Check if date contains '-'
-      if (dateString.includes('-')) {
-        const parts = dateString.split('-');
+      // Check if date contains '-' or '/'
+      const separator = dateString.includes('-') ? '-' : dateString.includes('/') ? '/' : null;
+      
+      if (separator) {
+        const parts = dateString.split(separator);
         if (parts.length === 3) {
-          // Check if it's DD-MM-YYYY (day has 1-2 digits, year has 4)
+          // Check if it's DD-MM-YYYY or DD/MM/YYYY (day has 1-2 digits, year has 4)
           if (parts[0].length <= 2 && parts[2].length === 4) {
-            // DD-MM-YYYY format
+            // DD-MM-YYYY or DD/MM/YYYY format
             const [day, month, year] = parts;
             return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
           } else if (parts[0].length === 4) {
@@ -616,6 +609,14 @@ export default function AnalisisDataPage() {
   }, []);
 
   const activeFiltersCount = Object.values(filters).filter(v => v !== "").length;
+
+  // Animated counter for total population
+  const { count: animatedCount, ref: countUpRef } = useCountUp({
+    end: filteredData.length,
+    duration: 2000,
+    enableScrollSpy: false,
+    preserveValue: false,
+  });
 
   // OPTIMIZED dengan useMemo - untuk consistency di mobile dan desktop
   const predictAgeCount = useMemo(() => {
@@ -847,7 +848,7 @@ export default function AnalisisDataPage() {
 
   // Count up animation for prediction result - using memoized value
   const predictionCount = predictAgeCount;
-  const { count: animatedCount } = useCountUp({
+  const { count: animatedPredictionCount } = useCountUp({
     end: predictionCount,
     duration: 1500,
     enableScrollSpy: false,
@@ -918,23 +919,6 @@ export default function AnalisisDataPage() {
       <div className="relative mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-24 sm:pb-28 pt-3 sm:pt-4">
         <HeaderCard title="Analisis Data" backUrl="/masyarakat/data-desa" showBackButton={true} />
 
-        {/* Performance Warning - Data Limited - Optimized display */}
-        {totalDataCount > MAX_DATA_DISPLAY && (
-          <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-orange-50 border border-orange-200 rounded-lg sm:rounded-xl">
-            <div className="flex items-start gap-2">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-xs sm:text-sm font-bold text-orange-900 mb-0.5 sm:mb-1">⚡ Optimasi Performa Aktif</h4>
-                <p className="text-[10px] sm:text-xs text-orange-700 leading-tight sm:leading-relaxed">
-                  Menampilkan {MAX_DATA_DISPLAY.toLocaleString()} dari {totalDataCount.toLocaleString()} data. Gunakan filter untuk hasil lebih spesifik.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Summary Card - SaaS Style */}
         <div className="mb-4 sm:mb-6 relative group">
           <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 rounded-2xl sm:rounded-3xl blur-lg opacity-15 group-hover:opacity-25 transition-opacity duration-300"></div>
@@ -952,8 +936,11 @@ export default function AnalisisDataPage() {
                 </div>
               </div>
               <div className="relative">
-                <div className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent mb-2 leading-none">
-                  {activeFiltersCount > 0 ? filteredData.length.toLocaleString() : totalDataCount.toLocaleString()}
+                <div 
+                  ref={countUpRef as React.RefObject<HTMLDivElement>}
+                  className="text-4xl sm:text-5xl md:text-6xl font-black bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent mb-2 leading-none"
+                >
+                  {animatedCount.toLocaleString()}
                 </div>
               </div>
               <div className="text-sm sm:text-base text-gray-600 font-semibold">Jiwa</div>
@@ -1320,7 +1307,7 @@ export default function AnalisisDataPage() {
                     </div>
                     <div className="text-sm mb-2 font-medium">Jumlah Penduduk Usia {targetAge} Tahun</div>
                     <div className="text-sm mb-3 font-medium opacity-90">Per Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-                    <div className="text-5xl font-extrabold my-3 drop-shadow-lg">{animatedCount}</div>
+                    <div className="text-5xl font-extrabold my-3 drop-shadow-lg">{animatedPredictionCount}</div>
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>

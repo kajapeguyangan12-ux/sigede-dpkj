@@ -98,10 +98,30 @@ interface AnggotaLembaga {
   urutanTampil: number;
 }
 
+type LembagaType = 'kemasyarakatan' | 'karang-taruna';
+
+const lembagaOptions = [
+  { value: 'kemasyarakatan' as LembagaType, label: 'Lembaga Pemberdayaan Masyarakat', icon: '🤝' },
+  { value: 'karang-taruna' as LembagaType, label: 'Karang Taruna', icon: '🎯' },
+];
+
+/**
+ * Admin Lembaga Page
+ * 
+ * Data Structure:
+ * - Firestore Collections:
+ *   - lembaga-kemasyarakatan: Lembaga Pemberdayaan Masyarakat data
+ *   - lembaga-karang-taruna: Karang Taruna data
+ * 
+ * - Firebase Storage:
+ *   - lembaga-kemasyarakatan/: Photos for Lembaga Pemberdayaan Masyarakat
+ *   - Karang-Taruna/: Photos for Karang Taruna
+ * 
+ * - All images are automatically converted to WebP format for optimization
+ */
 export default function AdminLembagaPage() {
-  // Using single collection for lembaga kemasyarakatan
-  const tipeLembaga = 'kemasyarakatan'
-  
+  const [tipeLembaga, setTipeLembaga] = useState<LembagaType>('kemasyarakatan')
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [dataAnggota, setDataAnggota] = useState<AnggotaLembaga[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editingAnggota, setEditingAnggota] = useState<AnggotaLembaga | null>(null)
@@ -136,7 +156,7 @@ export default function AdminLembagaPage() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [tipeLembaga])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -216,7 +236,7 @@ export default function AdminLembagaPage() {
       setIsLoading(true)
       const timestamp = Date.now()
       const fileName = `${timestamp}_cover.webp`
-      const imageUrl = await uploadLembagaImage(file, fileName)
+      const imageUrl = await uploadLembagaImage(file, fileName, tipeLembaga)
       await saveLembagaCoverImage(tipeLembaga, imageUrl)
       
       setCoverImage(imageUrl)
@@ -235,7 +255,7 @@ export default function AdminLembagaPage() {
       setUploadingPhoto(true)
       const timestamp = Date.now()
       const fileName = `${timestamp}_anggota.webp`
-      const imageUrl = await uploadLembagaImage(file, fileName)
+      const imageUrl = await uploadLembagaImage(file, fileName, tipeLembaga)
       
       setFormData(prev => ({ ...prev, foto: imageUrl }))
     } catch (error) {
@@ -267,12 +287,69 @@ export default function AdminLembagaPage() {
                 <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
               <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">
-                Kelola Lembaga Kemasyarakatan
+                Kelola {lembagaOptions.find(opt => opt.value === tipeLembaga)?.label}
               </h1>
             </div>
             <p className="text-red-50 text-xs sm:text-sm md:text-base ml-0 sm:ml-14 md:ml-16">
-              Kelola anggota lembaga kemasyarakatan desa
+              Kelola anggota {lembagaOptions.find(opt => opt.value === tipeLembaga)?.label.toLowerCase()} desa
             </p>
+          </div>
+
+          {/* Dropdown Selector */}
+          <div className="mb-4 sm:mb-6 animate-fade-in">
+            {isDropdownOpen && (
+              <button
+                type="button"
+                aria-label="Tutup dropdown"
+                className="fixed inset-0 z-10 cursor-default bg-black/10"
+                onClick={() => setIsDropdownOpen(false)}
+              />
+            )}
+            <div className="relative mb-4">
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full flex items-center justify-between rounded-xl sm:rounded-2xl border border-red-200 bg-white/90 backdrop-blur-sm p-4 sm:p-5 shadow-lg ring-1 ring-red-100/50 hover:bg-red-50 transition-all duration-300"
+              >
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <span className="text-2xl">{lembagaOptions.find(opt => opt.value === tipeLembaga)?.icon}</span>
+                  <span className="text-sm sm:text-base font-semibold text-gray-800">
+                    {lembagaOptions.find(opt => opt.value === tipeLembaga)?.label}
+                  </span>
+                </div>
+                <svg 
+                  className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 z-20 mt-2 rounded-xl sm:rounded-2xl border border-red-200 bg-white/95 backdrop-blur-sm shadow-2xl ring-1 ring-red-100/50 overflow-hidden">
+                  {lembagaOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        setTipeLembaga(option.value);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 sm:gap-4 p-4 sm:p-5 text-left transition-colors duration-200 ${
+                        tipeLembaga === option.value
+                          ? 'bg-red-100 text-red-800'
+                          : 'text-gray-700 hover:bg-red-50'
+                      }`}
+                    >
+                      <span className="text-xl sm:text-2xl">{option.icon}</span>
+                      <span className="text-sm sm:text-base font-medium">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Add Button */}
@@ -289,14 +366,14 @@ export default function AdminLembagaPage() {
           {/* Cover Image Section */}
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl border border-red-100 p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-card-entrance">
             <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800 mb-3 sm:mb-4 md:mb-5">
-              Gambar Cover Lembaga Kemasyarakatan
+              Gambar Cover {lembagaOptions.find(opt => opt.value === tipeLembaga)?.label}
             </h3>
             
             {coverImage && (
               <div className="mb-4 sm:mb-5">
                 <img
                   src={coverImage}
-                  alt="Cover Lembaga Kemasyarakatan"
+                  alt={`Cover ${lembagaOptions.find(opt => opt.value === tipeLembaga)?.label}`}
                   className="w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover rounded-xl sm:rounded-2xl shadow-lg"
                 />
               </div>
@@ -324,14 +401,14 @@ export default function AdminLembagaPage() {
           {/* Members List */}
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl border border-red-100 p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 animate-card-entrance">
             <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800 mb-4 sm:mb-5 md:mb-6">
-              Daftar Anggota Lembaga Kemasyarakatan ({dataAnggota.length})
+              Daftar Anggota {lembagaOptions.find(opt => opt.value === tipeLembaga)?.label} ({dataAnggota.length})
             </h3>
 
             {dataAnggota.length === 0 ? (
               <div className="text-center py-8 sm:py-10 md:py-12">
                 <Building2 className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 text-gray-300 mx-auto mb-3 sm:mb-4" />
                 <div className="text-gray-400 text-sm sm:text-base md:text-lg font-medium">
-                  Belum ada anggota lembaga kemasyarakatan
+                  Belum ada anggota {lembagaOptions.find(opt => opt.value === tipeLembaga)?.label.toLowerCase()}
                 </div>
                 <p className="text-gray-500 text-xs sm:text-sm mt-2">
                   Tambahkan anggota pertama dengan tombol di atas

@@ -33,6 +33,33 @@ const datasetLabels: Record<DatasetKey, string> = {
 
 // Helper function to process APB data
 const processAPBData = (apbData: DetailedAPBData[]) => {
+  // Define the desired order for pendapatan subcategories
+  const pendapatanOrder = [
+    'Pendapatan Asli Desa',
+    'Dana Desa',
+    'Bagi Hasil Pajak Daerah',
+    'Bagi Hasil Retrebusi Daerah',
+    'Alokasi Dana Desa',
+    'Alokasi Dana',
+    'Bantuan Keuangan Khusus Kota Denpasar',
+    'Bantuan Keuangan Khusus Prov. Bali',
+    'Pendapatan Lain-lain'
+  ];
+
+  // Define the desired order for belanja subcategories (including both old and new names)
+  const belanjaOrder = [
+    'Pemerintahan Desa',
+    'Bidang Penyelenggaraan Pemerintah Desa',
+    'Pelaksanaan Pembangunan Desa',
+    'Bidang Pembangunan Desa',
+    'Pembinaan Kemasyarakatan Desa',
+    'Bidang Pembinaan Kemasyarakatan',
+    'Pemberdayaan Masyarakat Desa',
+    'Bidang Pemberdayaan Masyarakat Desa',
+    'Penanggulangan Bencana Dan Keadaan',
+    'Bidang Penanggulangan Bencana'
+  ];
+
   const financeData: Record<
     FinanceCategory,
     Record<number, { anggaran: FinanceRow[]; realisasi: FinanceRow[] }>
@@ -58,6 +85,36 @@ const processAPBData = (apbData: DetailedAPBData[]) => {
     financeData[category][year].realisasi.push({
       label: item.subKategori,
       amount: item.realisasi
+    });
+  });
+
+  // Sort pendapatan data according to the defined order
+  Object.keys(financeData.pendapatan).forEach(year => {
+    const yearNum = parseInt(year);
+    financeData.pendapatan[yearNum].anggaran.sort((a, b) => {
+      const indexA = pendapatanOrder.indexOf(a.label);
+      const indexB = pendapatanOrder.indexOf(b.label);
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
+    financeData.pendapatan[yearNum].realisasi.sort((a, b) => {
+      const indexA = pendapatanOrder.indexOf(a.label);
+      const indexB = pendapatanOrder.indexOf(b.label);
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
+  });
+
+  // Sort belanja data according to the defined order
+  Object.keys(financeData.belanja).forEach(year => {
+    const yearNum = parseInt(year);
+    financeData.belanja[yearNum].anggaran.sort((a, b) => {
+      const indexA = belanjaOrder.indexOf(a.label);
+      const indexB = belanjaOrder.indexOf(b.label);
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
+    financeData.belanja[yearNum].realisasi.sort((a, b) => {
+      const indexA = belanjaOrder.indexOf(a.label);
+      const indexB = belanjaOrder.indexOf(b.label);
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
     });
   });
 
@@ -617,23 +674,28 @@ export default function KeuanganMasyarakatPage() {
                 return (
                   <>
                     <div className="space-y-3">
-                      {paginatedData.map((row: FinanceRow, index: number) => (
-                        <div key={`detail-${row.label}-${startIndex + index}`} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-semibold text-gray-900 mb-1">{row.label}</h4>
-                              <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  Item #{startIndex + index + 1}
-                                </span>
+                      {paginatedData.map((row: FinanceRow, index: number) => {
+                        // Map old label to new label
+                        const displayLabel = row.label === 'Alokasi Dana' ? 'Alokasi Dana Desa' : row.label;
+                        
+                        return (
+                          <div key={`detail-${row.label}-${startIndex + index}`} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-semibold text-gray-900 mb-1">{displayLabel}</h4>
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Item #{startIndex + index + 1}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-right ml-3">
+                                <p className="text-lg font-bold text-gray-900">{formatCurrency(row.amount)}</p>
                               </div>
                             </div>
-                            <div className="text-right ml-3">
-                              <p className="text-lg font-bold text-gray-900">{formatCurrency(row.amount)}</p>
-                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Pagination Controls */}
