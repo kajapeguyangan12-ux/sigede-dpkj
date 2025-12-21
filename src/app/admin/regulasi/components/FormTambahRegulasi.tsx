@@ -56,7 +56,7 @@ export default function FormTambahRegulasi({
     }
 
     if (!formData.tentang.trim()) {
-      alert("Mohon isi Pengundangan");
+      alert("Mohon isi Tanggal Pengundangan");
       return;
     }
 
@@ -201,17 +201,16 @@ export default function FormTambahRegulasi({
             </div>
           </div>
 
-          {/* Pengundangan */}
+          {/* Tanggal Pengundangan */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-3">
-              Pengundangan <span className="text-red-500">*</span>
+              Tanggal Pengundangan <span className="text-red-500">*</span>
             </label>
-            <textarea
+            <input
+              type="date"
               value={formData.tentang}
               onChange={(e) => updateFormData("tentang", e.target.value)}
-              placeholder="Contoh: Pengelolaan Sampah dan Kebersihan Lingkungan Desa"
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all bg-white text-gray-900 resize-none"
-              rows={3}
+              className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all bg-white text-gray-900"
               required
             />
           </div>
@@ -229,7 +228,7 @@ export default function FormTambahRegulasi({
               className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-all bg-white text-gray-900"
             />
             <p className="text-xs text-gray-500 mt-2">
-              Format: [Jenis] Nomor [Nomor] Tahun [Tahun] tentang [Pengundangan]
+              Format: [Jenis] Nomor [Nomor] Tahun [Tahun] tentang [Tanggal]
             </p>
           </div>
 

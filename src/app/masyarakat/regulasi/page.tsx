@@ -189,11 +189,16 @@ export default function RegulasiPage() {
                   </div>
                 </div>
 
-                {/* Tentang */}
+                {/* Tanggal Pengundangan */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">Tentang</label>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">Tanggal Pengundangan</label>
                   <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
-                    {selectedRegulasi.tentang}
+                    {selectedRegulasi.tentang && new Date(selectedRegulasi.tentang).toLocaleDateString('id-ID', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </div>
                 </div>
 
