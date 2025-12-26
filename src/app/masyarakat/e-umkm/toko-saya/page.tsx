@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
@@ -63,6 +63,9 @@ export default function TokoSayaPage() {
   const [editForm, setEditForm] = useState<Partial<UMKM>>({});
   const [newImages, setNewImages] = useState<File[]>([]);
   const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [tokoToDelete, setTokoToDelete] = useState<UMKM | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -181,6 +184,33 @@ export default function TokoSayaPage() {
       alert('Gagal memperbarui data UMKM');
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (umkm: UMKM) => {
+    setTokoToDelete(umkm);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!tokoToDelete) return;
+
+    try {
+      setDeleteLoading(true);
+
+      // Hapus dari Firestore
+      const umkmRef = doc(db, 'e-umkm', tokoToDelete.id);
+      await deleteDoc(umkmRef);
+
+      alert('Toko berhasil dihapus!');
+      setShowDeleteModal(false);
+      setTokoToDelete(null);
+      fetchMyUMKM(); // Refresh list
+    } catch (error) {
+      console.error('Error deleting UMKM:', error);
+      alert('Gagal menghapus toko. Silakan coba lagi.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -308,6 +338,12 @@ export default function TokoSayaPage() {
                             className="flex-1 min-w-[100px] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all"
                           >
                             Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(umkm)}
+                            className="flex-1 min-w-[100px] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs sm:text-sm font-bold rounded-lg sm:rounded-xl transition-all"
+                          >
+                            Hapus
                           </button>
                           {umkm.status === 'aktif' && (
                             <>
@@ -667,6 +703,90 @@ export default function TokoSayaPage() {
                   className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-xl sm:rounded-2xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                   {editLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && tokoToDelete && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-3xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-full">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Konfirmasi Hapus</h2>
+                    <p className="text-red-100 text-sm mt-0.5">Tindakan ini tidak dapat dibatalkan</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 space-y-4">
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                  <p className="text-gray-800 font-semibold mb-2">
+                    Apakah Anda yakin ingin menghapus toko ini?
+                  </p>
+                  <div className="bg-white rounded-lg p-3 mt-3">
+                    <p className="text-sm text-gray-600">Nama Toko:</p>
+                    <p className="text-base font-bold text-gray-900">{tokoToDelete.namaUsaha}</p>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4">
+                  <div className="flex gap-2">
+                    <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-bold text-yellow-900 mb-1">Peringatan:</p>
+                      <ul className="text-xs text-yellow-800 space-y-1 list-disc list-inside">
+                        <li>Data toko akan dihapus permanen</li>
+                        <li>Semua produk terkait mungkin terpengaruh</li>
+                        <li>Tindakan ini tidak dapat dibatalkan</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 p-6 rounded-b-3xl flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setTokoToDelete(null);
+                  }}
+                  disabled={deleteLoading}
+                  className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={deleteLoading}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {deleteLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Menghapus...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Ya, Hapus</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

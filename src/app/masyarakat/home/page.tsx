@@ -665,14 +665,12 @@ export default function MasyarakatHomePage(): JSX.Element {
                             className="flex h-full transition-transform duration-[1000ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
                             style={{
                               transform: `translateX(-${currentSlideshowIndex * 100}%)`,
-                              width: `${pengaturan.fotoSlideshow.length * 100}%`
                             }}
                           >
                             {pengaturan.fotoSlideshow.map((foto, index) => (
                               <div
                                 key={index}
                                 className="relative w-full h-full flex-shrink-0"
-                                style={{ width: `${100 / pengaturan.fotoSlideshow.length}%` }}
                               >
                                 <img
                                   src={foto}
