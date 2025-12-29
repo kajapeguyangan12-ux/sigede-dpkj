@@ -142,8 +142,20 @@ function DetailTokoContent() {
 
   const handleContactSeller = () => {
     if (umkmData?.noTelepon) {
+      // Format nomor telepon untuk WhatsApp (format internasional)
+      let phoneNumber = umkmData.noTelepon.replace(/\D/g, ''); // Hapus karakter non-digit
+      
+      // Tambahkan kode negara Indonesia jika belum ada
+      if (!phoneNumber.startsWith('62')) {
+        if (phoneNumber.startsWith('0')) {
+          phoneNumber = '62' + phoneNumber.substring(1);
+        } else {
+          phoneNumber = '62' + phoneNumber;
+        }
+      }
+      
       const message = encodeURIComponent(`Halo, saya tertarik dengan produk di toko ${umkmData.namaUsaha}`);
-      window.open(`https://wa.me/${umkmData.noTelepon.replace(/\D/g, '')}?text=${message}`, '_blank');
+      window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
     }
   };
 
@@ -154,8 +166,20 @@ function DetailTokoContent() {
 
   const handleOrderProduct = () => {
     if (selectedProduct && umkmData?.noTelepon) {
+      // Format nomor telepon untuk WhatsApp (format internasional)
+      let phoneNumber = umkmData.noTelepon.replace(/\D/g, ''); // Hapus karakter non-digit
+      
+      // Tambahkan kode negara Indonesia jika belum ada
+      if (!phoneNumber.startsWith('62')) {
+        if (phoneNumber.startsWith('0')) {
+          phoneNumber = '62' + phoneNumber.substring(1);
+        } else {
+          phoneNumber = '62' + phoneNumber;
+        }
+      }
+      
       const message = encodeURIComponent(`Halo, Apakah Produk ${selectedProduct.namaProduk} Tersedia?`);
-      window.open(`https://wa.me/${umkmData.noTelepon.replace(/\D/g, '')}?text=${message}`, '_blank');
+      window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
     }
   };
 
