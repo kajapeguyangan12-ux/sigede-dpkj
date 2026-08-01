@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <!-- Dauh Puri Kaja Emblem (Simplified representation) -->
+  <defs>
+    <style>
+      .blue-bg { fill: #1E5BA8; }
+      .white-border { fill: none; stroke: white; stroke-width: 8; }
+      .gold { fill: #FFD700; }
+      .red { fill: #C41E3A; }
+      .green { fill: #4CAF50; }
+      .yellow-text { fill: #FFD700; font-family: Arial, sans-serif; font-weight: bold; }
+    </style>
+  </defs>
+  
+  <!-- Pentagon background -->
+  <polygon class="blue-bg" points="250,50 450,200 380,450 120,450 50,200"/>
+  <polygon class="white-border" points="250,50 450,200 380,450 120,450 50,200"/>
+  
+  <!-- Star at top -->
+  <polygon class="gold" points="250,80 260,105 287,105 265,120 275,145 250,130 225,145 235,120 213,105 240,105"/>
+  
+  <!-- Center shield (simplified) -->
+  <rect class="red" x="180" y="150" width="140" height="150" rx="10"/>
+  <polygon class="gold" points="220,200 250,180 280,200 280,240 250,220 220,240"/>
+  
+  <!-- Left wheat/rice stalk -->
+  <line stroke="#FFD700" stroke-width="3" x1="100" y1="200" x2="120" y2="150"/>
+  <line stroke="#FFD700" stroke-width="3" x1="110" y1="220" x2="130" y2="170"/>
+  
+  <!-- Right leaf design -->
+  <path class="green" d="M 380 200 Q 390 220 380 240 Q 370 220 380 200"/>
+  <path class="green" d="M 380 250 Q 390 270 380 290 Q 370 270 380 250"/>
+  
+  <!-- Bottom decorative elements -->
+  <ellipse class="green" cx="250" cy="400" rx="120" ry="30"/>
+  
+  <!-- Banner text area -->
+  <rect class="white-border" x="120" y="420" width="260" height="50" rx="5"/>
+  <text class="yellow-text" x="250" y="455" text-anchor="middle" font-size="20">PARA LAWA SUBHIKSA</text>
+</svg>

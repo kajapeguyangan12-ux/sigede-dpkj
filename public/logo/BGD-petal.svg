@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- BGD Logo - Red petal design -->
+  <defs>
+    <style>
+      .petal { fill: #FF3333; }
+    </style>
+  </defs>
+  
+  <!-- Top Left Petal -->
+  <path class="petal" d="M 60 40 Q 40 60 50 90 Q 70 70 80 50 Z"/>
+  
+  <!-- Top Right Petal -->
+  <path class="petal" d="M 140 40 Q 160 60 150 90 Q 130 70 120 50 Z"/>
+  
+  <!-- Middle Left Petal -->
+  <path class="petal" d="M 30 100 Q 20 120 50 130 Q 60 110 55 85 Z"/>
+  
+  <!-- Middle Right Petal -->
+  <path class="petal" d="M 170 100 Q 180 120 150 130 Q 140 110 145 85 Z"/>
+  
+  <!-- Bottom Left Petal -->
+  <path class="petal" d="M 60 160 Q 40 140 50 110 Q 70 130 80 150 Z"/>
+  
+  <!-- Bottom Right Petal -->
+  <path class="petal" d="M 140 160 Q 160 140 150 110 Q 130 130 120 150 Z"/>
+</svg>

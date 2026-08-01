@@ -1,0 +1,422 @@
+"use client";
+
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from 'next/navigation';
+import HeaderCard from "../../components/HeaderCard";
+import BottomNavigation from '../../components/BottomNavigation';
+import { 
+  getUserNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead,
+  UniversalNotification
+} from "../../../lib/notificationService";
+import { useAuth } from "../../../contexts/AuthContext";
+
+const getNotificationIcon = (type: 'pengaduan' | 'layanan_publik' | 'e_umkm_rating', priority: string) => {
+  if (type === 'e_umkm_rating') {
+    return '⭐';
+  } else if (type === 'pengaduan') {
+    switch (priority) {
+      case 'high': return '🚨';
+      case 'medium': return '📝';
+      case 'low': return '📄';
+      default: return '📋';
+    }
+  } else {
+    switch (priority) {
+      case 'high': return '📄';
+      case 'medium': return '📋';
+      case 'low': return '📝';
+      default: return '📊';
+    }
+  }
+};
+
+const getTypeLabel = (type: 'pengaduan' | 'layanan_publik' | 'e_umkm_rating') => {
+  if (type === 'e_umkm_rating') return 'E-UMKM';
+  return type === 'pengaduan' ? 'Pengaduan' : 'Layanan Publik';
+};
+
+const getPriorityColor = (priority: string) => {
+  switch (priority) {
+    case 'high':
+      return 'text-red-600 bg-red-50 border-red-200';
+    case 'medium':
+      return 'text-blue-600 bg-blue-50 border-blue-200';
+    case 'low':
+      return 'text-green-600 bg-green-50 border-green-200';
+    default:
+      return 'text-gray-600 bg-gray-50 border-gray-200';
+  }
+};
+
+export default function NotifikasiPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [notifications, setNotifications] = useState<UniversalNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'pengaduan' | 'layanan_publik' | 'e_umkm_rating'>('all');
+  const [hasAutoMarked, setHasAutoMarked] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  
+  const handleNotificationClick = async (notification: UniversalNotification) => {
+    // Mark as read
+    if (notification.id && notification.status === 'unread') {
+      await handleMarkAsRead(notification.id);
+    }
+    
+    // Navigate based on type
+    if (notification.type === 'e_umkm_rating') {
+      const umkmId = notification.metadata?.umkmId || notification.referenceId;
+      router.push(`/masyarakat/e-umkm/detail?id=${umkmId}`);
+    } else if (notification.type === 'pengaduan') {
+      router.push(`/masyarakat/pengaduan`);
+    } else if (notification.type === 'layanan_publik') {
+      router.push(`/masyarakat/riwayat`);
+    }
+  };
+
+  const fetchNotifications = useCallback(async (userId: string) => {
+    try {
+      setLoading(true);
+      const data = await getUserNotifications(userId);
+      setNotifications(data);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch notifications
+  useEffect(() => {
+    if (user?.uid) {
+      fetchNotifications(user.uid);
+    }
+  }, [user?.uid, fetchNotifications]);
+
+  // Auto-mark notifications as read after page load
+  useEffect(() => {
+    if (user?.uid && !hasAutoMarked && notifications.length > 0) {
+      const hasUnread = notifications.some(n => n.status === 'unread');
+      if (hasUnread) {
+        const timer = setTimeout(() => {
+          markAllNotificationsAsRead(user.uid).then(() => {
+            setHasAutoMarked(true);
+            // Refresh notifications after marking
+            fetchNotifications(user.uid);
+          }).catch(err => 
+            console.error('Failed to auto-mark notifications:', err)
+          );
+        }, 2000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user?.uid, notifications, hasAutoMarked, fetchNotifications]);
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await markNotificationAsRead(notificationId);
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, status: 'read' as const }
+            : notif
+        )
+      );
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      await markAllNotificationsAsRead(user.uid);
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, status: 'read' as const }))
+      );
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
+
+  const filteredNotifications = notifications.filter(notif => {
+    if (filter === 'all') return true;
+    return notif.type === filter;
+  });
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentNotifications = filteredNotifications.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const unreadCount = notifications.filter(n => n.status === 'unread').length;
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
+    return new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pb-safe">
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 pb-56 sm:pb-60 pt-3 sm:pt-4">
+        <HeaderCard 
+          title="Notifikasi" 
+          subtitle={`${unreadCount} belum dibaca`}
+          backUrl="/masyarakat/home"
+          showBackButton={true}
+        />
+
+        {/* Filter Tabs */}
+        <div className="mb-4 sm:mb-6 flex flex-wrap gap-2 sm:gap-3">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-medium transition-all shadow-sm ${
+              filter === 'all'
+                ? 'bg-blue-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Semua
+          </button>
+          <button
+            onClick={() => setFilter('pengaduan')}
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-medium transition-all shadow-sm ${
+              filter === 'pengaduan'
+                ? 'bg-blue-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Pengaduan
+          </button>
+          <button
+            onClick={() => setFilter('layanan_publik')}
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-medium transition-all shadow-sm ${
+              filter === 'layanan_publik'
+                ? 'bg-blue-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Layanan Publik
+          </button>
+        </div>
+
+        {/* Mark All Read Button */}
+        {unreadCount > 0 && (
+          <div className="mb-4 sm:mb-6">
+            <button
+              onClick={handleMarkAllAsRead}
+              className="w-full py-2.5 sm:py-3 px-4 sm:px-6 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors text-sm sm:text-base font-medium shadow-md hover:shadow-lg"
+            >
+              Tandai Semua Sudah Dibaca ({unreadCount})
+            </button>
+          </div>
+        )}
+
+        {/* Notifications List */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          {loading ? (
+            <div className="lg:col-span-2 text-center py-12 sm:py-16">
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-600 mt-3 sm:mt-4 text-sm sm:text-base">Memuat notifikasi...</p>
+            </div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="lg:col-span-2 text-center py-12 sm:py-16 lg:py-20">
+              <div className="text-5xl sm:text-6xl lg:text-7xl mb-4 sm:mb-6">📭</div>
+              <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-2">
+                Tidak Ada Notifikasi
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600 px-4">
+                {filter === 'all' 
+                  ? 'Belum ada notifikasi untuk ditampilkan'
+                  : `Tidak ada notifikasi ${getTypeLabel(filter)}`
+                }
+              </p>
+            </div>
+          ) : (
+            currentNotifications.map((notification) => (
+              <div
+                key={notification.id}
+                onClick={() => handleNotificationClick(notification)}
+                className={`border rounded-2xl p-4 sm:p-5 transition-all hover:shadow-xl hover:scale-[1.01] cursor-pointer ${
+                  notification.status === 'unread'
+                    ? 'bg-blue-50 border-blue-200 shadow-md'
+                    : 'bg-white border-gray-200'
+                }`}
+              >
+                <div className="flex items-start gap-3 sm:gap-4">
+                  {/* Icon */}
+                  <div className="text-2xl sm:text-3xl flex-shrink-0 mt-1">
+                    {getNotificationIcon(notification.type, notification.priority)}
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className={`text-xs sm:text-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full font-medium border ${getPriorityColor(notification.priority)}`}>
+                        {getTypeLabel(notification.type)}
+                      </span>
+                      {notification.status === 'unread' && (
+                        <span className="text-xs sm:text-sm bg-red-500 text-white px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full font-medium">
+                          Baru
+                        </span>
+                      )}
+                      {notification.actionRequired && (
+                        <span className="text-xs sm:text-sm bg-orange-500 text-white px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full font-medium">
+                          Perlu Tindakan
+                        </span>
+                      )}
+                    </div>
+                    
+                    <h3 className={`font-semibold text-sm sm:text-base mb-2 ${
+                      notification.status === 'unread' ? 'text-blue-900' : 'text-gray-900'
+                    }`}>
+                      {notification.title}
+                    </h3>
+                    
+                    <p className="text-gray-700 text-sm sm:text-base mb-3 leading-relaxed">
+                      {notification.message}
+                    </p>
+
+                    {/* Metadata */}
+                    {notification.metadata && (
+                      <div className="text-xs sm:text-sm text-gray-500 space-y-1.5 sm:space-y-2">
+                        {notification.metadata.jenisLayanan && (
+                          <div>Jenis: {notification.metadata.jenisLayanan}</div>
+                        )}
+                        {notification.metadata.kategoriPengaduan && (
+                          <div>Kategori: {notification.metadata.kategoriPengaduan}</div>
+                        )}
+                        {notification.metadata.tanggapan && (
+                          <div className="bg-blue-50 border-l-4 border-blue-500 px-3 py-2 rounded-r-lg mt-3">
+                            <p className="font-semibold text-blue-900 flex items-center gap-1.5 mb-1">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                              </svg>
+                              Tanggapan Admin:
+                            </p>
+                            <p className="text-blue-800 text-sm font-medium leading-relaxed">{notification.metadata.tanggapan}</p>
+                          </div>
+                        )}
+                        {notification.metadata.buktiApproval && (
+                          <div className="font-mono bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg">
+                            Bukti: {notification.metadata.buktiApproval}
+                          </div>
+                        )}
+                        {notification.metadata.estimasiSelesai && (
+                          <div>Estimasi Selesai: {notification.metadata.estimasiSelesai}</div>
+                        )}
+                        {notification.metadata.alasanTolak && (
+                          <div className="bg-red-50 border-l-4 border-red-500 px-3 py-2 rounded-r-lg mt-3">
+                            <p className="font-semibold text-red-900 flex items-center gap-1.5 mb-1">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              Alasan Penolakan:
+                            </p>
+                            <p className="text-red-800 text-sm font-medium leading-relaxed">{notification.metadata.alasanTolak}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-3 sm:mt-4">
+                      <span className="text-xs sm:text-sm text-gray-500">
+                        {formatDate(notification.createdAt)}
+                      </span>
+                      {notification.status === 'unread' && (
+                        <button
+                          onClick={() => handleMarkAsRead(notification.id!)}
+                          className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                        >
+                          Tandai Dibaca
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Pagination */}
+        {!loading && filteredNotifications.length > itemsPerPage && (
+          <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 sm:mt-8 mb-8 sm:mb-10">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg disabled:shadow-none text-sm sm:text-base font-semibold"
+            >
+              ‹
+            </button>
+            
+            {/* Selalu tampilkan halaman 1-5 */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => goToPage(page)}
+                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all text-sm sm:text-base font-semibold shadow-md hover:shadow-lg ${
+                  currentPage === page
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white scale-110 shadow-lg'
+                    : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:scale-105'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            {/* Ellipsis dan halaman terakhir jika totalPages > 5 */}
+            {totalPages > 5 && (
+              <>
+                <span className="px-2 text-gray-400 font-bold">···</span>
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all text-sm sm:text-base font-semibold shadow-md hover:shadow-lg ${
+                    currentPage === totalPages
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white scale-110 shadow-lg'
+                      : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:scale-105'
+                  }`}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg disabled:shadow-none text-sm sm:text-base font-semibold"
+            >
+              ›
+            </button>
+          </div>
+        )}
+      </div>
+
+      <BottomNavigation />
+    </div>
+  );
+}

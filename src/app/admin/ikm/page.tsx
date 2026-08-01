@@ -1,0 +1,1141 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../../contexts/AuthContext";
+import { handleAdminLogout } from '../../../lib/logoutHelper';
+import AdminLayout from "../components/AdminLayout";
+import AdminHeaderCard, {
+  AdminHeaderSearchBar,
+  AdminHeaderAccount,
+} from "../../components/AdminHeaderCard";
+import { collection, getDocs, deleteDoc, doc, query, orderBy, Timestamp, updateDoc, where } from "firebase/firestore";
+import { db as firestore } from "../../../lib/firebase";
+import * as XLSX from 'xlsx';
+
+// Interface untuk data IKM
+interface IKMData {
+  id: string;
+  namaPengisi: string;
+  nik: string;
+  pekerjaan: string;
+  jenisKelamin: string;
+  jenisLayanan: string;
+  tanggalPengisian: Date;
+  rating: number;
+  komentar?: string;
+  pertanyaan: {
+    [key: string]: number; // key: pertanyaan, value: rating 1-5
+  };
+}
+
+export default function IKMPage() {
+  const router = useRouter();
+  const { logout } = useAuth();
+  
+  const [ikmData, setIkmData] = useState<IKMData[]>([]);
+  const [loading, setLoading] = useState(false); // Only for data operations
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedIKM, setSelectedIKM] = useState<IKMData | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingIKM, setEditingIKM] = useState<IKMData | null>(null);
+  const [editForm, setEditForm] = useState<{
+    pertanyaan: { [key: string]: number };
+    komentar: string;
+  }>({
+    pertanyaan: {},
+    komentar: ''
+  });
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    loadIKMData();
+  }, []);
+
+  const loadIKMData = async () => {
+    try {
+      setLoading(true);
+      const ikmCollection = collection(firestore, "ikm-survey");
+      const q = query(ikmCollection, orderBy("tanggalPengisian", "desc"));
+      const snapshot = await getDocs(q);
+      
+      const surveyData = snapshot.docs.map((doc) => {
+        const docData = doc.data();
+        return {
+          id: doc.id,
+          namaPengisi: docData.namaPengisi || "-",
+          nik: String(docData.nik || "-").trim(),
+          pekerjaan: "-",
+          jenisKelamin: "-",
+          jenisLayanan: docData.jenisLayanan || "-",
+          tanggalPengisian: docData.tanggalPengisian?.toDate() || new Date(),
+          rating: docData.rating || 0,
+          komentar: docData.komentar || "",
+          pertanyaan: docData.pertanyaan || {},
+        } as IKMData;
+      });
+
+      const nikList = Array.from(
+        new Set(
+          surveyData
+            .map((item) => item.nik)
+            .filter((nik) => nik && nik !== "-")
+        )
+      );
+      const dataPendudukByNik = new Map<
+        string,
+        { pekerjaan: string; jenisKelamin: string }
+      >();
+
+      try {
+        // Firestore membatasi operator "in", jadi NIK dicari per kelompok.
+        const nikChunks: string[][] = [];
+        for (let index = 0; index < nikList.length; index += 30) {
+          nikChunks.push(nikList.slice(index, index + 30));
+        }
+
+        const demographicQueries = nikChunks.flatMap((nikChunk) => [
+          {
+            source: "masyarakat",
+            nikField: "idNumber",
+            promise: getDocs(
+              query(
+                collection(firestore, "masyarakat"),
+                where("idNumber", "in", nikChunk)
+              )
+            ),
+          },
+          {
+            source: "data-desa",
+            nikField: "nik",
+            promise: getDocs(
+              query(
+                collection(firestore, "data-desa"),
+                where("nik", "in", nikChunk)
+              )
+            ),
+          },
+        ]);
+
+        // Data akun menjadi fallback, lalu data-desa (sumber utama) menimpanya
+        // bila tersedia. Kegagalan satu kelompok tidak mengosongkan kelompok lain.
+        const demographicResults = await Promise.allSettled(
+          demographicQueries.map((item) => item.promise)
+        );
+
+        demographicResults.forEach((result, index) => {
+          const queryInfo = demographicQueries[index];
+
+          if (result.status === "rejected") {
+            console.error(
+              `Error loading data pengisi IKM dari ${queryInfo.source}:`,
+              result.reason
+            );
+            return;
+          }
+
+          result.value.docs.forEach((dataPendudukDoc) => {
+            const dataPenduduk = dataPendudukDoc.data();
+            const nik = String(dataPenduduk[queryInfo.nikField] || "").trim();
+            const existingData = dataPendudukByNik.get(nik);
+
+            if (nik) {
+              dataPendudukByNik.set(nik, {
+                pekerjaan:
+                  dataPenduduk.pekerjaan || existingData?.pekerjaan || "-",
+                jenisKelamin:
+                  dataPenduduk.jenisKelamin ||
+                  existingData?.jenisKelamin ||
+                  "-",
+              });
+            }
+          });
+        });
+      } catch (demographicError) {
+        console.error(
+          "Error loading pekerjaan dan jenis kelamin pengisi IKM:",
+          demographicError
+        );
+      }
+
+      const data = surveyData.map((item) => {
+        const dataPenduduk = dataPendudukByNik.get(item.nik);
+        return {
+          ...item,
+          pekerjaan: dataPenduduk?.pekerjaan || "-",
+          jenisKelamin: dataPenduduk?.jenisKelamin || "-",
+        };
+      });
+      
+      setIkmData(data);
+    } catch (error) {
+      console.error("Error loading IKM data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+
+    try {
+      setDeleting(true);
+      await deleteDoc(doc(firestore, "ikm-survey", deletingId));
+      await loadIKMData();
+      setShowDeleteConfirm(false);
+      setDeletingId(null);
+    } catch (error) {
+      console.error("Error deleting IKM:", error);
+      alert("Gagal menghapus data IKM");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleView = (ikm: IKMData) => {
+    setSelectedIKM(ikm);
+    setShowDetailModal(true);
+  };
+
+  const handleEdit = (ikm: IKMData) => {
+    setEditingIKM(ikm);
+    setEditForm({
+      pertanyaan: { ...ikm.pertanyaan },
+      komentar: ikm.komentar || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateRating = (pertanyaan: string, nilai: number) => {
+    setEditForm(prev => ({
+      ...prev,
+      pertanyaan: {
+        ...prev.pertanyaan,
+        [pertanyaan]: nilai
+      }
+    }));
+  };
+
+  const calculateAverageRating = (pertanyaan: { [key: string]: number }): number => {
+    const values = Object.values(pertanyaan);
+    if (values.length === 0) return 0;
+    const sum = values.reduce((acc, val) => acc + val, 0);
+    return Math.round(sum / values.length);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingIKM) return;
+
+    try {
+      setUpdating(true);
+      const newAverageRating = calculateAverageRating(editForm.pertanyaan);
+      
+      await updateDoc(doc(firestore, "ikm-survey", editingIKM.id), {
+        pertanyaan: editForm.pertanyaan,
+        komentar: editForm.komentar,
+        rating: newAverageRating,
+        updatedAt: Timestamp.now()
+      });
+
+      await loadIKMData();
+      setShowEditModal(false);
+      setEditingIKM(null);
+      alert('Data IKM berhasil diupdate!');
+    } catch (error) {
+      console.error("Error updating IKM:", error);
+      alert("Gagal mengupdate data IKM");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Fungsi untuk konversi rating ke deskripsi
+  const getRatingDescription = (rating: number): string => {
+    if (rating === 5) return "Sangat Baik";
+    if (rating === 4) return "Baik";
+    if (rating === 3) return "Cukup";
+    if (rating === 2) return "Kurang";
+    if (rating === 1) return "Sangat Kurang";
+    return "-";
+  };
+
+  const handleExport = () => {
+    // Pertanyaan IKM lengkap untuk header dan mapping
+    const pertanyaanLengkap = [
+      "BAGAIMANA PENDAPAT SAUDARA TENTANG KESESUAIAN PERSYARATAN PELAYANAN DENGAN JENIS PELAYANANNYA",
+      "BAGAIMANA PEMAHAMAN SAUDARA TENTANG KEMUDAHAN PROSEDUR PELAYANAN DI UNIT INI",
+      "BAGAIMANA PENDAPAT SAUDARA TENTANG KECEPATAN WAKTU DALAM MEMBERIKAN PELAYANAN",
+      "BAGAIMANA PENDAPAT SAUDARA TENTANG KEWAJARAN BIAYA / TARIF DALAM PELAYANAN",
+      "BAGAIMANA PENDAPAT SAUDARA TENTANG KESESUAIAN PRODUK PELAYANAN ANTARA YANG TERCANTUM DALAM STANDAR PELAYANAN DENGAN HASIL YANG DIBERIKAN",
+      "BAGAIMANA PENDAPAT SAUDARA TENTANG KOMPETENSI / KEMAMPUAN PETUGAS DALAM PELAYANAN",
+      "BAGAIMANA PENDAPAT SAUDARA PETUGAS DALAM PELAYANAN TERKAIT KESOPANAN DAN KERAMAHAN",
+      "BAGAIMANA PENDAPAT SAUDARA TENTANG KUALITAS SARANA DAN PRASARANA",
+      "BAGAIMANA PENDAPAT SAUDARA TENTANG PENANGANAN PENGADUAN PENGGUNA LAYANAN"
+    ];
+
+    // Create Excel headers
+    const headers = [
+      "No",
+      "Nama Pengisi",
+      "NIK",
+      "Pekerjaan",
+      "Jenis Kelamin",
+      "Jenis Layanan",
+      "Tanggal",
+      "Rating Rata-rata",
+      ...pertanyaanLengkap,
+      "Komentar Saran"
+    ];
+
+    // Create Excel data with all question ratings in correct order
+    const excelData = ikmData.map((item, index) => {
+      const row: any = {
+        "No": index + 1,
+        "Nama Pengisi": item.namaPengisi || "-",
+        "NIK": item.nik || "-",
+        "Pekerjaan": item.pekerjaan || "-",
+        "Jenis Kelamin": item.jenisKelamin || "-",
+        "Jenis Layanan": item.jenisLayanan || "-",
+        "Tanggal": item.tanggalPengisian.toLocaleDateString('id-ID', { 
+          day: '2-digit', 
+          month: 'long', 
+          year: 'numeric' 
+        }),
+        "Rating Rata-rata": `${item.rating} (${getRatingDescription(item.rating)})`
+      };
+
+      // Add ratings for each question in the correct order
+      pertanyaanLengkap.forEach((pertanyaan) => {
+        const rating = item.pertanyaan[pertanyaan];
+        if (rating !== undefined) {
+          row[pertanyaan] = `${rating} (${getRatingDescription(rating)})`;
+        } else {
+          row[pertanyaan] = "-";
+        }
+      });
+
+      // Add comment
+      row["Komentar Saran"] = item.komentar ? item.komentar.trim() : "-";
+
+      return row;
+    });
+
+    // Create worksheet from data
+    const worksheet = XLSX.utils.json_to_sheet(excelData, { header: headers });
+
+    // Set column widths for better readability
+    const columnWidths = [
+      { wch: 5 },   // No
+      { wch: 25 },  // Nama Pengisi
+      { wch: 20 },  // NIK
+      { wch: 25 },  // Pekerjaan
+      { wch: 18 },  // Jenis Kelamin
+      { wch: 35 },  // Jenis Layanan
+      { wch: 20 },  // Tanggal
+      { wch: 20 },  // Rating Rata-rata
+      { wch: 80 },  // Pertanyaan 1
+      { wch: 80 },  // Pertanyaan 2
+      { wch: 80 },  // Pertanyaan 3
+      { wch: 80 },  // Pertanyaan 4
+      { wch: 80 },  // Pertanyaan 5
+      { wch: 80 },  // Pertanyaan 6
+      { wch: 80 },  // Pertanyaan 7
+      { wch: 80 },  // Pertanyaan 8
+      { wch: 80 },  // Pertanyaan 9
+      { wch: 50 },  // Komentar Saran
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    // Create workbook and add worksheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data IKM");
+
+    // Generate filename
+    const timestamp = new Date();
+    const dateStr = timestamp.toLocaleDateString('id-ID', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    }).replace(/\//g, '-');
+    const timeStr = timestamp.toLocaleTimeString('id-ID', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }).replace(/:/g, '');
+    const fileName = `Data_IKM_${dateStr}_${timeStr}.xlsx`;
+
+    // Write and download file
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout("admin");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  // Filter data berdasarkan search
+  const filteredData = ikmData.filter(
+    (item) =>
+      item.namaPengisi.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.nik.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.jenisLayanan.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate average rating
+  const averageRating = ikmData.length > 0
+    ? (ikmData.reduce((sum, item) => sum + item.rating, 0) / ikmData.length).toFixed(1)
+    : "0.0";
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Memuat data IKM...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        {/* Enhanced Header */}
+        <div className="glass-effect rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 mb-8 sm:mb-10 relative z-40 overflow-hidden max-w-7xl mx-auto mt-6">
+          {/* Floating Background Elements */}
+          <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-amber-400/10 to-orange-400/10 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-orange-400/10 to-red-400/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-gradient-to-br from-red-400/5 to-amber-400/5 rounded-full blur-lg animate-pulse delay-500"></div>
+
+          {/* Enhanced AdminHeaderCard with better styling */}
+          <div className="w-full bg-gradient-to-r from-white via-amber-50/30 to-orange-50/40 rounded-2xl shadow-lg border border-gray-200/60 px-8 py-8 flex items-center justify-between mb-6 relative backdrop-blur-sm">
+            {/* Enhanced Title Section */}
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-xl shadow-amber-500/25 transform hover:scale-105 transition-all duration-300">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="font-bold text-4xl bg-gradient-to-r from-slate-800 via-amber-800 to-orange-800 bg-clip-text text-transparent mb-2">
+                  Data IKM
+                </h1>
+                <p className="text-slate-600 font-medium text-lg">
+                  Indeks Kepuasan Masyarakat terhadap pelayanan desa
+                </p>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-2 text-sm text-amber-600 font-semibold">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                    Survey Aktif
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-orange-600 font-semibold">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                    {ikmData.length} Responden
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Enhanced Controls Section */}
+            <div className="flex items-center gap-6 relative z-10">
+              {/* Enhanced Search Bar */}
+              <div className="flex items-center w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-300/50 px-5 py-4 hover:border-amber-400 hover:shadow-lg transition-all duration-300 group">
+                <input
+                  type="text"
+                  placeholder="Cari data IKM..."
+                  className="flex-1 bg-transparent text-gray-700 text-base font-medium focus:outline-none placeholder-gray-500"
+                />
+                <svg
+                  className="ml-3 text-gray-400 group-hover:text-amber-500 transition-colors duration-300"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              
+              {/* Enhanced Account Section */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-amber-50 hover:to-amber-100 transition-all duration-300 cursor-pointer shadow-md">
+                  <svg
+                    width="24"
+                    height="24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    className="text-gray-600"
+                  >
+                    <path d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 01-7.5-7.5h2A5.5 5.5 0 0110 10z"/>
+                  </svg>
+                </div>
+                
+                <button
+                  onClick={handleLogout}
+                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-lg group"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    className="text-red-600 group-hover:text-red-700"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto p-6">
+
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm font-medium">Total Kuesioner</p>
+                  <h3 className="text-3xl font-bold text-gray-900">{ikmData.length}</h3>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm font-medium">Rating Rata-rata</p>
+                  <h3 className="text-3xl font-bold text-gray-900">{averageRating}</h3>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm font-medium">Kepuasan</p>
+                  <h3 className="text-3xl font-bold text-gray-900">
+                    {averageRating >= "4.0" ? "Baik" : averageRating >= "3.0" ? "Cukup" : "Perlu Perbaikan"}
+                  </h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Export */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="flex-1 w-full">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-3 pl-12 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                  <svg
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+              <button
+                onClick={handleExport}
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export IKM
+              </button>
+            </div>
+          </div>
+
+          {/* List Hasil Kuesioner */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800">List Hasil Kuesioner</h2>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Nama Pengisi</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">NIK</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Jenis Layanan</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Rating</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredData.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        <div className="flex flex-col items-center gap-3">
+                          <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <p className="text-lg font-medium">Belum ada data IKM</p>
+                          <p className="text-sm">Data kuesioner kepuasan masyarakat akan muncul di sini</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredData.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-medium text-gray-900">{item.namaPengisi}</p>
+                            <p className="text-sm text-gray-500">{item.tanggalPengisian.toLocaleDateString('id-ID')}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">{item.nik}</td>
+                        <td className="px-6 py-4">
+                          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                            {item.jenisLayanan}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <svg
+                                key={i}
+                                className={`w-5 h-5 ${i < item.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            ))}
+                            <span className="ml-2 text-sm font-medium text-gray-700">({item.rating})</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg font-medium transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors"
+                            >
+                              Hapus
+                            </button>
+                            <button
+                              onClick={() => handleView(item)}
+                              className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
+                            >
+                              View
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal - Modern & Elegant */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-slideUp">
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-full flex items-center justify-center animate-pulse">
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-center">Konfirmasi Hapus</h3>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6">
+              <p className="text-center text-gray-600 mb-2">Apakah Anda yakin ingin menghapus data IKM ini?</p>
+              <p className="text-center text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan</p>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeletingId(null);
+                }}
+                disabled={deleting}
+                className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-semibold transition-all transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 shadow-lg"
+              >
+                {deleting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Menghapus...
+                  </span>
+                ) : "Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal - Modern & Elegant */}
+      {showDetailModal && selectedIKM && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full my-8 max-h-[90vh] overflow-hidden animate-slideUp flex flex-col">
+            {/* Header with gradient and pattern */}
+            <div className="relative bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 p-6 text-white overflow-hidden flex-shrink-0">
+              {/* Decorative circles */}
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
+              
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold">Detail IKM</h3>
+                    <p className="text-blue-100 text-sm mt-1">Hasil Survei Kepuasan Masyarakat</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedIKM(null);
+                  }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/20 transition-all backdrop-blur-sm flex-shrink-0"
+                >
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content with modern cards - SCROLLABLE */}
+            <div className="p-6 space-y-6 bg-gradient-to-b from-gray-50 to-white overflow-y-auto flex-1">
+              {/* Info Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-2xl p-5 border border-gray-200 hover:border-blue-300 transition-all hover:shadow-lg group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Nama Pengisi</p>
+                  </div>
+                  <p className="font-bold text-gray-900 text-base ml-13 truncate">{selectedIKM.namaPengisi}</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-gray-200 hover:border-purple-300 transition-all hover:shadow-lg group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">NIK</p>
+                  </div>
+                  <p className="font-bold text-gray-900 text-base ml-13">{selectedIKM.nik}</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-gray-200 hover:border-cyan-300 transition-all hover:shadow-lg group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 6h6m-7 4h8m-9 10h10a2 2 0 002-2V6a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-.414-.414A1 1 0 0013.586 3h-3.172a1 1 0 00-.707.293l-.414.414A1 1 0 018.586 4H7a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Pekerjaan</p>
+                  </div>
+                  <p className="font-bold text-gray-900 text-base ml-13">{selectedIKM.pekerjaan || "-"}</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-gray-200 hover:border-pink-300 transition-all hover:shadow-lg group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14a5 5 0 100-10 5 5 0 000 10zm0 0v7m-3-3h6" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Jenis Kelamin</p>
+                  </div>
+                  <p className="font-bold text-gray-900 text-base ml-13">{selectedIKM.jenisKelamin || "-"}</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-gray-200 hover:border-green-300 transition-all hover:shadow-lg group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Jenis Layanan</p>
+                  </div>
+                  <p className="font-bold text-gray-900 text-base ml-13">{selectedIKM.jenisLayanan}</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-gray-200 hover:border-orange-300 transition-all hover:shadow-lg group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-500 font-medium">Tanggal</p>
+                  </div>
+                  <p className="font-bold text-gray-900 text-sm ml-13">{selectedIKM.tanggalPengisian.toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                </div>
+              </div>
+
+              {/* Rating Section with animation */}
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-5 border-2 border-yellow-200">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Rating Keseluruhan</p>
+                    <p className="text-xs text-gray-500">Kepuasan terhadap pelayanan</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-4">
+                  <div className="flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <svg
+                        key={i}
+                        className={`w-8 h-8 transition-all duration-300 ${i < selectedIKM.rating ? 'text-yellow-400 scale-110' : 'text-gray-300'}`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <div className="text-center">
+                    <span className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">{selectedIKM.rating}</span>
+                    <span className="text-xl font-semibold text-gray-600">/5</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comment Section */}
+              {selectedIKM.komentar && (
+                <div className="bg-white rounded-2xl p-5 border border-gray-200">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-700">Komentar & Saran</p>
+                  </div>
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border-l-4 border-indigo-500">
+                    <p className="text-gray-700 italic leading-relaxed text-sm">&ldquo;{selectedIKM.komentar}&rdquo;</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Ratings */}
+              {Object.keys(selectedIKM.pertanyaan).length > 0 && (
+                <div className="bg-white rounded-2xl p-5 border border-gray-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">Detail Penilaian Per Aspek</p>
+                      <p className="text-xs text-gray-500">Breakdown rating untuk setiap pertanyaan</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {Object.entries(selectedIKM.pertanyaan).map(([pertanyaan, nilai], index) => (
+                      <div key={pertanyaan} className="group hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 rounded-xl p-3 transition-all border border-transparent hover:border-blue-200">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex gap-2 flex-1 min-w-0">
+                            <span className="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-lg flex items-center justify-center text-xs font-bold group-hover:scale-110 transition-transform">
+                              {index + 1}
+                            </span>
+                            <span className="text-xs text-gray-700 font-medium leading-relaxed line-clamp-2">{pertanyaan}</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="flex gap-0.5">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`w-4 h-4 transition-all ${i < nilai ? 'text-yellow-400' : 'text-gray-300'}`}
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                            </div>
+                            <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-lg">
+                              {nilai}/5
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer with action button */}
+            <div className="p-5 bg-gray-50 border-t border-gray-200 flex-shrink-0">
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedIKM(null);
+                }}
+                className="w-full px-6 py-3 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-900 hover:to-black text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg text-sm"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Tutup
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingIKM && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full my-8 max-h-[90vh] overflow-hidden animate-slideUp flex flex-col">
+            {/* Header with gradient */}
+            <div className="relative bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 p-6 text-white overflow-hidden flex-shrink-0">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-16 -mb-16"></div>
+              
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold">Edit Penilaian IKM</h3>
+                    <p className="text-amber-100 text-sm mt-1">Ubah rating dan komentar survei</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingIKM(null);
+                  }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/20 transition-all backdrop-blur-sm flex-shrink-0"
+                >
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content - SCROLLABLE */}
+            <div className="p-6 space-y-6 bg-gradient-to-b from-gray-50 to-white overflow-y-auto flex-1">
+              {/* Info Summary */}
+              <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Nama:</span>
+                    <span className="ml-2 font-semibold text-gray-900">{editingIKM.namaPengisi}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Layanan:</span>
+                    <span className="ml-2 font-semibold text-gray-900">{editingIKM.jenisLayanan}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Average Rating Display */}
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-5 border-2 border-yellow-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Rating Rata-rata</p>
+                    <p className="text-2xl font-bold text-gray-900">{calculateAverageRating(editForm.pertanyaan).toFixed(1)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Questions with Star Rating */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-bold text-gray-800 mb-4">Penilaian Per Pertanyaan</h4>
+                
+                {[
+                  "BAGAIMANA PENDAPAT SAUDARA TENTANG KESESUAIAN PERSYARATAN PELAYANAN DENGAN JENIS PELAYANANNYA",
+                  "BAGAIMANA PEMAHAMAN SAUDARA TENTANG KEMUDAHAN PROSEDUR PELAYANAN DI UNIT INI",
+                  "BAGAIMANA PENDAPAT SAUDARA TENTANG KECEPATAN WAKTU DALAM MEMBERIKAN PELAYANAN",
+                  "BAGAIMANA PENDAPAT SAUDARA TENTANG KEWAJARAN BIAYA / TARIF DALAM PELAYANAN",
+                  "BAGAIMANA PENDAPAT SAUDARA TENTANG KESESUAIAN PRODUK PELAYANAN ANTARA YANG TERCANTUM DALAM STANDAR PELAYANAN DENGAN HASIL YANG DIBERIKAN",
+                  "BAGAIMANA PENDAPAT SAUDARA TENTANG KOMPETENSI / KEMAMPUAN PETUGAS DALAM PELAYANAN",
+                  "BAGAIMANA PENDAPAT SAUDARA PETUGAS DALAM PELAYANAN TERKAIT KESOPANAN DAN KERAMAHAN",
+                  "BAGAIMANA PENDAPAT SAUDARA TENTANG KUALITAS SARANA DAN PRASARANA",
+                  "BAGAIMANA PENDAPAT SAUDARA TENTANG PENANGANAN PENGADUAN PENGGUNA LAYANAN"
+                ].map((pertanyaan, index) => (
+                  <div key={index} className="bg-white rounded-xl p-5 border border-gray-200 hover:border-amber-300 transition-all hover:shadow-md">
+                    <p className="text-sm font-medium text-gray-700 mb-3">
+                      {index + 1}. {pertanyaan}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => handleUpdateRating(pertanyaan, star)}
+                          className="group transition-transform hover:scale-110"
+                        >
+                          <svg
+                            className={`w-8 h-8 transition-colors ${
+                              star <= (editForm.pertanyaan[pertanyaan] || 0)
+                                ? 'text-yellow-400'
+                                : 'text-gray-300 group-hover:text-yellow-200'
+                            }`}
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        </button>
+                      ))}
+                      <span className="ml-2 text-sm font-semibold text-gray-700">
+                        ({editForm.pertanyaan[pertanyaan] || 0})
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Komentar Section */}
+              <div className="bg-white rounded-xl p-5 border border-gray-200">
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Komentar Tambahan
+                </label>
+                <textarea
+                  value={editForm.komentar}
+                  onChange={(e) => setEditForm({ ...editForm, komentar: e.target.value })}
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all text-gray-900"
+                  placeholder="Masukkan komentar atau saran..."
+                />
+              </div>
+            </div>
+
+            {/* Footer with action buttons */}
+            <div className="p-5 bg-gray-50 border-t border-gray-200 flex gap-3 flex-shrink-0">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingIKM(null);
+                }}
+                disabled={updating}
+                className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={updating}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-semibold transition-all transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 shadow-lg"
+              >
+                {updating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Menyimpan...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Simpan Perubahan
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AdminLayout>
+  );
+}

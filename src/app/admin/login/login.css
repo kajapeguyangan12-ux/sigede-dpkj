@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for admin login page */
+.admin-login-bg {
+  background: linear-gradient(90deg, #fde4e4 0%, #fff 100%);
+}
