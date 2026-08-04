@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createLaporan } from '@/lib/laporanPengaduanService';
-import { getDataDesa } from '@/lib/dataDesaService';
+import { findDataDesaByNIK } from '@/lib/dataDesaService';
 import { useAuth } from '@/contexts/AuthContext';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -67,8 +67,7 @@ export default function BuatLaporanPage() {
         // Fetch daerah dari data-desa jika ada NIK
         if (userNik) {
           try {
-            const allData = await getDataDesa();
-            const userData = allData.find(d => d.nik === userNik);
+            const userData = await findDataDesaByNIK(userNik);
             if (userData?.daerah) {
               userDaerah = userData.daerah;
             }

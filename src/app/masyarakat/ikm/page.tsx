@@ -5,7 +5,14 @@ import { useRouter } from 'next/navigation';
 import BottomNavigation from '../../components/BottomNavigation';
 import HeaderCard from '../../components/HeaderCard';
 import { useAuth } from '../../../contexts/AuthContext';
-import { collection, addDoc, getDocs, Timestamp } from 'firebase/firestore';
+import {
+  addDoc,
+  average,
+  collection,
+  count,
+  getAggregateFromServer,
+  Timestamp,
+} from 'firebase/firestore';
 import { db as firestore } from '../../../lib/firebase';
 
 const JENIS_LAYANAN = [
@@ -67,15 +74,18 @@ export default function IKMPage() {
   useEffect(() => {
     const loadIKMSummary = async () => {
       try {
-        const snapshot = await getDocs(collection(firestore, 'ikm-survey'));
-        const totalRating = snapshot.docs.reduce((sum, surveyDoc) => {
-          const rating = Number(surveyDoc.data().rating);
-          return sum + (Number.isFinite(rating) ? rating : 0);
-        }, 0);
+        const snapshot = await getAggregateFromServer(
+          collection(firestore, 'ikm-survey'),
+          {
+            total: count(),
+            average: average('rating'),
+          }
+        );
+        const aggregate = snapshot.data();
 
         setIkmSummary({
-          total: snapshot.size,
-          average: snapshot.size > 0 ? totalRating / snapshot.size : 0,
+          total: aggregate.total,
+          average: aggregate.average ?? 0,
           loading: false,
         });
       } catch (error) {

@@ -47,10 +47,11 @@ const StatCard: React.FC<StatCardProps> = ({
 
 interface PopulationStatsProps {
   data: any[];
+  total?: number;
 }
 
-const PopulationStats: React.FC<PopulationStatsProps> = ({ data }) => {
-  const totalPenduduk = data.length;
+const PopulationStats: React.FC<PopulationStatsProps> = ({ data, total }) => {
+  const totalPenduduk = total ?? data.length;
 
   const stats = [
     {

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from "../../components/BottomNavigation";
-import { getDataDesa, DataDesaItem } from "../../../lib/dataDesaService";
+import { getDataDesa, getDataDesaPublicSummary, DataDesaItem, DataDesaPublicSummary } from "../../../lib/dataDesaService";
 import { canAccessDataDesaAnalisis } from "../../../lib/rolePermissions";
 import { UserRole } from "../lib/useCurrentUser";
 import PopulationStats from "./components/PopulationStats";
@@ -24,6 +24,7 @@ interface KategoriOption {
 
 export default function DataDesaPage() {
   const [dataWarga, setDataWarga] = useState<DataDesaItem[]>([]);
+  const [publicSummary, setPublicSummary] = useState<DataDesaPublicSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedVillage, setSelectedVillage] = useState<string>("dauh-puri-kaja");
   const [selectedDesa, setSelectedDesa] = useState<string>("all");
@@ -151,20 +152,24 @@ export default function DataDesaPage() {
   ];
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSummary = async () => {
       try {
-        const data = await getDataDesa();
-        setDataWarga(data);
+        const summary = await getDataDesaPublicSummary();
+        setPublicSummary(summary);
+        setDaerahOptions([
+          { id: 'all', name: 'Semua Daerah' },
+          ...Object.values(summary.areas)
+            .sort((a, b) => a.name.localeCompare(b.name, 'id'))
+            .map((area) => ({ id: area.code, name: area.name })),
+        ]);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching data desa summary:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    // Fetch daerah data from database
-    fetchDaerahData();
-    fetchData();
+    fetchSummary();
   }, []);
   
   // Check access to analisis data
@@ -212,7 +217,7 @@ export default function DataDesaPage() {
   }, [showVillageDropdown, showDesaDropdown, showKategoriDropdown]);
 
   // Calculate basic statistics and chart data
-  const totalPenduduk = dataWarga.length;
+  const totalPenduduk = publicSummary?.total ?? dataWarga.length;
 
   // Filter data based on selected desa and kategori
   const filteredData = dataWarga.filter(item => {
@@ -231,10 +236,16 @@ export default function DataDesaPage() {
     const matchesDesa = itemDaerahCode === selectedDesa;
     return matchesDesa;
   });
+  const selectedAreaSummary = selectedDesa === 'all' || selectedDesa === ''
+    ? null
+    : publicSummary?.areas[selectedDesa] || null;
+  const filteredTotal = publicSummary
+    ? selectedAreaSummary?.total ?? publicSummary.total
+    : filteredData.length;
 
   // Generate chart data based on selected category
   const getChartData = () => {
-    if (!selectedKategori || filteredData.length === 0) return null;
+    if (!selectedKategori || filteredTotal === 0) return null;
 
     const selectedKategoriObj = kategoriOptions.find(k => k.id === selectedKategori);
     if (!selectedKategoriObj) return null;
@@ -258,6 +269,34 @@ export default function DataDesaPage() {
         break;
       default:
         return null;
+    }
+
+    if (publicSummary) {
+      const categories = selectedAreaSummary?.categories || publicSummary.categories;
+      let entries = Object.entries(categories[fieldName] || {});
+
+      if (fieldName === 'pendidikanTerakhir') {
+        const educationOrder = [
+          'Tidak/Belum Sekolah',
+          'Tamat SD/Sederajat',
+          'SLTP/Sederajat',
+          'SLTA/Sederajat',
+          'Diploma/Sederajat',
+          'Sarjana/Sederajat',
+        ];
+        entries = entries.sort(([a], [b]) => {
+          const aIndex = educationOrder.indexOf(a);
+          const bIndex = educationOrder.indexOf(b);
+          return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+        });
+      } else {
+        entries = entries.sort(([, a], [, b]) => b - a).slice(0, 8);
+      }
+
+      return {
+        labels: entries.map(([label]) => label),
+        values: entries.map(([, value]) => value),
+      };
     }
 
     // Define education order
@@ -385,7 +424,7 @@ export default function DataDesaPage() {
     };
   };
 
-  const chartData = useMemo(() => getChartData(), [selectedKategori, filteredData.length, selectedDesa]);
+  const chartData = useMemo(() => getChartData(), [selectedKategori, filteredData.length, selectedDesa, publicSummary]);
 
   const getSelectedDaerahName = () => {
     const daerah = daerahOptions.find(d => d.id === selectedDesa);
@@ -575,7 +614,7 @@ export default function DataDesaPage() {
 
         {/* Population Summary */}
         {/* Population Statistics */}
-        <PopulationStats data={filteredData} />
+        <PopulationStats data={filteredData} total={filteredTotal} />
 
         {/* Analysis Button - Only show if user has access */}
         {canAccessAnalisis && (

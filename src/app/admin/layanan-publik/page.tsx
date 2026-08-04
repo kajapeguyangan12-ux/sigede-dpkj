@@ -14,7 +14,7 @@ import {
   approveByKadus,
   markAsCompleted
 } from "../../../lib/layananPublikService";
-import { getDataDesa } from "../../../lib/dataDesaService";
+import { getDataDesaByNIKs } from "../../../lib/dataDesaService";
 import { getMasyarakatByNIK } from "../../../lib/masyarakatService";
 import { getKependudukanPhotoURL } from "../../../lib/kependudukanPhotoService";
 import { storage, db } from "../../../lib/firebase";
@@ -156,8 +156,13 @@ export default function LayananPublikAdminPage() {
       const data = await getAllLayananPublik();
       console.log('📦 Total layanan from Firestore:', data.length);
       
-      // Get data-desa to enrich layanan with daerah info
-      const dataDesaList = await getDataDesa();
+      // Fetch only residents referenced by service requests.
+      const dataDesaList = await getDataDesaByNIKs(
+        data.map((layanan) => layanan.nik || '')
+      );
+      const dataDesaByNik = new Map(
+        dataDesaList.map((resident) => [resident.nik, resident])
+      );
       
       // Enrich layanan data with daerah and personal data from data-desa and masyarakat profile
       const enrichedData = await Promise.all(data.map(async (layanan) => {
@@ -165,7 +170,7 @@ export default function LayananPublikAdminPage() {
         
         // Enrich with daerah from data-desa
         if (!enriched.daerah && enriched.nik) {
-          const userData = dataDesaList.find(d => d.nik === enriched.nik);
+          const userData = dataDesaByNik.get(enriched.nik);
           if (userData?.daerah) {
             enriched.daerah = userData.daerah;
           }

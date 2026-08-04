@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import userManagementService from '../../../../lib/userManagementService';
-import { getDataDesa, DataDesaItem } from '../../../../lib/dataDesaService';
+import { findDataDesaByNIK, DataDesaItem } from '../../../../lib/dataDesaService';
 
 // Custom SVG icons
 const EyeIcon = ({ className }: { className?: string }) => (
@@ -206,12 +206,7 @@ export default function WargaLokalRegisterPage() {
     setError('');
     
     try {
-      console.log('📡 NIK CHECK: Fetching data-desa...');
-      const dataWarga = await getDataDesa();
-      console.log('📊 NIK CHECK: Total data:', dataWarga.length);
-      
-      // Find matching NIK
-      const matchedData = dataWarga.find(item => item.nik === formData.nik);
+      const matchedData = await findDataDesaByNIK(formData.nik);
       
       if (matchedData) {
         console.log('✅ NIK CHECK: NIK valid and found in data-desa');

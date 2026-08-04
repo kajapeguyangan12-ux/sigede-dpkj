@@ -241,85 +241,81 @@ export const getAllENewsItems = async () => {
   }
 };
 
-// Subscribe to real-time updates for published items (berita and pengumuman)
-export const subscribeToPublishedENews = (callback: (items: ENewsItem[]) => void) => {
-  let beritaUnsubscribe: any = null;
-  let pengumumanUnsubscribe: any = null;
+const createENewsSubscription = (
+  callback: (items: ENewsItem[]) => void,
+  ordered: boolean,
+  onError?: (error: Error) => void
+) => {
+  let beritaItems: ENewsItem[] = [];
+  let pengumumanItems: ENewsItem[] = [];
+  let beritaReady = false;
+  let pengumumanReady = false;
 
-  console.log('🔔 Setting up subscriptions to both collections...');
+  const emitItems = () => {
+    if (!beritaReady || !pengumumanReady) return;
 
-  beritaUnsubscribe = onSnapshot(
-    query(collection(db, ENEWS_COLLECTION)),
-    (querySnapshot) => {
-      console.log('📚 Berita snapshot update:', querySnapshot.size, 'documents');
-      
-      pengumumanUnsubscribe = onSnapshot(
-        query(collection(db, PENGUMUMAN_COLLECTION)),
-        (querySnapshotPengumuman) => {
-          console.log('📢 Pengumuman snapshot update:', querySnapshotPengumuman.size, 'documents');
-          
-          const items: ENewsItem[] = [];
-          
-          querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            console.log(`  - Berita: ${doc.id}`, data.title?.substring(0, 30));
-            items.push(normalizeENewsItem(data, doc.id, 'berita'));
-          });
-          
-          querySnapshotPengumuman.forEach((doc) => {
-            const data = doc.data();
-            console.log(`  - Pengumuman: ${doc.id}`, data.title?.substring(0, 30));
-            items.push(normalizeENewsItem(data, doc.id, 'pengumuman'));
-          });
-          
-          const sorted = items.sort((a, b) => {
-            const aTime = a.createdAt?.toMillis?.() ?? 0;
-            const bTime = b.createdAt?.toMillis?.() ?? 0;
-            return bTime - aTime;
-          });
-          
-          console.log('🔄 Emitting callback with', sorted.length, 'items');
-          callback(sorted);
-        },
-        (error) => {
-          console.error('❌ Error in pengumuman subscription:', error);
-        }
+    callback(
+      [...beritaItems, ...pengumumanItems].sort((a, b) => {
+        const aTime = a.createdAt?.toMillis?.() ?? 0;
+        const bTime = b.createdAt?.toMillis?.() ?? 0;
+        return bTime - aTime;
+      })
+    );
+  };
+
+  const handleError = (error: Error) => {
+    console.error('Error in e-news subscription:', error);
+    onError?.(error);
+  };
+
+  const beritaQuery = ordered
+    ? query(collection(db, ENEWS_COLLECTION), orderBy('createdAt', 'desc'))
+    : query(collection(db, ENEWS_COLLECTION));
+  const pengumumanQuery = ordered
+    ? query(collection(db, PENGUMUMAN_COLLECTION), orderBy('createdAt', 'desc'))
+    : query(collection(db, PENGUMUMAN_COLLECTION));
+
+  const unsubscribeBerita = onSnapshot(
+    beritaQuery,
+    (snapshot) => {
+      beritaItems = snapshot.docs.map((item) =>
+        normalizeENewsItem(item.data(), item.id, 'berita')
       );
+      beritaReady = true;
+      emitItems();
     },
-    (error) => {
-      console.error('❌ Error in berita subscription:', error);
-    }
+    handleError
+  );
+
+  const unsubscribePengumuman = onSnapshot(
+    pengumumanQuery,
+    (snapshot) => {
+      pengumumanItems = snapshot.docs.map((item) =>
+        normalizeENewsItem(item.data(), item.id, 'pengumuman')
+      );
+      pengumumanReady = true;
+      emitItems();
+    },
+    handleError
   );
 
   return () => {
-    console.log('🛑 Unsubscribing from snapshots...');
-    beritaUnsubscribe?.();
-    pengumumanUnsubscribe?.();
+    unsubscribeBerita();
+    unsubscribePengumuman();
   };
+};
+
+// Subscribe to real-time updates for published items (berita and pengumuman)
+export const subscribeToPublishedENews = (
+  callback: (items: ENewsItem[]) => void,
+  onError?: (error: Error) => void
+) => {
+  return createENewsSubscription(callback, false, onError);
 };
 
 // Subscribe to real-time updates for all items (for admin) - berita and pengumuman
 export const subscribeToAllENews = (callback: (items: ENewsItem[]) => void) => {
-  const unsubscribeBerita = onSnapshot(
-    query(collection(db, ENEWS_COLLECTION), orderBy('createdAt', 'desc')),
-    (querySnapshot) => {
-      const unsubscribePengumuman = onSnapshot(
-        query(collection(db, PENGUMUMAN_COLLECTION), orderBy('createdAt', 'desc')),
-        (querySnapshotPengumuman) => {
-          const items: ENewsItem[] = [];
-          querySnapshot.forEach((doc) => {
-            items.push(normalizeENewsItem(doc.data(), doc.id, 'berita'));
-          });
-          querySnapshotPengumuman.forEach((doc) => {
-            items.push(normalizeENewsItem(doc.data(), doc.id, 'pengumuman'));
-          });
-          callback(items.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
-        }
-      );
-      return unsubscribePengumuman;
-    }
-  );
-  return unsubscribeBerita;
+  return createENewsSubscription(callback, true);
 };
 
 // Upload image to Firebase Storage

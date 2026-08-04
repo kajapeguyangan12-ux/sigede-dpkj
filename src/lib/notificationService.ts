@@ -2,6 +2,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  getCountFromServer,
   query,
   where,
   orderBy,
@@ -228,8 +229,8 @@ export const getUnreadNotificationCount = async (userId: string): Promise<number
       where("status", "==", "unread")
     );
     
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.size;
+    const querySnapshot = await getCountFromServer(q);
+    return querySnapshot.data().count;
   } catch (error) {
     console.error("❌ Error getting unread count:", error);
     return 0;
@@ -256,6 +257,23 @@ export const subscribeToUserNotifications = (
       } as UniversalNotification);
     });
     callback(notifications);
+  });
+};
+
+// Subscribe only to unread notifications for navigation badges.
+// This preserves real-time updates without loading the user's full history.
+export const subscribeToUnreadNotificationCount = (
+  userId: string,
+  callback: (count: number) => void
+) => {
+  const q = query(
+    collection(db, COLLECTION_NOTIFICATIONS),
+    where("userId", "==", userId),
+    where("status", "==", "unread")
+  );
+
+  return onSnapshot(q, (querySnapshot) => {
+    callback(querySnapshot.size);
   });
 };
 

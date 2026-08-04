@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
 import HeaderCard from "../../components/HeaderCard";
 import BottomNavigation from '../../components/BottomNavigation';
-import { getPublishedENewsItems, subscribeToPublishedENews, type ENewsItem } from "../../../lib/enewsService";
+import { subscribeToPublishedENews, type ENewsItem } from "../../../lib/enewsService";
 import { ChevronRight, Calendar, MapPin } from "lucide-react";
 
 export default function ENewsPage() {
@@ -13,43 +13,14 @@ export default function ENewsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load data from Firebase
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        console.log('Loading e-news data...');
-        setLoading(true);
-        const data = await getPublishedENewsItems();
-        console.log('E-news data loaded:', data);
-        
-        // Debug: Log image URLs
-        data.forEach((item, index) => {
-          console.log(`📸 E-News #${index + 1}:`, {
-            id: item.id,
-            jenis: item.jenis,
-            judul: item.judul,
-            gambar: item.gambar,
-            hasImage: !!item.gambar,
-            isDefaultImage: item.gambar === '/logo/default.png'
-          });
-        });
-        
-        setNewsData(data);
-        setError(null);
-      } catch (error) {
-        console.error('Error loading e-news data:', error);
-        setError(error instanceof Error ? error.message : 'Gagal memuat data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-
-    // Subscribe to real-time updates
     const unsubscribe = subscribeToPublishedENews((items) => {
-      console.log('Received real-time update:', items);
       setNewsData(items);
+      setError(null);
+      setLoading(false);
+    }, (subscriptionError) => {
+      setError(subscriptionError.message || 'Gagal memuat data');
+      setLoading(false);
     });
 
     return () => unsubscribe();

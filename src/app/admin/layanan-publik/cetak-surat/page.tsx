@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { handleAdminLogout } from '../../../../lib/logoutHelper';
 import { getLayananById, LayananPublik } from "../../../../lib/layananPublikService";
-import { getDataDesa } from "../../../../lib/dataDesaService";
+import { findDataDesaByNIK } from "../../../../lib/dataDesaService";
 
 // Dynamically import html2canvas and jsPDF
 let html2canvas: any = null;
@@ -66,24 +66,24 @@ function CetakSuratContent() {
             setTimeout(() => reject(new Error('Fetch timeout')), 10000)
           );
           
-          const dataPromise = Promise.all([
-            getLayananById(layananId),
-            getDataDesa()
-          ]);
+          const dataPromise = (async () => {
+            const layananData = await getLayananById(layananId);
+            const residentData = layananData?.nik
+              ? await findDataDesaByNIK(layananData.nik)
+              : null;
+            return [layananData, residentData] as const;
+          })();
           
-          return await Promise.race([dataPromise, timeoutPromise]) as [LayananPublik, any[]];
+          return await Promise.race([dataPromise, timeoutPromise]) as [LayananPublik, any];
         };
         
-        const [layananData, allDataDesa] = await fetchWithTimeout();
+        const [layananData, residentData] = await fetchWithTimeout();
         
         setLayanan(layananData);
 
         // Cari user data dari data-desa berdasarkan NIK (optional, bisa skip jika tidak ada)
-        if (layananData?.nik) {
-          const user = allDataDesa.find(d => d.nik === layananData.nik);
-          if (user) {
-            setUserData(user);
-          }
+        if (residentData) {
+          setUserData(residentData);
         }
         
         // Auto-scroll to preview setelah data dimuat

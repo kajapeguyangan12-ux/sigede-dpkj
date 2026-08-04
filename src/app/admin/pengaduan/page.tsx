@@ -8,7 +8,7 @@ import {
   LaporanPengaduan,
   StatusLaporan
 } from '../../../lib/laporanPengaduanService';
-import { getDataDesa } from '../../../lib/dataDesaService';
+import { findDataDesaByNIK } from '../../../lib/dataDesaService';
 import { useCurrentUser } from '../../masyarakat/lib/useCurrentUser';
 import { UserRole } from '../../masyarakat/lib/useCurrentUser';
 import Link from 'next/link';
@@ -139,8 +139,7 @@ export default function AdminPengaduanPage() {
   const fetchUserDaerah = async () => {
     if ((currentUser?.role === 'admin_desa' || currentUser?.role === 'kepala_dusun') && currentUser?.nik) {
       try {
-        const allData = await getDataDesa();
-        const userData = allData.find(d => d.nik === currentUser.nik);
+        const userData = await findDataDesaByNIK(currentUser.nik);
         if (userData?.daerah) {
           setUserDaerah(userData.daerah);
         }

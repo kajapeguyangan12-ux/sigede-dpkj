@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import AdminLayout from "../components/AdminLayout";
 import AdminHeaderCard, { AdminHeaderSearchBar, AdminHeaderAccount } from "../../components/AdminHeaderCard";
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getCountFromServer, query, where } from 'firebase/firestore';
 import { db as firestore } from '../../../lib/firebase';
 import { FIREBASE_COLLECTIONS } from '../../../lib/rolePermissions';
 import { handleAdminLogout } from '../../../lib/logoutHelper';
@@ -209,21 +209,21 @@ export default function AdminHomePage() {
         
         // 1. Total Users
         const usersCollection = collection(firestore, FIREBASE_COLLECTIONS.USERS);
-        const usersSnapshot = await getDocs(usersCollection);
-        const totalUsers = usersSnapshot.size;
+        const usersSnapshot = await getCountFromServer(usersCollection);
+        const totalUsers = usersSnapshot.data().count;
         console.log('👥 Total Users:', totalUsers);
 
         // 2. Active Services (Layanan Publik dengan status aktif)
         const layananCollection = collection(firestore, 'layanan-publik');
         const activeLayananQuery = query(layananCollection, where('status', '==', 'aktif'));
-        const activeLayananSnapshot = await getDocs(activeLayananQuery);
-        const activeServices = activeLayananSnapshot.size;
+        const activeLayananSnapshot = await getCountFromServer(activeLayananQuery);
+        const activeServices = activeLayananSnapshot.data().count;
         console.log('✅ Active Services:', activeServices);
 
         // 3. Data Records (Data Desa / KK)
         const dataDesaCollection = collection(firestore, 'data-desa');
-        const dataDesaSnapshot = await getDocs(dataDesaCollection);
-        const dataRecords = dataDesaSnapshot.size;
+        const dataDesaSnapshot = await getCountFromServer(dataDesaCollection);
+        const dataRecords = dataDesaSnapshot.data().count;
         console.log('📁 Data Records:', dataRecords);
 
         setStats({

@@ -6,7 +6,7 @@ import HeaderCard from "../../../components/HeaderCard";
 import BottomNavigation from "../../../components/BottomNavigation";
 import PhotoUpload from './PhotoUpload';
 import { useAuth } from '@/contexts/AuthContext';
-import { getDataDesa } from '@/lib/dataDesaService';
+import { findDataDesaByNIK } from '@/lib/dataDesaService';
 import { uploadLayananPublikPhoto } from '@/lib/layananPublikPhotoService';
 
 interface FormLayananProps {
@@ -60,12 +60,7 @@ export default function FormLayanan({ jenisLayanan, onBack }: FormLayananProps) 
 
         console.log('🔑 User NIK:', userNik);
         
-        // Fetch all data from data-desa collection
-        const allData = await getDataDesa();
-        console.log('📊 Total data from data-desa:', allData.length);
-        
-        // Find user data by matching NIK
-        const userData = allData.find(person => person.nik === userNik);
+        const userData = await findDataDesaByNIK(userNik);
         
         if (userData) {
           console.log('✅ Found user data:', userData);

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from '@/contexts/AuthContext';
-import { subscribeToUserNotifications } from '@/lib/notificationService';
+import { subscribeToUnreadNotificationCount } from '@/lib/notificationService';
 import { useState, useEffect } from 'react';
 
 type IconProps = {
@@ -87,10 +87,7 @@ export default function BottomNavigation() {
     if (!user?.uid) return;
 
     // Subscribe to notifications real-time
-    const unsubscribe = subscribeToUserNotifications(user.uid, (notifications) => {
-      const unreadNotifications = notifications.filter(notif => notif.status === 'unread');
-      setUnreadCount(unreadNotifications.length);
-    });
+    const unsubscribe = subscribeToUnreadNotificationCount(user.uid, setUnreadCount);
 
     return () => unsubscribe();
   }, [user?.uid]);

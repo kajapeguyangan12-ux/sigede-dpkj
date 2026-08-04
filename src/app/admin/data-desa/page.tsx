@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser } from '../../masyarakat/lib/useCurrentUser';
 import AdminLayout from "../components/AdminLayout";
 import { Users, Plus, Upload, Grid, List, Search, Trash2, Edit, Eye, X, TrendingUp, UserCheck, Home } from 'lucide-react';
-import { addDataDesa, updateDataDesa, deleteDataDesa, subscribeToDataDesa, DataDesaItem } from "../../../lib/dataDesaService";
+import { addDataDesa, updateDataDesa, deleteDataDesa, getDataDesa, invalidateDataDesaCache, saveDataDesaPublicSummary, DataDesaItem } from "../../../lib/dataDesaService";
 import UploadExcel from "./components/UploadExcelNew";
 import KKCard from "./components/KKCard";
 import AnimatedCounter from "./components/AnimatedCounter";
@@ -318,19 +318,28 @@ export default function DataDesaPage() {
     desil: ""
   });
 
-  useEffect(() => {
-    const unsubscribe = subscribeToDataDesa((data) => {
+  const loadDataDesa = useCallback(async (forceRefresh = false) => {
+    try {
+      setLoading(true);
+      if (forceRefresh) invalidateDataDesaCache();
+      const data = await getDataDesa();
       const formattedData = data.map(item => ({
         ...item,
-        createdAt: item.createdAt.toDate(),
-        updatedAt: item.updatedAt.toDate()
+        createdAt: item.createdAt?.toDate?.() || new Date(),
+        updatedAt: item.updatedAt?.toDate?.() || new Date()
       })) as DataDesa[];
       setDataWarga(formattedData);
+      await saveDataDesaPublicSummary(data);
+    } catch (error) {
+      console.error('Error loading data desa:', error);
+    } finally {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
   }, []);
+
+  useEffect(() => {
+    loadDataDesa();
+  }, [loadDataDesa]);
 
   // Auto-set filter berdasarkan daerah user jika kepala_dusun
   useEffect(() => {
@@ -407,9 +416,29 @@ export default function DataDesaPage() {
     try {
       if (editingId) {
         await updateDataDesa(editingId, formData);
+        setDataWarga((previous) => {
+          const nextData = previous.map((item) =>
+            item.id === editingId
+              ? { ...item, ...formData, updatedAt: new Date() }
+              : item
+          );
+          void saveDataDesaPublicSummary(nextData as unknown as DataDesaItem[]);
+          return nextData;
+        });
         alert("Data warga berhasil diperbarui!");
       } else {
-        await addDataDesa(formData);
+        const newId = await addDataDesa(formData);
+        const now = new Date();
+        setDataWarga((previous) => {
+          const nextData = [{
+            id: newId,
+            ...formData,
+            createdAt: now,
+            updatedAt: now,
+          } as DataDesa, ...previous];
+          void saveDataDesaPublicSummary(nextData as unknown as DataDesaItem[]);
+          return nextData;
+        });
         alert("Data warga berhasil ditambahkan!");
       }
       setShowModal(false);
@@ -452,6 +481,11 @@ export default function DataDesaPage() {
     if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
       try {
         await deleteDataDesa(id);
+        setDataWarga((previous) => {
+          const nextData = previous.filter((item) => item.id !== id);
+          void saveDataDesaPublicSummary(nextData as unknown as DataDesaItem[]);
+          return nextData;
+        });
         alert("Data berhasil dihapus!");
       } catch (error) {
         console.error("Error deleting data:", error);
@@ -979,9 +1013,10 @@ export default function DataDesaPage() {
         {(showUploadModal || isUploadMinimized) && (
           <UploadExcel 
             isMinimizedFromParent={isUploadMinimized}
-            onUploadComplete={() => {
+            onUploadComplete={async () => {
               setShowUploadModal(false);
               setIsUploadMinimized(false);
+              await loadDataDesa(true);
             }}
             onMinimize={() => {
               setIsUploadMinimized(true);
@@ -1539,6 +1574,4 @@ export default function DataDesaPage() {
     </>
   );
 }
-
-
 
