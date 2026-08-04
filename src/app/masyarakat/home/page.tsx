@@ -231,7 +231,9 @@ export default function MasyarakatHomePage(): JSX.Element {
   const [umkmList, setUmkmList] = useState<UMKM[]>([]);
   const [currentBeritaIndex, setCurrentBeritaIndex] = useState(0);
   const [currentUmkmIndex, setCurrentUmkmIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loadingBerita, setLoadingBerita] = useState(true);
+  const [loadingUmkm, setLoadingUmkm] = useState(true);
+  const [loadingPengaturan, setLoadingPengaturan] = useState(true);
   const [pengaturan, setPengaturan] = useState<PengaturanHome | null>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [currentSlideshowIndex, setCurrentSlideshowIndex] = useState(0);
@@ -329,7 +331,17 @@ export default function MasyarakatHomePage(): JSX.Element {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      setLoadingBerita(true);
+      setLoadingUmkm(true);
+
+      // Start UMKM request immediately so it does not wait for news processing.
+      const umkmRequest = getDocs(
+        query(
+          collection(db, "e-umkm"),
+          where("status", "==", "aktif"),
+          limit(20)
+        )
+      );
 
       // Fetch berita terbaru dari E-News Admin (auto update)
       try {
@@ -341,8 +353,9 @@ export default function MasyarakatHomePage(): JSX.Element {
           // Try simple query first without where clause to avoid index issues
           const queryTerbaru = query(
             collection(db, "e-news_berita"),
+            where("status", "==", "published"),
             orderBy("createdAt", "desc"),
-            limit(10) // Ambil 10 berita untuk di-filter client-side
+            limit(5)
           );
           const snapshotTerbaru = await getDocs(queryTerbaru);
           
@@ -443,17 +456,13 @@ export default function MasyarakatHomePage(): JSX.Element {
       } catch (beritaError) {
         console.error('❌ Error fetching berita from e-news_berita:', beritaError);
         setBeritaList([]);
+      } finally {
+        setLoadingBerita(false);
       }
 
       // Fetch 3 UMKM dengan kunjungan terbanyak (hanya yang aktif)
       try {
-        // Simple query without composite index
-        const umkmQuery = query(
-          collection(db, "e-umkm"),
-          where("status", "==", "aktif"),
-          limit(20) // Fetch more to sort client-side
-        );
-        const umkmSnapshot = await getDocs(umkmQuery);
+        const umkmSnapshot = await umkmRequest;
         const umkm: UMKM[] = [];
         umkmSnapshot.forEach((doc) => {
           const data = doc.data();
@@ -475,17 +484,20 @@ export default function MasyarakatHomePage(): JSX.Element {
       } catch (umkmError: any) {
         console.warn('⚠️ Error fetching UMKM:', umkmError.message);
         setUmkmList([]);
+      } finally {
+        setLoadingUmkm(false);
       }
 
     } catch (error) {
       console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+      setLoadingBerita(false);
+      setLoadingUmkm(false);
     }
   };
 
   const fetchPengaturan = async () => {
     try {
+      setLoadingPengaturan(true);
       console.log('📥 Fetching pengaturan home...');
       const docRef = doc(db, "pengaturan", "home");
       const docSnap = await getDoc(docRef);
@@ -503,6 +515,8 @@ export default function MasyarakatHomePage(): JSX.Element {
       }
     } catch (error) {
       console.error('❌ Error fetching pengaturan:', error);
+    } finally {
+      setLoadingPengaturan(false);
     }
   };
 
@@ -662,7 +676,7 @@ export default function MasyarakatHomePage(): JSX.Element {
                 {/* Slideshow box - Below Title */}
                 <div className="relative">
                   <div className="bg-white/95 backdrop-blur-md rounded-xl overflow-hidden shadow-lg">
-                    {loading ? (
+                    {loadingPengaturan ? (
                       <div className="flex items-center justify-center gap-2 text-gray-400 h-32 sm:h-40 md:h-48 lg:h-64 xl:h-80">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
                         <span className="text-xs">Memuat...</span>
@@ -796,13 +810,13 @@ export default function MasyarakatHomePage(): JSX.Element {
                 ))}
               </div>
               
-              {/* Mobile: Top Row - 5 items */}
-              <div className="grid lg:hidden grid-cols-5 gap-3 sm:gap-4 md:gap-6">
-                {menuItems.slice(0, 5).map((item) => (
+              {/* Mobile/tablet: consistent 5-column grid */}
+              <div className="grid grid-cols-5 gap-x-2 gap-y-5 xs:gap-x-3 sm:gap-x-4 sm:gap-y-6 md:gap-x-6 lg:hidden">
+                {menuItems.map((item) => (
                   <Link 
                     key={item.title} 
                     href={item.href}
-                    className="group cursor-pointer"
+                    className="group min-w-0 cursor-pointer"
                   >
                     <div className="flex flex-col items-center group-hover:transform group-hover:scale-105 transition-all duration-300">
                       {/* Professional Icon Container */}
@@ -820,49 +834,13 @@ export default function MasyarakatHomePage(): JSX.Element {
                         <div className={`absolute inset-0 rounded-lg sm:rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300 scale-110`}></div>
                       </div>
                       
-                      {/* Professional Text Label */}
-                      <span className="text-center font-medium leading-tight text-[10px] xs:text-[11px] sm:text-xs lg:text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300 max-w-[60px] sm:max-w-16 lg:max-w-20">
+                      <span className="min-h-[2.5em] w-full text-center font-medium leading-tight text-[10px] xs:text-[11px] sm:text-xs lg:text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
                         {item.title}
                       </span>
                     </div>
                   </Link>
                 ))}
               </div>
-              
-              {/* Mobile: Bottom Row - 4 items (centered) */}
-              {menuItems.length > 5 && (
-                <div className="grid lg:hidden grid-cols-4 gap-3 sm:gap-4 md:gap-6 max-w-[280px] xs:max-w-xs sm:max-w-sm mx-auto">
-                  {menuItems.slice(5).map((item) => (
-                    <Link 
-                      key={item.title} 
-                      href={item.href}
-                      className="group cursor-pointer"
-                    >
-                      <div className="flex flex-col items-center group-hover:transform group-hover:scale-105 transition-all duration-300">
-                        {/* Professional Icon Container */}
-                        <div className="relative mb-3">
-                          <div
-                            className={`relative grid h-14 w-14 sm:h-16 sm:w-16 place-items-center rounded-xl bg-gradient-to-br ${item.gradient} text-lg sm:text-xl text-white shadow-lg transition-all duration-300 group-hover:shadow-xl`}
-                          >
-                            {item.icon}
-                            
-                            {/* Subtle glow effect */}
-                            <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm`}></div>
-                          </div>
-                          
-                          {/* Enhanced ring effect */}
-                          <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300 scale-110`}></div>
-                        </div>
-                        
-                        {/* Professional Text Label */}
-                        <span className="text-center font-medium leading-tight text-xs text-gray-700 group-hover:text-gray-900 transition-colors duration-300 max-w-16">
-                          {item.title}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </section>
@@ -877,7 +855,7 @@ export default function MasyarakatHomePage(): JSX.Element {
               </h3>
               <div className="h-0.5 flex-1 ml-3 sm:ml-4 lg:ml-5 bg-gradient-to-r from-red-200 to-transparent rounded-full"></div>
             </div>
-          {loading ? (
+          {loadingBerita ? (
             <div className="rounded-2xl sm:rounded-3xl bg-white/95 p-6 sm:p-8 md:p-10 shadow-xl ring-1 ring-red-200/50 backdrop-blur-sm border border-white/20">
               <div className="flex flex-col justify-center items-center gap-3 sm:gap-4">
                 <div className="animate-spin rounded-full h-12 w-12 sm:h-14 sm:w-14 border-b-4 border-red-600 border-t-4 border-t-transparent"></div>
@@ -1093,7 +1071,7 @@ export default function MasyarakatHomePage(): JSX.Element {
               </h3>
               <div className="h-0.5 flex-1 ml-3 sm:ml-4 lg:ml-5 bg-gradient-to-r from-amber-200 to-transparent rounded-full"></div>
             </div>
-          {loading ? (
+          {loadingUmkm ? (
             <div className="rounded-2xl sm:rounded-3xl bg-white/90 p-6 sm:p-8 lg:p-10 shadow-xl ring-1 ring-amber-200 backdrop-blur-sm">
               <div className="flex justify-center items-center">
                 <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 border-b-4 border-amber-600"></div>
@@ -1280,5 +1258,3 @@ export default function MasyarakatHomePage(): JSX.Element {
     </main>
   );
 }
-
-
