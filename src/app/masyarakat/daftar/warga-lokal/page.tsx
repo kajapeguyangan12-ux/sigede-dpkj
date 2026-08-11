@@ -32,6 +32,19 @@ const DesaLogo = "/logo/LOGO_DPKJ.png";
 
 export default function WargaLokalRegisterPage() {
   const router = useRouter();
+
+  const emptyVerifiedFields = {
+    namaLengkap: '',
+    alamat: '',
+    daerah: '',
+    tempatLahir: '',
+    tanggalLahir: '',
+    jenisKelamin: '',
+    agama: '',
+    pekerjaan: '',
+    statusKawin: '',
+    kewarganegaraan: 'WNI'
+  };
   
   // Form state
   const [formData, setFormData] = useState({
@@ -138,10 +151,9 @@ export default function WargaLokalRegisterPage() {
       setNikVerified(false);
       setNikMessage('');
       setVerifiedData(null);
-      // Clear tanggal lahir when NIK changes
       setFormData(prev => ({
         ...prev,
-        tanggalLahir: ''
+        ...emptyVerifiedFields
       }));
     }
     
@@ -238,11 +250,20 @@ export default function WargaLokalRegisterPage() {
           console.log('📅 Auto-filling tanggal lahir from data-desa:', birthDate);
         }
         
-        // Auto-fill daerah and tanggal lahir from matched data
+        // Auto-fill citizen profile data from data-desa.
+        // Account credentials stay manual: username, email, password.
         setFormData(prev => ({
           ...prev,
+          namaLengkap: matchedData.namaLengkap || '',
+          alamat: matchedData.alamat || '',
           daerah: matchedData.daerah || '',
-          tanggalLahir: birthDate || prev.tanggalLahir
+          tempatLahir: matchedData.tempatLahir || '',
+          tanggalLahir: birthDate || '',
+          jenisKelamin: matchedData.jenisKelamin || '',
+          agama: matchedData.agama || '',
+          pekerjaan: matchedData.pekerjaan || '',
+          statusKawin: matchedData.statusKawin || matchedData.statusNikah || '',
+          kewarganegaraan: matchedData.kewarganegaraan || 'WNI'
         }));
         console.log('📍 Auto-filled daerah:', matchedData.daerah);
         console.log('📅 Auto-filled tanggal lahir:', birthDate);
